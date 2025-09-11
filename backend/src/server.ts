@@ -79,7 +79,78 @@ app.use('/api/learning-records', learningRecordRoutes);
 app.use('/api/upload', uploadRoutes);
 
 // 文件上传服务
-app.use('/uploads', express.static('uploads'));
+// 配置静态文件服务，设置适当的Content-Type和Content-Disposition头信息
+
+// 为可在浏览器中预览的文件类型设置Content-Disposition: inline
+// 这会告诉浏览器尝试以内联方式显示文件而不是下载它
+const previewableExtensions = [
+  // 图片类型
+  'jpg', 'jpeg', 'png', 'gif', 'svg', 'bmp', 'webp',
+  // 文档类型
+  'pdf', 'html', 'htm', 'txt', 'md', 'css', 'js',
+  // Office文档
+  'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx'
+];
+
+// 创建一个修改后的静态文件服务中间件
+app.use('/uploads', (req, res, next) => {
+  // 获取文件扩展名
+  const extension = req.path.split('.').pop()?.toLowerCase() || '';
+  
+  // 检查是否是可预览的文件类型
+  const isPreviewable = previewableExtensions.includes(extension);
+  
+  if (isPreviewable) {
+    // 对于可预览的文件，显式设置Content-Disposition为inline
+    res.setHeader('Content-Disposition', 'inline');
+    
+    // 为不同类型的文件设置适当的Content-Type
+    const contentTypeMap = {
+      'pdf': 'application/pdf',
+      'txt': 'text/plain',
+      'md': 'text/markdown',
+      'css': 'text/css',
+      'js': 'application/javascript',
+      'html': 'text/html',
+      'htm': 'text/html',
+      'jpg': 'image/jpeg',
+      'jpeg': 'image/jpeg',
+      'png': 'image/png',
+      'gif': 'image/gif',
+      'svg': 'image/svg+xml',
+      'webp': 'image/webp',
+      'bmp': 'image/bmp'
+      // 对于Office文档，我们不设置特定的Content-Type，让浏览器自己处理
+    };
+    
+    // 如果文件类型在contentTypeMap中，设置对应的Content-Type
+    if (contentTypeMap[extension]) {
+      res.setHeader('Content-Type', contentTypeMap[extension]);
+    }
+  } else {
+    // 对于其他文件类型，设置nosniff头以确保安全
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+  }
+  
+  // 使用fs模块直接读取文件并发送，而不是使用express.static
+  const path = require('path');
+  const fs = require('fs');
+  const filePath = path.join(__dirname, '..', 'uploads', req.path);
+  
+  fs.stat(filePath, (err, stats) => {
+    if (err) {
+      return next(err);
+    }
+    
+    if (!stats.isFile()) {
+      return next();
+    }
+    
+    // 创建文件流并发送
+    const fileStream = fs.createReadStream(filePath);
+    fileStream.pipe(res);
+  });
+});
 
 // Swagger UI
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(specs));
