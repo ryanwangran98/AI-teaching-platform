@@ -40,7 +40,7 @@ import {
   ExpandLess,
   ArrowBack,
 } from '@mui/icons-material';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { assignmentAPI, questionAPI, chapterAPI, knowledgePointAPI } from '../../services/api';
 
 
@@ -135,6 +135,8 @@ function TabPanel(props: TabPanelProps) {
 
 const AssignmentManagement: React.FC = () => {
   const navigate = useNavigate();
+  const params = useParams();
+  const courseId = params.courseId as string;
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -364,8 +366,8 @@ const AssignmentManagement: React.FC = () => {
   // 添加获取题目列表的函数
   const fetchQuestions = async () => {
     try {
-      // 调用实际的API获取题目列表
-      const response = await questionAPI.getQuestions();
+      // 调用实际的API获取题目列表，传递课程ID
+      const response = await questionAPI.getQuestions({ courseId });
       const data = response.data || response;
       setQuestions(Array.isArray(data) ? data : data.questions || []);
     } catch (error) {

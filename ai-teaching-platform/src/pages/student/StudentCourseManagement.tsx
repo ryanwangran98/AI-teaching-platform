@@ -149,7 +149,11 @@ const StudentCourseManagement: React.FC = () => {
       console.log('处理后的所有课程数据:', allCoursesData);
       
       // 创建已加入课程ID的集合，用于快速查找
-      const enrolledCourseIds = new Set(myCoursesData.map(course => course.id));
+      // 确保只包含有效的课程ID
+      const enrolledCourseIds = new Set(myCoursesData
+        .filter(course => course && course.id) // 过滤掉无效的课程数据
+        .map(course => course.id)
+      );
       
       // 转换我的课程数据格式
       const formattedMyCourses = myCoursesData.map(course => ({
@@ -189,7 +193,8 @@ const StudentCourseManagement: React.FC = () => {
           studentsCount: course._count?.enrollments || course.studentsCount || course.studentCount || 0,
           tags: course.tags || [course.category || course.department || '其他'],
           thumbnail: course.coverImage || course.thumbnail || course.imageUrl || '/api/placeholder/400/200',
-          enrolled: enrolledCourseIds.has(course.id),
+          // 确保只在确实已加入时才标记为已加入
+        enrolled: course.id && enrolledCourseIds.has(course.id),
           progress: isNaN(Number(course.progress)) ? 0 : Math.max(0, Math.min(100, course.progress || 0)),
           completedChapters: course.completedChapters || course.completedHours || 0,
           totalChapters: course.totalChapters || course._count?.chapters || course.totalHours || 0,

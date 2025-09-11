@@ -246,14 +246,29 @@ router.delete('/:id', authenticateToken, authorizeRoles('TEACHER', 'ADMIN'), asy
     const knowledgePointIds = knowledgePoints.map(kp => kp.id);
 
     if (knowledgePointIds.length > 0) {
-      // 删除与知识点关联的题目和作业
-      await prisma.question.deleteMany({
-        where: { knowledgePointId: { in: knowledgePointIds } }
-      });
-
-      await prisma.assignment.deleteMany({
-        where: { knowledgePointId: { in: knowledgePointIds } }
-      });
+      // 删除与知识点关联的题目和作业 - 确保只删除属于当前章节的内容
+      for (const kpId of knowledgePointIds) {
+        // 删除知识点下的所有作业（包括关联的题目，因为Question与Assignment有级联关系）
+        await prisma.assignment.deleteMany({
+          where: {
+            knowledgePointId: kpId,
+            knowledgePoint: {
+              chapterId: id
+            }
+          }
+        });
+        
+        // 删除知识点下不关联作业的题目
+        await prisma.question.deleteMany({
+          where: {
+            knowledgePointId: kpId,
+            assignmentId: null,
+            knowledgePoint: {
+              chapterId: id
+            }
+          }
+        });
+      }
 
       // 删除知识点
       await prisma.knowledgePoint.deleteMany({

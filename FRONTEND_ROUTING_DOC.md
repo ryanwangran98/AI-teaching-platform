@@ -2,7 +2,14 @@
 
 ## 1. 前端架构概述
 
-AI融合教学平台前端采用React+TypeScript+Ant Design架构，使用React Router实现页面路由管理。本文档详细描述了前端路由结构、页面布局、主要组件及其交互流程。
+AI融合教学平台前端采用React+TypeScript+Material-UI架构，使用React Router实现页面路由管理。本文档详细描述了前端路由结构、页面布局、主要组件及其交互流程。
+
+### 1.1 技术栈
+- React 19 + TypeScript 5.8
+- React Router v7
+- Material-UI 7.x
+- Axios 1.11
+- Recharts 3.x
 
 ## 2. 路由结构
 
@@ -15,6 +22,8 @@ AI融合教学平台前端采用React+TypeScript+Ant Design架构，使用React 
 无需登录即可访问的页面：
 - 登录页
 - 注册页
+- 忘记密码页
+- 测试页面
 
 #### 2.2.2 私有路由
 需要登录才能访问的页面，根据用户角色进行权限控制：
@@ -30,53 +39,51 @@ AI融合教学平台前端采用React+TypeScript+Ant Design架构，使用React 
 |---------|---------|---------|------|
 | `/login` | 登录页 | `src/pages/Login.tsx` | 用户登录入口 |
 | `/register` | 注册页 | `src/pages/Register.tsx` | 新用户注册入口 |
-| `/forgot-password` | 忘记密码 | `src/pages/ForgotPassword.tsx` | 密码重置流程 |
+| `/test` | 测试页 | `src/pages/TestPage.tsx` | 快速登录测试 |
 | `/404` | 页面不存在 | `src/pages/404.tsx` | 页面未找到提示 |
 
 ### 3.2 学生端路由
 
 | 路由路径 | 页面名称 | 组件文件 | 说明 |
 |---------|---------|---------|------|
-| `/student/dashboard` | 学生仪表盘 | `src/pages/student/Dashboard.tsx` | 学生个人中心和学习概览 |
-| `/student/courses` | 我的课程 | `src/pages/student/Courses.tsx` | 学生已选课程列表 |
-| `/student/courses/explore` | 加入课程 | `src/pages/student/Courses.tsx` | 浏览并加入可学习的课程 |
-| `/student/courses/:courseId` | 课程详情 | `src/pages/student/CourseDetail.tsx` | 课程详细内容和学习进度 |
-| `/student/assignments` | 我的作业 | `src/pages/student/Assignments.tsx` | 作业列表和完成情况 |
-| `/student/assignments/:id` | 做作业 | `src/pages/student/DoAssignment.tsx` | 完成并提交作业的页面 |
-| `/student/results` | 学习成绩 | `src/pages/student/Results.tsx` | 作业成绩和学习成果展示 |
+| `/student` | 学生仪表盘 | `src/pages/student/StudentDashboard.tsx` | 学生个人中心和学习概览 |
+| `/student/courses` | 我的课程 | `src/pages/student/MyCourses.tsx` | 学生已选课程列表 |
+| `/student/courses/explore` | 浏览课程 | `src/pages/student/CourseBrowser.tsx` | 浏览并加入可学习的课程 |
+| `/student/course/:courseId` | 课程详情 | `src/pages/student/CourseDetail.tsx` | 课程详细内容和学习进度 |
+| `/student/course/:courseId/assignment/:assignmentId` | 做作业 | `src/pages/student/AssignmentDetail.tsx` | 完成并提交作业的页面 |
+| `/student/assignments` | 我的作业 | `src/pages/student/MyAssignments.tsx` | 作业列表和完成情况 |
+| `/student/results` | 学习成绩 | `src/pages/student/LearningResults.tsx` | 作业成绩和学习成果展示 |
 | `/student/learning-records` | 学习记录 | `src/pages/student/LearningRecords.tsx` | 学习进度和历史记录 |
-| `/student/notifications` | 我的通知 | `src/pages/student/Notifications.tsx` | 系统通知和消息中心 |
+| `/student/notifications` | 我的通知 | `src/pages/student/NotificationList.tsx` | 系统通知和消息中心 |
 | `/student/profile` | 个人资料 | `src/pages/student/Profile.tsx` | 个人信息管理 |
 
 ### 3.3 教师端路由
 
 | 路由路径 | 页面名称 | 组件文件 | 说明 |
 |---------|---------|---------|------|
-| `/teacher/dashboard` | 教师仪表盘 | `src/pages/teacher/Dashboard.tsx` | 教师工作台和数据分析 |
-| `/teacher/courses` | 我的课程 | `src/pages/teacher/Courses.tsx` | 教师创建和管理的课程列表 |
-| `/teacher/courses/create` | 创建课程 | `src/pages/teacher/CreateCourse.tsx` | 新建课程表单 |
-| `/teacher/courses/:courseId` | 课程管理 | `src/pages/teacher/CourseManagement.tsx` | 课程内容和学生管理 |
-| `/teacher/courses/:courseId/chapters` | 章节管理 | `src/pages/teacher/ChaptersManagement.tsx` | 课程章节和知识点管理 |
-| `/teacher/assignments` | 作业管理 | `src/pages/teacher/Assignments.tsx` | 作业列表和发布情况 |
-| `/teacher/assignments/create` | 创建作业 | `src/pages/teacher/CreateAssignment.tsx` | 新建作业表单 |
-| `/teacher/assignments/:id` | 作业详情 | `src/pages/teacher/AssignmentDetail.tsx` | 作业详情和提交管理 |
-| `/teacher/assignments/:id/submissions/:submissionId` | 作业批改 | `src/pages/teacher/GradeSubmission.tsx` | 批改学生提交的作业 |
-| `/teacher/question-bank` | 题库管理 | `src/pages/teacher/QuestionBank.tsx` | 题目列表和题库维护 |
-| `/teacher/question-bank/create` | 创建题目 | `src/pages/teacher/CreateQuestion.tsx` | 新建题目表单 |
-| `/teacher/students` | 学生管理 | `src/pages/teacher/Students.tsx` | 学生列表和成绩统计 |
-| `/teacher/teaching-statistics` | 教学统计 | `src/pages/teacher/TeachingStatistics.tsx` | 教学数据和学习情况统计 |
-| `/teacher/notifications` | 我的通知 | `src/pages/teacher/Notifications.tsx` | 系统通知和消息中心 |
+| `/teacher` | 教师仪表盘 | `src/pages/teacher/TeacherDashboard.tsx` | 教师工作台和数据分析 |
+| `/teacher/courses` | 我的课程 | `src/pages/teacher/TeacherCourseManagement.tsx` | 教师创建和管理的课程列表 |
+| `/teacher/courses/new` | 创建课程 | `src/pages/teacher/CreateCourse.tsx` | 新建课程表单 |
+| `/teacher/courses/:courseId` | 课程资源管理 | `src/pages/teacher/ResourceManagement.tsx` | 课程资源统一管理入口 |
+| `/teacher/courses/:courseId/courseware` | 课件管理 | `src/pages/teacher/CoursewareManagement.tsx` | 课件上传和管理 |
+| `/teacher/courses/:courseId/materials` | 资料管理 | `src/pages/teacher/MaterialManagement.tsx` | 学习资料管理 |
+| `/teacher/courses/:courseId/chapters` | 章节管理 | `src/pages/teacher/ChapterManagement.tsx` | 课程章节和知识点管理 |
+| `/teacher/courses/:courseId/knowledge-points` | 知识点管理 | `src/pages/teacher/KnowledgePointManagement.tsx` | 知识点维护 |
+| `/teacher/courses/:courseId/questions` | 题库管理 | `src/pages/teacher/QuestionBankManagement.tsx` | 题目列表和题库维护 |
+| `/teacher/courses/:courseId/assignments` | 作业管理 | `src/pages/teacher/AssignmentManagement.tsx` | 作业列表和发布情况 |
+| `/teacher/assignments` | 全部作业 | `src/pages/teacher/AssignmentManagement.tsx` | 所有课程作业管理 |
+| `/teacher/notifications` | 我的通知 | `src/pages/teacher/NotificationManagement.tsx` | 系统通知和消息中心 |
 | `/teacher/profile` | 个人资料 | `src/pages/teacher/Profile.tsx` | 个人信息管理 |
 
 ### 3.4 管理员端路由
 
 | 路由路径 | 页面名称 | 组件文件 | 说明 |
 |---------|---------|---------|------|
-| `/admin/dashboard` | 管理仪表盘 | `src/pages/admin/Dashboard.tsx` | 系统概览和数据统计 |
-| `/admin/users` | 用户管理 | `src/pages/admin/Users.tsx` | 系统用户列表和权限管理 |
-| `/admin/courses` | 课程管理 | `src/pages/admin/Courses.tsx` | 所有课程的管理和审核 |
+| `/admin` | 管理仪表盘 | `src/pages/admin/AdminDashboard.tsx` | 系统概览和数据统计 |
+| `/admin/users` | 用户管理 | `src/pages/admin/UserManagement.tsx` | 系统用户列表和权限管理 |
+| `/admin/courses` | 课程管理 | `src/pages/admin/CourseManagement.tsx` | 所有课程的管理和审核 |
 | `/admin/statistics` | 系统统计 | `src/pages/admin/SystemStatistics.tsx` | 系统使用数据统计和分析 |
-| `/admin/settings` | 系统设置 | `src/pages/admin/Settings.tsx` | 系统全局配置和参数设置 |
+| `/admin/settings` | 系统设置 | `src/pages/admin/SystemSettings.tsx` | 系统全局配置和参数设置 |
 
 ## 4. 页面布局结构
 

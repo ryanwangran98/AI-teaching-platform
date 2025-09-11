@@ -292,6 +292,28 @@ router.delete('/:id', authenticateToken, authorizeRoles('TEACHER', 'ADMIN'), asy
       return res.status(403).json({ error: 'Not authorized to delete this knowledge point' });
     }
 
+    // 删除知识点下的所有作业（包括关联的题目，因为Question与Assignment有级联关系）
+    await prisma.assignment.deleteMany({
+      where: {
+        knowledgePointId: id,
+        knowledgePoint: {
+          chapterId: knowledgePoint.chapterId
+        }
+      }
+    });
+    
+    // 删除知识点下不关联作业的题目
+    await prisma.question.deleteMany({
+      where: {
+        knowledgePointId: id,
+        assignmentId: null,
+        knowledgePoint: {
+          chapterId: knowledgePoint.chapterId
+        }
+      }
+    });
+    
+    // 最后删除知识点
     await prisma.knowledgePoint.delete({
       where: { id }
     });

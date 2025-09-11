@@ -9,7 +9,7 @@ const upload = multer({ dest: 'uploads/' });
 const router = express.Router();
 
 // 获取作业列表
-router.get('/', async (req, res) => {
+router.get('/', authenticateToken, async (req: any, res) => {
   try {
     const {
       knowledgePointId,
@@ -23,8 +23,15 @@ router.get('/', async (req, res) => {
     const skip = (Number(page) - 1) * Number(limit);
     const where: any = {};
 
+    // 对学生角色，只返回已发布的作业
+    if (req.user!.role === 'STUDENT') {
+      where.status = 'PUBLISHED';
+    } else if (status) {
+      // 对教师或管理员角色，可以根据传入的status参数过滤
+      where.status = status as string;
+    }
+
     if (knowledgePointId) where.knowledgePointId = knowledgePointId as string;
-    if (status) where.status = status as string;
     if (type) where.type = type as string;
     // 新增：支持按课程ID筛选
     if (courseId) {
@@ -91,7 +98,24 @@ router.get('/:id', async (req, res) => {
             }
           }
         },
-        questions: true // 包含关联的题目
+        questions: {
+          select: {
+            id: true,
+            title: true,
+            content: true,
+            type: true,
+            difficulty: true,
+            points: true,
+            options: true,
+            correctAnswer: true,
+            explanation: true,
+            knowledgePointId: true,
+            assignmentId: true,
+            createdAt: true,
+            updatedAt: true,
+            teacherId: true
+          }
+        } // 包含关联的题目及题目内容
       }
     });
 
@@ -377,6 +401,21 @@ router.delete('/:id', authenticateToken, authorizeRoles('TEACHER', 'ADMIN'), asy
       return res.status(403).json({ error: 'Not authorized to delete this assignment' });
     }
 
+    // 删除与该作业关联的所有题目（确保只删除属于当前课程的题目）
+    await prisma.question.deleteMany({
+      where: {
+        assignmentId: id,
+        assignment: {
+          knowledgePoint: {
+            chapter: {
+              courseId: assignment.knowledgePoint.chapter.course.id
+            }
+          }
+        }
+      }
+    });
+    
+    // 然后删除作业本身
     await prisma.assignment.delete({
       where: { id }
     });
@@ -480,11 +519,12 @@ router.post('/:id/submit', authenticateToken, authorizeRoles('STUDENT'), upload.
         };
       });
 
-      // 创建提交记录
+      // 创建提交记录，将答案数据保存到content字段中
       const submission = await prisma.submission.create({
         data: {
           assignmentId,
           userId: req.user!.id,
+          content: JSON.stringify(answers), // 保存答案数据
           score: totalScore,
           status: 'GRADED',
           submittedAt: new Date()

@@ -13,7 +13,7 @@
     "db:migrate": "prisma migrate dev",
     "db:push": "prisma db push",
     "db:studio": "prisma studio",
-    "db:seed": "node prisma/seed.js",
+    "db:seed": "ts-node src/scripts/seed.ts",
     "db:reset": "prisma migrate reset --force",
     "db:reset:seed": "prisma migrate reset --force && npm run db:seed",
     "lint": "eslint src/**/*.js",

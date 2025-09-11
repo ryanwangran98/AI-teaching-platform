@@ -4,6 +4,11 @@
 
 本文档详细描述了AI融合教学平台的RESTful API接口设计规范，包括接口URL、请求参数、响应格式、状态码等信息。平台采用前后端分离架构，前端通过这些API与后端进行数据交互。
 
+### 1.1 API版本
+- 当前版本: v1
+- 基础URL: `http://localhost:3001/api`
+- 版本控制: 通过URL路径实现（如`/api/v1/`）
+
 ## 2. API基础信息
 
 ### 2.1 基础URL
@@ -26,14 +31,40 @@ http://localhost:3001/api
 }
 ```
 
+#### 2.3.1 成功响应示例
+```json
+{
+  "success": true,
+  "data": {
+    "id": "clxxxxxx",
+    "name": "计算机科学导论",
+    "code": "CS101"
+  },
+  "message": "课程创建成功"
+}
+```
+
+#### 2.3.2 错误响应示例
+```json
+{
+  "success": false,
+  "error": "Course not found",
+  "message": "请求的课程不存在"
+}
+```
+
 ### 2.4 HTTP状态码
 - `200 OK`: 请求成功
 - `201 Created`: 创建资源成功
+- `204 No Content`: 请求成功但无返回内容
 - `400 Bad Request`: 请求参数错误
 - `401 Unauthorized`: 未授权或Token失效
 - `403 Forbidden`: 权限不足
 - `404 Not Found`: 资源不存在
+- `409 Conflict`: 资源冲突（如重复创建）
+- `422 Unprocessable Entity`: 请求格式正确但语义错误
 - `500 Internal Server Error`: 服务器内部错误
+- `503 Service Unavailable`: 服务暂时不可用
 
 ## 3. API详细文档
 
@@ -66,9 +97,14 @@ http://localhost:3001/api
       "createdAt": "string"
     },
     "token": "string"
-  }
+  },
+  "message": "用户注册成功"
 }
 ```
+
+- **错误响应**:
+  - `400`: 参数缺失或格式错误
+  - `409`: 邮箱或用户名已存在
 
 #### 3.1.2 用户登录
 - **URL**: `/api/auth/login`
@@ -211,6 +247,32 @@ http://localhost:3001/api
 }
 ```
 - **Response**: 创建的课程详情
+```json
+{
+  "success": true,
+  "data": {
+    "id": "string",
+    "code": "string",
+    "name": "string",
+    "description": "string",
+    "credits": number,
+    "department": "string",
+    "category": "string",
+    "difficulty": "string",
+    "coverImage": "string",
+    "status": "DRAFT",
+    "teacherId": "string",
+    "createdAt": "string",
+    "updatedAt": "string"
+  },
+  "message": "课程创建成功"
+}
+```
+- **错误响应**:
+  - `400`: 参数缺失或格式错误
+  - `401`: 未授权
+  - `403`: 权限不足
+  - `409`: 课程代码已存在
 
 #### 3.3.6 更新课程
 - **URL**: `/api/courses/{id}`

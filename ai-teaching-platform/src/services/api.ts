@@ -228,17 +228,16 @@ export const assignmentAPI = {
     return response.data;
   },
 
-  submitAssignment: async (id: string, submissionData: { content: string; files?: File[] }) => {
-    const formData = new FormData();
-    formData.append('content', submissionData.content);
-    if (submissionData.files) {
-      submissionData.files.forEach(file => formData.append('files', file));
+  submitAssignment: async (id: string, submissionData: { assignmentId: string; answers: any[] }) => {
+    console.log('提交的作业数据:', submissionData);
+    try {
+      const response = await api.post('/submissions', submissionData);
+      console.log('提交成功，响应:', response);
+      return response.data;
+    } catch (error: any) {
+      console.error('提交失败，错误详情:', error.response?.data || error.message);
+      throw error;
     }
-    
-    const response = await api.post(`/assignments/${id}/submit`, formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    });
-    return response.data;
   },
 
   gradeAssignment: async (id: string, submissionId: string, gradeData: { score: number; feedback: string }) => {

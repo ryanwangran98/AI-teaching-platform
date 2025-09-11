@@ -4,6 +4,12 @@
 
 本系统采用SQLite数据库，通过Prisma ORM进行数据访问。SQLite是一种轻量级的文件数据库，适合开发阶段和小型应用场景。本文档详细描述了系统的数据模型、表结构、字段定义和关系设计。
 
+### 1.1 技术选型
+- 数据库: SQLite 3.42+
+- ORM框架: Prisma 5.7+
+- 连接池: Prisma内置连接池
+- 数据库管理: Prisma Studio
+
 ## 2. 数据模型总览
 
 系统包含12个核心数据模型，它们之间通过外键建立关联，形成完整的数据关系网络：
@@ -20,6 +26,34 @@
 10. **Courseware** - 课件表
 11. **Notification** - 通知表
 12. **LearningRecord** - 学习记录表
+
+### 2.1 数据模型关系图
+
+```mermaid
+erDiagram
+    User ||--o{ Course : "教师创建"
+    User ||--o{ Enrollment : "学生选课"
+    User ||--o{ Assignment : "教师创建"
+    User ||--o{ Question : "教师创建"
+    User ||--o{ Courseware : "教师上传"
+    User ||--o{ Material : "教师上传"
+    User ||--o{ Submission : "学生提交"
+    User ||--o{ Notification : "接收通知"
+    
+    Course ||--o{ Chapter : "包含章节"
+    Course ||--o{ Enrollment : "被选课"
+    Course ||--o{ Assignment : "包含作业"
+    
+    Chapter ||--o{ KnowledgePoint : "包含知识点"
+    Chapter ||--o{ Courseware : "关联课件"
+    Chapter ||--o{ Material : "关联资料"
+    
+    KnowledgePoint ||--o{ Assignment : "关联作业"
+    KnowledgePoint ||--o{ Question : "关联题目"
+    
+    Assignment ||--o{ Question : "包含题目"
+    Assignment ||--o{ Submission : "学生提交"
+```
 
 ## 3. 数据模型详细设计
 
@@ -52,27 +86,27 @@ model User {
 ```
 
 **字段说明：**
-- `id`: 用户唯一标识
+- `id`: 用户唯一标识 (CUID格式)
 - `email`: 电子邮箱（登录凭证，唯一）
 - `username`: 用户名（唯一）
-- `password`: 密码（加密存储）
+- `password`: 密码（BCrypt加密存储）
 - `firstName`: 名字
 - `lastName`: 姓氏
-- `avatar`: 头像URL
+- `avatar`: 头像URL（可选）
 - `role`: 用户角色（STUDENT, TEACHER, ADMIN）
-- `isActive`: 用户状态
-- `createdAt`: 创建时间
-- `updatedAt`: 更新时间
+- `isActive`: 用户状态（是否激活）
+- `createdAt`: 创建时间（ISO 8601格式）
+- `updatedAt`: 更新时间（ISO 8601格式）
 
 **关系：**
-- 一对多：User -> Assignment
-- 一对多：User -> Course
-- 一对多：User -> Courseware
-- 一对多：User -> Enrollment
-- 一对多：User -> Material
-- 一对多：User -> Notification
-- 一对多：User -> Question
-- 一对多：User -> Submission
+- 一对多：User -> Assignment（教师创建的作业）
+- 一对多：User -> Course（教师创建的课程）
+- 一对多：User -> Courseware（教师上传的课件）
+- 一对多：User -> Enrollment（学生选课记录）
+- 一对多：User -> Material（教师上传的资料）
+- 一对多：User -> Notification（用户接收的通知）
+- 一对多：User -> Question（教师创建的题目）
+- 一对多：User -> Submission（学生提交的作业）
 
 ### 3.2 Course (课程表)
 
@@ -100,24 +134,24 @@ model Course {
 ```
 
 **字段说明：**
-- `id`: 课程唯一标识
+- `id`: 课程唯一标识 (CUID格式)
 - `code`: 课程代码（唯一）
 - `name`: 课程名称
-- `description`: 课程描述
-- `credits`: 学分
+- `description`: 课程描述（可选）
+- `credits`: 学分（默认3学分）
 - `department`: 所属院系
 - `category`: 课程类别
 - `difficulty`: 难度级别（EASY, MEDIUM, HARD）
-- `coverImage`: 封面图片URL
-- `status`: 课程状态（DRAFT, PUBLISHED）
-- `teacherId`: 授课教师ID
-- `createdAt`: 创建时间
-- `updatedAt`: 更新时间
+- `coverImage`: 封面图片URL（可选）
+- `status`: 课程状态（DRAFT草稿, PUBLISHED已发布）
+- `teacherId`: 授课教师ID（外键关联User表）
+- `createdAt`: 创建时间（ISO 8601格式）
+- `updatedAt`: 更新时间（ISO 8601格式）
 
 **关系：**
-- 多对一：Course -> User (teacher)
-- 一对多：Course -> Chapter
-- 一对多：Course -> Enrollment
+- 多对一：Course -> User (teacher)（课程由教师创建）
+- 一对多：Course -> Chapter（课程包含多个章节）
+- 一对多：Course -> Enrollment（课程被多个学生选择）
 
 ### 3.3 Chapter (章节表)
 
@@ -570,14 +604,15 @@ LearningRecord 1─┘
 系统中的索引主要通过Prisma ORM自动创建，以下是关键索引：
 
 1. **唯一索引：**
-   - `User.email`
-   - `User.username`
-   - `Course.code`
-   - `Enrollment(userId, courseId)`
-   - `Submission(userId, assignmentId)`
+   - `User.email` - 确保邮箱唯一性
+   - `User.username` - 确保用户名唯一性
+   - `Course.code` - 确保课程代码唯一性
+   - `Enrollment(userId, courseId)` - 确保学生不能重复选择同一门课程
+   - `Submission(userId, assignmentId)` - 确保学生不能重复提交同一份作业
 
 2. **外键索引：**
    - 所有外键字段（如`Course.teacherId`, `Chapter.courseId`等）都自动创建索引以优化查询性能
+   - 时间字段（`createdAt`, `updatedAt`）用于排序查询优化
 
 ## 6. 数据安全考虑
 

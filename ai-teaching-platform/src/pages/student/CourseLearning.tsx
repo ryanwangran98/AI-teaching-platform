@@ -192,10 +192,13 @@ const CourseLearning: React.FC = () => {
         assignments: assignmentsData.map((assignment: any) => ({
           id: assignment.id,
           title: assignment.title || '未命名作业',
-          type: assignment.type === 'homework' ? 'homework' : 
-                assignment.type === 'quiz' ? 'quiz' : 'exam',
-          dueDate: assignment.dueDate || '',
-          totalPoints: assignment.totalPoints || 0,
+          type: assignment.type.toLowerCase() === 'homework' ? 'homework' : 
+                assignment.type.toLowerCase() === 'quiz' ? 'quiz' : 
+                assignment.type.toLowerCase() === 'exam' ? 'exam' :
+                assignment.type.toLowerCase() === 'project' ? 'project' : assignment.type,
+          dueDate: assignment.dueDate || assignment.endTime || '',
+          totalPoints: assignment.totalPoints || assignment.totalScore || 0,
+          totalScore: assignment.totalScore || assignment.totalPoints || 0, // 与教师端字段名保持一致
           status: assignment.status === 'pending' ? 'pending' :
                   assignment.status === 'submitted' ? 'submitted' :
                   assignment.status === 'graded' ? 'graded' : 'pending',
@@ -218,7 +221,10 @@ const CourseLearning: React.FC = () => {
       case 'video': return <VideoLibrary />;
       case 'document': return <Description />;
       case 'quiz': return <Assignment />;
-      case 'assignment': return <Assignment />;
+      case 'homework': return <Assignment />;
+      case 'exam': return <Assignment />;
+      case 'project': return <Assignment />;
+      case 'assignment': return <Assignment />; // 保持向后兼容
       default: return <Description />;
     }
   };
@@ -228,7 +234,10 @@ const CourseLearning: React.FC = () => {
       case 'video': return '视频';
       case 'document': return '文档';
       case 'quiz': return '测验';
-      case 'assignment': return '作业';
+      case 'homework': return '作业';
+      case 'exam': return '考试';
+      case 'project': return '项目';
+      case 'assignment': return '作业'; // 保持向后兼容
       default: return type;
     }
   };
@@ -472,21 +481,20 @@ const CourseLearning: React.FC = () => {
 
                     <Box sx={{ mb: 2 }}>
                       <Typography variant="body2" color="text.secondary">
-                        类型: {assignment.type === 'homework' ? '作业' : 
-                              assignment.type === 'quiz' ? '测验' : '考试'}
+                        类型: {getTypeLabel(assignment.type)}
                       </Typography>
                       <Typography variant="body2" color="text.secondary">
                         截止日期: {assignment.dueDate}
                       </Typography>
                       <Typography variant="body2" color="text.secondary">
-                        总分: {assignment.totalPoints}分
+                        总分: {assignment.totalScore || assignment.totalPoints}分
                       </Typography>
                     </Box>
 
                     {assignment.status === 'graded' && assignment.score !== undefined && (
                       <Box sx={{ mb: 2 }}>
                         <Typography variant="h6" color="primary">
-                          得分: {assignment.score}/{assignment.totalPoints}
+                          得分: {assignment.score}/{assignment.totalScore || assignment.totalPoints}
                         </Typography>
                       </Box>
                     )}

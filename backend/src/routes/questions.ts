@@ -5,13 +5,14 @@ import { authenticateToken, authorizeRoles, AuthRequest } from '../middleware/au
 const router = express.Router();
 
 // 获取题目列表
-router.get('/', async (req, res) => {
+router.get('/', authenticateToken, async (req: AuthRequest, res) => {
   try {
     const { 
       assignmentId, 
       type, 
       difficulty, 
       knowledgePointId,
+      courseId,
       page = 1,
       limit = 20
     } = req.query;
@@ -23,6 +24,32 @@ router.get('/', async (req, res) => {
     if (type) where.type = type as string;
     if (difficulty) where.difficulty = difficulty as string;
     if (knowledgePointId) where.knowledgePointId = knowledgePointId as string;
+
+    // 教师只能查看自己课程的题目
+    if (req.user!.role === 'TEACHER' && !courseId) {
+      // 获取教师所有课程ID
+      const teacherCourses = await prisma.course.findMany({
+        where: { teacherId: req.user!.id },
+        select: { id: true }
+      });
+      const courseIds = teacherCourses.map(course => course.id);
+      
+      // 添加课程过滤条件（通过知识点和章节关联）
+      where.knowledgePoint = {
+        chapter: {
+          courseId: {
+            in: courseIds
+          }
+        }
+      };
+    } else if (courseId) {
+      // 如果指定了courseId，过滤该课程的题目
+      where.knowledgePoint = {
+        chapter: {
+          courseId: courseId as string
+        }
+      };
+    }
 
     const questions = await prisma.question.findMany({
       where,

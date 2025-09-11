@@ -1,6 +1,7 @@
 import express from 'express';
 import prisma from '../config/database';
 import { authenticateToken, authorizeRoles, AuthRequest } from '../middleware/auth';
+import { logInfo, logError } from '../utils/logger';
 
 const router = express.Router();
 
@@ -342,32 +343,35 @@ router.delete('/:id', authenticateToken, authorizeRoles('TEACHER', 'ADMIN'), asy
       
       for (const chapter of chapters) {
         for (const kp of chapter.knowledgePoints) {
-          // 先获取该知识点下的所有作业
+          // 删除该知识点下的所有作业
           const assignments = await prisma.assignment.findMany({
-            where: { knowledgePointId: kp.id },
-            include: { questions: true }
+            where: { knowledgePointId: kp.id }
           });
           
-          // 先删除每个作业下的提交
+          // 删除每个作业下的提交
           for (const assignment of assignments) {
             await prisma.submission.deleteMany({
               where: { assignmentId: assignment.id }
             });
-            
-            // 删除作业下的问题
-            await prisma.question.deleteMany({
-              where: { assignmentId: assignment.id }
-            });
           }
           
-          // 然后删除知识点下的作业
+          // 删除该知识点下的所有作业（包括关联的问题，因为Question与Assignment有级联关系）
           await prisma.assignment.deleteMany({
             where: { knowledgePointId: kp.id }
           });
           
-          // 删除不关联作业的问题
+          // 删除该知识点下不关联作业的问题
           await prisma.question.deleteMany({
-            where: { knowledgePointId: kp.id, assignmentId: null }
+            where: { 
+              knowledgePointId: kp.id, 
+              assignmentId: null,
+              // 额外确保这些问题属于当前课程
+              knowledgePoint: {
+                chapter: {
+                  courseId: id
+                }
+              }
+            }
           });
         }
         
@@ -608,10 +612,15 @@ router.post('/:id/enroll', authenticateToken, authorizeRoles('STUDENT'), async (
     const { id: courseId } = req.params;
     const userId = req.user!.id;
 
+    // 添加调试日志
+    logInfo('Enroll course request received', { userId, courseId });
+
     // 检查课程是否存在
     const course = await prisma.course.findUnique({
       where: { id: courseId }
     });
+
+    logInfo('Course lookup result', { courseId, courseFound: !!course });
 
     if (!course) {
       return res.status(404).json({ error: 'Course not found' });
@@ -627,7 +636,10 @@ router.post('/:id/enroll', authenticateToken, authorizeRoles('STUDENT'), async (
       }
     });
 
+    logInfo('Existing enrollment check', { userId, courseId, alreadyEnrolled: !!existingEnrollment });
+
     if (existingEnrollment) {
+      logInfo('Enrollment rejected - already enrolled', { userId, courseId });
       return res.status(400).json({ error: 'Already enrolled in this course' });
     }
 
@@ -640,12 +652,15 @@ router.post('/:id/enroll', authenticateToken, authorizeRoles('STUDENT'), async (
       }
     });
 
+    logInfo('Course enrollment successful', { userId, courseId, enrollmentId: enrollment.id });
+
     res.status(201).json({
       success: true,
       message: 'Successfully enrolled in course',
       data: enrollment
     });
   } catch (error) {
+    logError('Failed to enroll in course', { error, userId: req.user?.id, courseId: req.params.id });
     res.status(500).json({ error: 'Server error' });
   }
 });
@@ -695,7 +710,7 @@ router.get('/student/my-courses', authenticateToken, authorizeRoles('STUDENT'), 
     const userId = req.user!.id;
 
     const enrollments = await prisma.enrollment.findMany({
-      where: { userId, status: 'ACTIVE' },
+      where: { userId, status: { in: ['ACTIVE', 'ENROLLED'] } },
       include: {
         course: {
           include: {

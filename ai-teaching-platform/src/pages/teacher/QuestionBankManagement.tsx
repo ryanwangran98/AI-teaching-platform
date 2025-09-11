@@ -38,7 +38,7 @@ import {
   Link,
   ArrowBack,
 } from '@mui/icons-material';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { questionAPI, chapterAPI, knowledgePointAPI } from '../../services/api';
 
 
@@ -105,6 +105,8 @@ function a11yProps(index: number) {
 
 const QuestionBankManagement: React.FC = () => {
   const navigate = useNavigate();
+  const params = useParams();
+  const courseId = params.courseId as string;
   const [questions, setQuestions] = useState<Question[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -141,13 +143,13 @@ const QuestionBankManagement: React.FC = () => {
     fetchChapters();
     fetchKnowledgePoints();
 
-  }, []);
+  }, [courseId]);
 
 
 
   const fetchChapters = async () => {
     try {
-      const response = await chapterAPI.getChapters(undefined, 'all');
+      const response = await chapterAPI.getChapters(courseId, 'all');
       const data = response.data || response;
       const chaptersData = Array.isArray(data) ? data : data.chapters || [];
       
@@ -170,7 +172,7 @@ const QuestionBankManagement: React.FC = () => {
 
   const fetchKnowledgePoints = async () => {
     try {
-      const response = await knowledgePointAPI.getKnowledgePoints();
+      const response = await knowledgePointAPI.getKnowledgePoints({ courseId });
       const data = response.data || response;
       const knowledgePointsData = Array.isArray(data) ? data : data.knowledgePoints || [];
       
@@ -199,7 +201,7 @@ const QuestionBankManagement: React.FC = () => {
   const fetchQuestions = async () => {
     try {
       setLoading(true);
-      const response = await questionAPI.getQuestions();
+      const response = await questionAPI.getQuestions({ courseId });
       const data = response.data || response;
       setQuestions(Array.isArray(data) ? data : data.questions || []);
       setError(null);
