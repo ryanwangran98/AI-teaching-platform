@@ -52,9 +52,51 @@ router.get('/', authenticateToken, async (req: CustomRequest, res: Response) => 
     const skip = (pageNum - 1) * limitNum;
 
     // 构建查询条件
-    const where: any = {
-      userId: req.user?.id,
-    };
+    let where: any = {};
+    
+    // 根据用户角色构建不同的查询条件
+    if (req.user?.role === 'STUDENT') {
+      // 学生只能看到与他们已加入课程相关的教师发送的通知
+      // 1. 获取学生已加入的所有课程
+      const enrollments = await prisma.enrollment.findMany({
+        where: {
+          userId: req.user.id,
+          status: 'ENROLLED'
+        },
+        select: {
+          courseId: true
+        }
+      });
+      
+      // 2. 获取这些课程的教师ID
+      const courseIds = enrollments.map(e => e.courseId);
+      const courses = await prisma.course.findMany({
+        where: {
+          id: {
+            in: courseIds
+          }
+        },
+        select: {
+          teacherId: true
+        }
+      });
+      
+      // 3. 获取所有相关教师ID
+      const teacherIds = Array.from(new Set(courses.map(c => c.teacherId)));
+      
+      // 4. 构建通知查询条件：
+      // - 通知是给当前学生的，或者
+      // - 通知是由学生已加入课程的教师发送的
+      where = {
+        OR: [
+          { userId: req.user.id },
+          { userId: { in: teacherIds } }
+        ]
+      };
+    } else {
+      // 教师和管理员可以看到所有通知
+      where.userId = req.user?.id;
+    }
 
     if (type) {
       where.type = type;

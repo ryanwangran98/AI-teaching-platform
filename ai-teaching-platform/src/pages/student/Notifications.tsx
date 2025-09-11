@@ -36,7 +36,7 @@ import {
   School,
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
-import { courseAPI } from '../../services/api';
+import { courseAPI, notificationAPI } from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
 
 interface Notification {
@@ -99,83 +99,31 @@ const NotificationsPage: React.FC = () => {
   const fetchNotifications = async () => {
     try {
       setLoading(true);
-      // 这里应该调用真实的API获取通知
-      // 暂时使用模拟数据，但会根据选中的课程进行过滤
-      setTimeout(() => {
-        const mockNotifications: Notification[] = [
-          {
-            id: '1',
-            title: '课程更新提醒',
-            content: '您学习的《高等数学》课程新增了第5章内容，请及时学习。',
-            type: 'info',
-            isRead: false,
-            createdAt: '2024-01-15T10:30:00Z',
-            relatedCourse: {
-              id: 'math101',
-              title: '高等数学',
-            },
-          },
-          {
-            id: '2',
-            title: '作业截止提醒',
-            content: '《线性代数》第3章作业将于明天截止，请尽快完成。',
-            type: 'warning',
-            isRead: false,
-            createdAt: '2024-01-14T14:20:00Z',
-            relatedCourse: {
-              id: 'linear101',
-              title: '线性代数',
-            },
-          },
-          {
-            id: '3',
-            title: '成绩发布',
-            content: '您提交的《大学英语》第2单元作业已批改完成，成绩为85分。',
-            type: 'success',
-            isRead: true,
-            createdAt: '2024-01-13T09:15:00Z',
-            relatedCourse: {
-              id: 'english101',
-              title: '大学英语',
-            },
-          },
-          {
-            id: '4',
-            title: '系统维护通知',
-            content: '平台将于本周六凌晨2:00-4:00进行系统维护，届时服务将暂时不可用。',
-            type: 'info',
-            isRead: true,
-            createdAt: '2024-01-12T16:45:00Z',
-          },
-          {
-            id: '5',
-            title: '课程即将开课',
-            content: '您已报名的《Python编程基础》课程将于明天正式开课，请做好学习准备。',
-            type: 'info',
-            isRead: false,
-            createdAt: '2024-01-11T11:30:00Z',
-            relatedCourse: {
-              id: 'python101',
-              title: 'Python编程基础',
-            },
-          },
-        ];
-        
-        // 根据选中的课程过滤通知
-        let filtered = mockNotifications;
-        if (selectedCourse) {
-          filtered = mockNotifications.filter(n => 
-            n.relatedCourse?.id === selectedCourse
-          );
-        }
-        
-        setNotifications(filtered);
-        setError(null);
-        setLoading(false);
-      }, 1000);
+      setError(null);
+      
+      // 调用真实API获取通知
+      const response = await notificationAPI.getNotifications();
+      
+      // 处理通知数据，确保数据格式正确
+      const notificationsData = Array.isArray(response.data?.notifications) 
+        ? response.data.notifications
+        : [];
+      
+      // 根据选中的课程过滤通知
+      let filtered = notificationsData;
+      if (selectedCourse) {
+        filtered = notificationsData.filter(n => 
+          n.relatedCourse?.id === selectedCourse || 
+          n.relatedId === selectedCourse
+        );
+      }
+      
+      setNotifications(filtered);
+      setError(null);
     } catch (error) {
       console.error('获取通知失败:', error);
       setError('获取通知失败，请稍后重试');
+    } finally {
       setLoading(false);
     }
   };

@@ -110,7 +110,7 @@ const Materials: React.FC<MaterialsProps> = ({ courseId: propCourseId }) => {
   useEffect(() => {
     fetchMaterials();
     fetchCourses();
-  }, []);
+  }, [effectiveCourseId]);
 
   useEffect(() => {
     filterMaterials();
