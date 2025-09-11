@@ -1,0 +1,215 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String         @id @default(cuid())
+  email         String         @unique
+  username      String         @unique
+  password      String
+  firstName     String
+  lastName      String
+  avatar        String?
+  role          String         @default("STUDENT")
+  isActive      Boolean        @default(true)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  assignments   Assignment[]
+  courses       Course[]
+  courseware    Courseware[]
+  enrollments   Enrollment[]
+  materials     Material[]
+  notifications Notification[]
+  questions     Question[]
+  submissions   Submission[]
+
+  @@map("users")
+}
+
+model Course {
+  id          String       @id @default(cuid())
+  code        String       @unique
+  name        String
+  description String?
+  credits     Int          @default(3)
+  department  String
+  category    String
+  difficulty  String       @default("MEDIUM")
+  coverImage  String?
+  status      String       @default("DRAFT")
+  teacherId   String
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  chapters    Chapter[]
+  teacher     User         @relation(fields: [teacherId], references: [id])
+  enrollments Enrollment[]
+
+  @@map("courses")
+}
+
+model Chapter {
+  id              String           @id @default(cuid())
+  title           String
+  content         String?
+  order           Int
+  status          String           @default("draft")
+  courseId        String
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  course          Course           @relation(fields: [courseId], references: [id])
+  courseware      Courseware[]
+  knowledgePoints KnowledgePoint[]
+  materials       Material[]
+
+  @@map("chapters")
+}
+
+model KnowledgePoint {
+  id          String       @id @default(cuid())
+  title       String
+  description String?
+  content     String?
+  order       Int
+  difficulty  String       @default("medium")
+  importance  String       @default("medium")
+  status      String       @default("draft")
+  chapterId   String
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  Assignment  Assignment[]
+  chapter     Chapter      @relation(fields: [chapterId], references: [id])
+  Question    Question[]
+
+  @@map("knowledge_points")
+}
+
+model Enrollment {
+  id         String   @id @default(cuid())
+  userId     String
+  courseId   String
+  status     String   @default("PENDING")
+  progress   Float    @default(0)
+  grade      Float?
+  enrolledAt DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  course     Course   @relation(fields: [courseId], references: [id])
+  user       User     @relation(fields: [userId], references: [id])
+
+  @@unique([userId, courseId])
+  @@map("enrollments")
+}
+
+model Assignment {
+  id               String         @id @default(cuid())
+  title            String
+  description      String?
+  type             String         @default("HOMEWORK")
+  totalPoints      Int            @default(100)
+  dueDate          DateTime
+  status           String         @default("DRAFT")
+  knowledgePointId String
+  teacherId        String
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+  knowledgePoint   KnowledgePoint @relation(fields: [knowledgePointId], references: [id])
+  teacher          User           @relation(fields: [teacherId], references: [id])
+  questions        Question[]
+  submissions      Submission[]
+
+  @@map("assignments")
+}
+
+model Submission {
+  id           String     @id @default(cuid())
+  content      String?
+  fileUrl      String?
+  score        Float?
+  feedback     String?
+  status       String     @default("PENDING")
+  userId       String
+  assignmentId String
+  submittedAt  DateTime   @default(now())
+  gradedAt     DateTime?
+  assignment   Assignment @relation(fields: [assignmentId], references: [id])
+  user         User       @relation(fields: [userId], references: [id])
+
+  @@unique([userId, assignmentId])
+  @@map("submissions")
+}
+
+model Question {
+  id               String         @id @default(cuid())
+  title            String
+  content          String
+  type             String         @default("SINGLE_CHOICE")
+  difficulty       String         @default("MEDIUM")
+  points           Int            @default(1)
+  options          String?
+  correctAnswer    String?
+  explanation      String?
+  knowledgePointId String
+  assignmentId     String?
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+  teacherId        String
+  knowledgePoint   KnowledgePoint @relation(fields: [knowledgePointId], references: [id])
+  assignment       Assignment?    @relation(fields: [assignmentId], references: [id])
+  teacher          User           @relation(fields: [teacherId], references: [id])
+
+  @@map("questions")
+}
+
+model Material {
+  id           String   @id @default(cuid())
+  title        String
+  description  String?
+  type         String   @default("PDF")
+  fileUrl      String
+  fileSize     Int      @default(0)
+  chapterId    String
+  uploadedById String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  uploadedBy   User     @relation(fields: [uploadedById], references: [id])
+  chapter      Chapter  @relation(fields: [chapterId], references: [id])
+
+  @@map("materials")
+}
+
+model Courseware {
+  id           String   @id @default(cuid())
+  title        String
+  description  String?
+  type         String   @default("SLIDES")
+  fileUrl      String
+  fileSize     Int      @default(0)
+  chapterId    String?
+  uploadedById String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  uploadedBy   User     @relation(fields: [uploadedById], references: [id])
+  chapter      Chapter? @relation(fields: [chapterId], references: [id])
+
+  @@map("coursewares")
+}
+
+model Notification {
+  id          String   @id @default(cuid())
+  title       String
+  content     String?
+  type        String   @default("info")
+  isRead      Boolean  @default(false)
+  userId      String
+  relatedId   String?
+  relatedType String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  user        User     @relation(fields: [userId], references: [id])
+
+  @@map("notifications")
+}

@@ -1,0 +1,463 @@
+import axios from 'axios';
+import type { User, RegisterData } from '../types/auth';
+import type { Course } from '../types/course';
+import type { Chapter } from '../types/chapter';
+import type { Assignment } from '../types/assignment';
+import type { LearningRecord } from '../types/learning-record';
+
+// 使用绝对路径连接真实后端
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
+
+const api = axios.create({
+  baseURL: API_BASE_URL,
+  timeout: 10000,
+  headers: {
+    'Content-Type': 'application/json;charset=UTF-8',
+    'Accept': 'application/json;charset=UTF-8',
+  },
+});
+
+// 请求拦截器
+api.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
+
+// 响应拦截器
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      window.location.href = '/login';
+    }
+    return Promise.reject(error);
+  }
+);
+
+// 认证相关
+export const authAPI = {
+  login: async (username: string, password: string) => {
+    const response = await api.post('/auth/login', { email: username, password });
+    return response.data;
+  },
+
+  register: async (userData: RegisterData) => {
+    const backendData = {
+      email: userData.email,
+      username: userData.username,
+      password: userData.password,
+      firstName: userData.realName || userData.username,
+      lastName: userData.realName || userData.username,
+      role: userData.role?.toUpperCase() || 'STUDENT'
+    };
+    const response = await api.post('/auth/register', backendData);
+    return response.data;
+  },
+
+  logout: async () => {
+    const response = await api.post('/auth/logout');
+    return response.data;
+  },
+
+  getProfile: async () => {
+    const response = await api.get('/users/profile');
+    return response.data;
+  },
+
+  updateProfile: async (userData: Partial<User>) => {
+    const response = await api.put('/users/profile', userData);
+    return response.data;
+  },
+
+  getUsers: async (params?: { page?: number; limit?: number; role?: string; search?: string }) => {
+    const response = await api.get('/users', { params });
+    return response.data;
+  },
+
+  getTeachers: async () => {
+    const response = await api.get('/users/teachers');
+    return response.data;
+  },
+
+  updateUserStatus: async (id: string, isActive: boolean) => {
+    const response = await api.put(`/users/${id}/status`, { isActive });
+    return response.data;
+  },
+};
+
+// 课程相关
+export const courseAPI = {
+  getCourses: async (params?: { page?: number; limit?: number; subject?: string; grade?: string }) => {
+    const response = await api.get('/courses', { params });
+    return response.data;
+  },
+
+  getMyCourses: async () => {
+    const response = await api.get('/courses/teacher/my-courses');
+    return response.data;
+  },
+
+  getStudentCourses: async () => {
+    const response = await api.get('/courses/student/my-courses');
+    return response.data;
+  },
+
+  getCourse: async (id: string) => {
+    const response = await api.get(`/courses/${id}`);
+    return response.data;
+  },
+
+  createCourse: async (courseData: any) => {
+    console.log('发送创建课程请求:', courseData);
+    const response = await api.post('/courses', courseData);
+    console.log('创建课程响应:', response.data);
+    return response.data;
+  },
+
+  updateCourse: async (id: string, courseData: Partial<Course>) => {
+    const response = await api.put(`/courses/${id}`, courseData);
+    return response.data;
+  },
+
+  deleteCourse: async (id: string) => {
+    const response = await api.delete(`/courses/${id}`);
+    return response.data;
+  },
+
+  // 发布课程
+  publishCourse: async (id: string) => {
+    const response = await api.patch(`/courses/${id}/publish`);
+    return response.data;
+  },
+
+  // 取消发布课程
+  unpublishCourse: async (id: string) => {
+    const response = await api.patch(`/courses/${id}/unpublish`);
+    return response.data;
+  },
+
+  // 学生加入课程
+  enrollCourse: async (courseId: string) => {
+    const response = await api.post(`/courses/${courseId}/enroll`);
+    return response.data;
+  },
+
+  // 学生退出课程
+  unenrollCourse: async (courseId: string) => {
+    const response = await api.delete(`/courses/${courseId}/enroll`);
+    return response.data;
+  },
+
+  // 获取教师最近活动
+  getTeacherRecentActivities: async (limit?: number) => {
+    const response = await api.get('/courses/teacher/recent-activities', { 
+      params: { limit } 
+    });
+    return response.data;
+  },
+
+};
+
+// 章节相关
+export const chapterAPI = {
+  getChapters: async (courseId?: string, status?: string) => {
+    const response = await api.get('/chapters', { params: { courseId, status } });
+    return response.data;
+  },
+
+  getChapter: async (chapterId: string) => {
+    const response = await api.get(`/chapters/${chapterId}`);
+    return response.data;
+  },
+
+  createChapter: async (courseId: string, chapterData: Partial<Chapter>) => {
+    const response = await api.post('/chapters', { ...chapterData, courseId });
+    return response.data;
+  },
+
+  updateChapter: async (chapterId: string, chapterData: Partial<Chapter>) => {
+    const response = await api.put(`/chapters/${chapterId}`, chapterData);
+    return response.data;
+  },
+
+  deleteChapter: async (chapterId: string) => {
+    const response = await api.delete(`/chapters/${chapterId}`);
+    return response.data;
+  },
+};
+
+// 作业相关
+export const assignmentAPI = {
+  getAssignments: async (params?: { courseId?: string; status?: string }) => {
+    const response = await api.get('/assignments', { params });
+    return response.data;
+  },
+
+  getMyAssignments: async (params?: { status?: string }) => {
+    const response = await api.get('/assignments/teacher/my-assignments', { params });
+    return response.data;
+  },
+
+  getAssignment: async (id: string) => {
+    const response = await api.get(`/assignments/${id}`);
+    return response.data;
+  },
+
+  createAssignment: async (assignmentData: Partial<Assignment>) => {
+    const response = await api.post('/assignments', assignmentData);
+    return response.data;
+  },
+
+  updateAssignment: async (id: string, assignmentData: Partial<Assignment>) => {
+    const response = await api.put(`/assignments/${id}`, assignmentData);
+    return response.data;
+  },
+
+  deleteAssignment: async (id: string) => {
+    const response = await api.delete(`/assignments/${id}`);
+    return response.data;
+  },
+
+  submitAssignment: async (id: string, submissionData: { content: string; files?: File[] }) => {
+    const formData = new FormData();
+    formData.append('content', submissionData.content);
+    if (submissionData.files) {
+      submissionData.files.forEach(file => formData.append('files', file));
+    }
+    
+    const response = await api.post(`/assignments/${id}/submit`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return response.data;
+  },
+
+  gradeAssignment: async (id: string, submissionId: string, gradeData: { score: number; feedback: string }) => {
+    const response = await api.post(`/assignments/${id}/submissions/${submissionId}/grade`, gradeData);
+    return response.data;
+  },
+};
+
+// 题库相关
+export const questionAPI = {
+  getQuestions: async (params?: { courseId?: string; chapterId?: string; type?: string; difficulty?: string }) => {
+    const response = await api.get('/questions', { params });
+    return response.data;
+  },
+
+  getQuestion: async (id: string) => {
+    const response = await api.get(`/questions/${id}`);
+    return response.data;
+  },
+
+  createQuestion: async (questionData: any) => {
+    const response = await api.post('/questions', questionData);
+    return response.data;
+  },
+
+  updateQuestion: async (id: string, questionData: any) => {
+    const response = await api.put(`/questions/${id}`, questionData);
+    return response.data;
+  },
+
+  deleteQuestion: async (id: string) => {
+    const response = await api.delete(`/questions/${id}`);
+    return response.data;
+  },
+};
+
+// 知识点相关
+export const knowledgePointAPI = {
+  getKnowledgePoints: async (params?: { courseId?: string; chapterId?: string; search?: string }) => {
+    const response = await api.get('/knowledge-points', { params });
+    return response.data;
+  },
+
+  getKnowledgePoint: async (id: string) => {
+    const response = await api.get(`/knowledge-points/${id}`);
+    return response.data;
+  },
+
+  createKnowledgePoint: async (knowledgePointData: any) => {
+    const response = await api.post('/knowledge-points', knowledgePointData);
+    return response.data;
+  },
+
+  updateKnowledgePoint: async (id: string, knowledgePointData: any) => {
+    const response = await api.put(`/knowledge-points/${id}`, knowledgePointData);
+    return response.data;
+  },
+
+  deleteKnowledgePoint: async (id: string) => {
+    const response = await api.delete(`/knowledge-points/${id}`);
+    return response.data;
+  },
+};
+
+// 课件相关
+export const coursewareAPI = {
+  getCoursewares: async (params?: { courseId?: string; chapterId?: string; type?: string }) => {
+    const response = await api.get('/coursewares', { params });
+    return response.data;
+  },
+
+  getCourseware: async (id: string) => {
+    const response = await api.get(`/coursewares/${id}`);
+    return response.data;
+  },
+
+  createCourseware: async (coursewareData: any) => {
+    // 检查是否包含文件对象，如果有，需要特殊处理文件上传
+    if (coursewareData.file) {
+      // 创建FormData对象来处理文件上传
+      const formData = new FormData();
+      formData.append('title', coursewareData.title);
+      formData.append('description', coursewareData.description || '');
+      formData.append('type', coursewareData.type);
+      if (coursewareData.chapterId) {
+        formData.append('chapterId', coursewareData.chapterId);
+      }
+      formData.append('file', coursewareData.file);
+      
+      // 不再需要临时的mockUrl，后端会从上传的文件中提取URL和文件大小
+      
+      // 修改请求头，让axios自动处理Content-Type
+      const config = {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      };
+      
+      const response = await api.post('/coursewares', formData, config);
+      return response.data;
+    } else {
+      // 如果没有文件，按照原来的方式处理
+      const response = await api.post('/coursewares', coursewareData);
+      return response.data;
+    }
+  },
+
+  updateCourseware: async (id: string, coursewareData: any) => {
+    const response = await api.put(`/coursewares/${id}`, coursewareData);
+    return response.data;
+  },
+
+  deleteCourseware: async (id: string) => {
+    const response = await api.delete(`/coursewares/${id}`);
+    return response.data;
+  },
+};
+
+// 资料相关
+export const materialAPI = {
+  getMaterials: async (params?: { courseId?: string; chapterId?: string; type?: string }) => {
+    const response = await api.get('/materials', { params });
+    return response.data;
+  },
+
+  getMaterial: async (id: string) => {
+    const response = await api.get(`/materials/${id}`);
+    return response.data;
+  },
+
+  createMaterial: async (materialData: any) => {
+    // 检查是否包含文件对象，如果有，需要特殊处理文件上传
+    if (materialData.file) {
+      // 创建FormData对象来处理文件上传
+      const formData = new FormData();
+      formData.append('title', materialData.title);
+      formData.append('description', materialData.description || '');
+      formData.append('type', materialData.type);
+      if (materialData.chapterId) {
+        formData.append('chapterId', materialData.chapterId);
+      }
+      formData.append('file', materialData.file);
+      
+      // 修改请求头，让axios自动处理Content-Type
+      const config = {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      };
+      
+      const response = await api.post('/materials', formData, config);
+      return response.data;
+    } else {
+      // 如果没有文件，按照原来的方式处理
+      const response = await api.post('/materials', materialData);
+      return response.data;
+    }
+  },
+
+  updateMaterial: async (id: string, materialData: any) => {
+    const response = await api.put(`/materials/${id}`, materialData);
+    return response.data;
+  },
+
+  deleteMaterial: async (id: string) => {
+    const response = await api.delete(`/materials/${id}`);
+    return response.data;
+  },
+};
+
+// 学习记录相关
+export const learningRecordAPI = {
+  getLearningRecords: async (params?: { courseId?: string; studentId?: string }) => {
+    const response = await api.get('/learning-records', { params });
+    return response.data;
+  },
+
+  createLearningRecord: async (recordData: Partial<LearningRecord>) => {
+    const response = await api.post('/learning-records', recordData);
+    return response.data;
+  },
+
+  updateLearningRecord: async (id: string, recordData: Partial<LearningRecord>) => {
+    const response = await api.put(`/learning-records/${id}`, recordData);
+    return response.data;
+  },
+
+  deleteLearningRecord: async (id: string) => {
+    const response = await api.delete(`/learning-records/${id}`);
+    return response.data;
+  },
+};
+
+// 通知相关
+export const notificationAPI = {
+  getNotifications: async (params?: { page?: number; limit?: number; isRead?: boolean }) => {
+    const response = await api.get('/notifications', { params });
+    return response.data;
+  },
+
+  createNotification: async (notificationData: any) => {
+    const response = await api.post('/notifications', notificationData);
+    return response.data;
+  },
+
+  markAsRead: async (id: string) => {
+    const response = await api.put(`/notifications/${id}/read`);
+    return response.data;
+  },
+
+  markAllAsRead: async () => {
+    const response = await api.put('/notifications/read-all');
+    return response.data;
+  },
+
+  deleteNotification: async (id: string) => {
+    const response = await api.delete(`/notifications/${id}`);
+    return response.data;
+  },
+};
+
+export default api;
