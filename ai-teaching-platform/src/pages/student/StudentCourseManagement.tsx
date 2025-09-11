@@ -64,7 +64,10 @@ const StudentCourseManagement: React.FC = () => {
   const [page, setPage] = useState(1);
   const itemsPerPage = 6;
   const [myCourses, setMyCourses] = useState<Course[]>([]);
-  const [allCourses, setAllCourses] = useState<Course[]>([]); // 添加所有课程的状态
+  const [allCourses, setAllCourses] = useState<Course[]>([]); // 所有课程的状态
+  
+  // 判断当前是"我的课程"还是"加入课程"页面
+  const isExploreMode = location.pathname === '/student/courses/explore';
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -227,10 +230,13 @@ const StudentCourseManagement: React.FC = () => {
     return colorMap[level] || 'default';
   };
 
-  const filteredCourses = allCourses; // 使用所有课程进行过滤
+  // 根据当前模式选择要显示的课程
+  // 在加入课程页面显示所有可加入的课程（包括已加入的，但会特殊标记）
+  const baseCourses = isExploreMode ? allCourses : myCourses;
   
-  const displayCourses = filteredCourses
+  const displayCourses = baseCourses
     .filter(course => {
+      // 筛选逻辑保持不变
       const matchesSearch = course.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
                            course.instructor.toLowerCase().includes(searchTerm.toLowerCase()) ||
                            course.description.toLowerCase().includes(searchTerm.toLowerCase());
@@ -305,7 +311,7 @@ const StudentCourseManagement: React.FC = () => {
     // 不再需要此功能
   };
 
-  const totalPages = Math.ceil(filteredCourses.length / itemsPerPage);
+  const totalPages = Math.ceil(baseCourses.length / itemsPerPage);
 
   if (loading) {
     return (
@@ -350,19 +356,21 @@ const StudentCourseManagement: React.FC = () => {
 
       <Box sx={{ mb: 4 }}>
         <Typography variant="h4" component="h1" gutterBottom>
-          课程中心
+          {isExploreMode ? '加入课程' : '我的课程'}
         </Typography>
         
-        {/* 标签切换 - 只保留我的课程 */}
-        <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
-          <Box sx={{ display: 'flex', gap: 2 }}>
-            <Button
-              variant="contained"
-            >
-              所有课程
-            </Button>
+        {/* 标签切换 - 根据模式显示不同内容 */}
+        {!isExploreMode && (
+          <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
+            <Box sx={{ display: 'flex', gap: 2 }}>
+              <Button
+                variant="contained"
+              >
+                所有课程
+              </Button>
+            </Box>
           </Box>
-        </Box>
+        )}
 
         {/* 搜索和筛选 */}
         <Box sx={{ display: 'flex', gap: 2, mb: 3, flexWrap: 'wrap' }}>
@@ -424,14 +432,25 @@ const StudentCourseManagement: React.FC = () => {
                     />
                     <CardContent sx={{ flexGrow: 1 }}>
                       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
-                        <Typography variant="h6" component="h2" noWrap>
-                          {course.title}
-                        </Typography>
-                        <Chip 
-                          label={getLevelText(course.level)} 
-                          size="small" 
-                          color={getLevelColor(course.level)}
-                        />
+                        <Box sx={{ position: 'relative' }}>
+                          <Typography variant="h6" component="h2" noWrap>
+                            {course.title}
+                          </Typography>
+                          {isExploreMode && course.enrolled && (
+                            <Chip 
+                              label="已加入" 
+                              size="small" 
+                              color="success" 
+                              sx={{ position: 'absolute', top: 0, right: 0, bgcolor: '#4CAF50', color: 'white' }}
+                            />
+                          )}
+                          <Chip 
+                            label={getLevelText(course.level)} 
+                            size="small" 
+                            color={getLevelColor(course.level)}
+                            sx={{ marginTop: isExploreMode && course.enrolled ? 1 : 0 }}
+                          />
+                        </Box>
                       </Box>
                       
                       <Typography variant="body2" color="textSecondary" gutterBottom>
@@ -486,7 +505,29 @@ const StudentCourseManagement: React.FC = () => {
                         <AccessTime sx={{ fontSize: 16, mr: 0.5 }} />
                         {course.duration}小时
                       </Typography>
-                      {course.enrolled ? (
+                      {isExploreMode ? (
+                        // 在加入课程页面，显示不同的按钮状态
+                        course.enrolled ? (
+                          <Button
+                            size="small"
+                            variant="contained"
+                            startIcon={<PlayCircle />}
+                            onClick={() => handleStartLearning(course.id)}
+                          >
+                            进入学习
+                          </Button>
+                        ) : (
+                          <Button
+                            size="small"
+                            variant="outlined"
+                            startIcon={<School />}
+                            onClick={() => handleEnrollCourse(course.id)}
+                          >
+                            加入学习
+                          </Button>
+                        )
+                      ) : (
+                        // 在我的课程页面，只显示进入学习按钮
                         <Button
                           size="small"
                           variant="contained"
@@ -494,15 +535,6 @@ const StudentCourseManagement: React.FC = () => {
                           onClick={() => handleStartLearning(course.id)}
                         >
                           进入学习
-                        </Button>
-                      ) : (
-                        <Button
-                          size="small"
-                          variant="outlined"
-                          startIcon={<School />}
-                          onClick={() => handleEnrollCourse(course.id)}
-                        >
-                          加入学习
                         </Button>
                       )}
                     </CardActions>

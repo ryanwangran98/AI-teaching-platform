@@ -39,6 +39,7 @@ AI融合教学平台前端采用React+TypeScript+Ant Design架构，使用React 
 |---------|---------|---------|------|
 | `/student/dashboard` | 学生仪表盘 | `src/pages/student/Dashboard.tsx` | 学生个人中心和学习概览 |
 | `/student/courses` | 我的课程 | `src/pages/student/Courses.tsx` | 学生已选课程列表 |
+| `/student/courses/explore` | 加入课程 | `src/pages/student/Courses.tsx` | 浏览并加入可学习的课程 |
 | `/student/courses/:courseId` | 课程详情 | `src/pages/student/CourseDetail.tsx` | 课程详细内容和学习进度 |
 | `/student/assignments` | 我的作业 | `src/pages/student/Assignments.tsx` | 作业列表和完成情况 |
 | `/student/assignments/:id` | 做作业 | `src/pages/student/DoAssignment.tsx` | 完成并提交作业的页面 |
