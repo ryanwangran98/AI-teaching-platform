@@ -309,13 +309,21 @@ const CoursewareManagement: React.FC = () => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
+  // 构建完整的文件URL用于预览
+  const getFullFileUrl = (fileUrl: string): string => {
+    if (!fileUrl) return '';
+    return fileUrl.startsWith('http') ? fileUrl : `http://localhost:3001${fileUrl}`;
+  };
+
   const handlePreview = (fileUrl: string) => {
-    window.open(fileUrl, '_blank');
+    const fullUrl = getFullFileUrl(fileUrl);
+    window.open(fullUrl, '_blank');
   };
 
   const handleDownload = (fileUrl: string, fileName: string) => {
+    const fullUrl = getFullFileUrl(fileUrl);
     const link = document.createElement('a');
-    link.href = fileUrl;
+    link.href = fullUrl;
     link.download = fileName;
     document.body.appendChild(link);
     link.click();
