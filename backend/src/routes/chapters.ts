@@ -43,16 +43,36 @@ router.get('/', async (req, res) => {
         },
         _count: {
           select: {
-            knowledgePoints: true
+            knowledgePoints: true,
+            materials: true,
+            courseware: true
           }
         }
       },
       orderBy: { order: 'asc' }
     });
 
+    // 添加作业计数
+    const chaptersWithCounts = await Promise.all(chapters.map(async (chapter) => {
+      const assignmentsCount = await prisma.assignment.count({
+        where: {
+          knowledgePoint: {
+            chapterId: chapter.id
+          }
+        }
+      });
+      
+      return {
+        ...chapter,
+        materialsCount: chapter._count.materials || 0,
+        coursewareCount: chapter._count.courseware || 0,
+        assignmentsCount: assignmentsCount || 0
+      };
+    }));
+
     res.json({
       success: true,
-      data: chapters
+      data: chaptersWithCounts
     });
   } catch (error) {
     res.status(500).json({ error: 'Server error' });

@@ -18,6 +18,8 @@ import NotificationManagement from './pages/teacher/NotificationManagement';
 import KnowledgePointManagement from './pages/teacher/KnowledgePointManagement';
 import QuestionBankManagement from './pages/teacher/QuestionBankManagement';
 import AssignmentManagement from './pages/teacher/AssignmentManagement';
+import AssignmentGrading from './pages/teacher/AssignmentGrading';
+import QuestionBank from './pages/teacher/QuestionBank';
 import TeacherCourseManagement from './pages/teacher/TeacherCourseManagement';
 import CreateCourse from './pages/teacher/CreateCourse';
 import ResourceManagement from './pages/teacher/ResourceManagement';
@@ -115,6 +117,8 @@ function App() {
         <Route path="knowledge-points" element={<KnowledgePointManagement />} />
         <Route path="questions" element={<QuestionBankManagement />} />
         <Route path="assignments" element={<AssignmentManagement />} />
+        <Route path="assignments/:assignmentId/questions" element={<QuestionBank />} />
+        <Route path="assignments/:assignmentId/grading" element={<AssignmentGrading />} />
       </Route>
 
       {/* 学生端路由 */}

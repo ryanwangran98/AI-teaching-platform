@@ -26,8 +26,6 @@ import {
   Grid,
   Card,
   CardContent,
-  Tabs,
-  Tab,
 } from '@mui/material';
 import {
   Add,
@@ -37,6 +35,8 @@ import {
   Search,
   Link,
   ArrowBack,
+  Check,
+  Close,
 } from '@mui/icons-material';
 import { useNavigate, useParams } from 'react-router-dom';
 import { questionAPI, chapterAPI, knowledgePointAPI } from '../../services/api';
@@ -70,39 +70,6 @@ interface Question {
   };
 }
 
-interface TabPanelProps {
-  children?: React.ReactNode;
-  index: number;
-  value: number;
-}
-
-function TabPanel(props: TabPanelProps) {
-  const { children, value, index, ...other } = props;
-
-  return (
-    <div
-      role="tabpanel"
-      hidden={value !== index}
-      id={`simple-tabpanel-${index}`}
-      aria-labelledby={`simple-tab-${index}`}
-      {...other}
-    >
-      {value === index && (
-        <Box sx={{ p: 3 }}>
-          {children}
-        </Box>
-      )}
-    </div>
-  );
-}
-
-function a11yProps(index: number) {
-  return {
-    id: `simple-tab-${index}`,
-    'aria-controls': `simple-tabpanel-${index}`,
-  };
-}
-
 const QuestionBankManagement: React.FC = () => {
   const navigate = useNavigate();
   const params = useParams();
@@ -110,14 +77,16 @@ const QuestionBankManagement: React.FC = () => {
   const [questions, setQuestions] = useState<Question[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [tabValue, setTabValue] = useState(0);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedType, setSelectedType] = useState('');
   const [selectedDifficulty, setSelectedDifficulty] = useState('');
   const [selectedChapter, setSelectedChapter] = useState('');
   const [selectedKnowledgePoint, setSelectedKnowledgePoint] = useState('');
 
-  
+  // 添加状态来跟踪正在编辑状态的题目ID
+  const [editingStatusQuestionId, setEditingStatusQuestionId] = useState<string | null>(null);
+  const [newStatus, setNewStatus] = useState<'draft' | 'published' | 'archived'>('draft');
+
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [editingQuestion, setEditingQuestion] = useState<Question | null>(null);
   const [chapters, setChapters] = useState<Array<{id: string, title: string}>>([]);
@@ -135,7 +104,8 @@ const QuestionBankManagement: React.FC = () => {
     correctAnswer: '',
     explanation: '',
     selectedChapterId: '',
-    knowledgePointId: ''
+    knowledgePointId: '',
+    status: 'draft' as 'draft' | 'published' | 'archived'
   });
 
   useEffect(() => {
@@ -214,10 +184,6 @@ const QuestionBankManagement: React.FC = () => {
     }
   };
 
-  const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
-    setTabValue(newValue);
-  };
-
   const handleCreate = () => {
     setCreateDialogOpen(true);
   };
@@ -235,7 +201,8 @@ const QuestionBankManagement: React.FC = () => {
       correctAnswer: '',
       explanation: '',
       selectedChapterId: '',
-      knowledgePointId: ''
+      knowledgePointId: '',
+      status: 'draft'
     });
     setFilteredKnowledgePoints(knowledgePoints);
   };
@@ -265,8 +232,17 @@ const QuestionBankManagement: React.FC = () => {
             break;
           case 'multiple_choice':
             // 多选题答案应该是A-Z字母的组合，用逗号分隔
-            if (!/^[A-Z](,[A-Z])*$/.test(createForm.correctAnswer)) {
-              errorMessage = '多选题的正确答案应为大写字母组合，用逗号分隔（如：A,B,C）';
+            // 过滤掉空字符串并检查格式
+            const answers = createForm.correctAnswer.split(',').filter(Boolean);
+            if (answers.length === 0) {
+              errorMessage = '请至少选择一个正确答案';
+            } else {
+              // 检查每个答案是否符合格式
+              const invalidAnswer = answers.some(answer => !/^[A-Z]$/.test(answer));
+              if (invalidAnswer) {
+                errorMessage = '多选题的正确答案应为大写字母组合，用逗号分隔（如：A,B,C）';
+              }
+              break;
             }
             break;
           case 'true_false':
@@ -307,18 +283,25 @@ const QuestionBankManagement: React.FC = () => {
         return;
       }
 
+      // 处理选项数据，过滤掉空选项
+      let processedOptions = undefined;
+      if (createForm.type === 'single_choice' || createForm.type === 'multiple_choice') {
+        if (Array.isArray(createForm.options)) {
+          processedOptions = createForm.options.filter(o => o && o.trim() !== '');
+        }
+      }
+
       const newQuestion = {
         title: createForm.title,
         content: createForm.content,
         type: createForm.type,
         difficulty: createForm.difficulty,
         points: createForm.points,
-        options: createForm.type === 'single_choice' || createForm.type === 'multiple_choice' 
-          ? (Array.isArray(createForm.options) ? createForm.options.filter(o => o && o.trim() !== '') : [])
-          : undefined,
+        options: processedOptions,
         correctAnswer: createForm.correctAnswer,
         explanation: createForm.explanation,
-        knowledgePointId: createForm.knowledgePointId
+        knowledgePointId: createForm.knowledgePointId,
+        status: createForm.status
       };
 
       if (editingQuestion) {
@@ -360,7 +343,8 @@ const QuestionBankManagement: React.FC = () => {
       correctAnswer: question.correctAnswer,
       explanation: question.explanation,
       selectedChapterId: selectedChapterId,
-      knowledgePointId: question.knowledgePointId || ''
+      knowledgePointId: question.knowledgePointId || '',
+      status: question.status || 'draft'
     });
     
     // 设置章节后筛选知识点
@@ -450,6 +434,20 @@ const QuestionBankManagement: React.FC = () => {
     }
   }, []);
 
+  // 添加更新题目状态的函数
+  const handleUpdateStatus = useCallback(async (id: string, status: 'draft' | 'published' | 'archived') => {
+    try {
+      await questionAPI.updateQuestion(id, { status });
+      setQuestions(prevQuestions => 
+        prevQuestions.map(q => q.id === id ? { ...q, status } : q)
+      );
+      setEditingStatusQuestionId(null);
+    } catch (error) {
+      console.error('更新题目状态失败:', error);
+      setError('更新题目状态失败，请稍后重试');
+    }
+  }, []);
+
   const getTypeLabel = (type: string) => {
     switch (type) {
       case 'single_choice': return '单选题';
@@ -510,33 +508,17 @@ const QuestionBankManagement: React.FC = () => {
     }
   };
 
-  const filteredQuestions = questions.filter(question => {
-    const matchesSearch = question.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           question.content.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesType = !selectedType || question.type === selectedType;
-    const matchesDifficulty = !selectedDifficulty || question.difficulty === selectedDifficulty;
-    const matchesChapter = !selectedChapter || question.knowledgePoint?.chapter?.id === selectedChapter;
-    const matchesKnowledgePoint = !selectedKnowledgePoint || question.knowledgePointId === selectedKnowledgePoint;
-    return matchesSearch && matchesType && matchesDifficulty && matchesChapter && matchesKnowledgePoint;
-  });
-
-  // 修改getQuestionsByType函数，使用useMemo优化
-  const getQuestionsByType = useCallback((type: string) => {
-    if (type === 'all') {
-      return filteredQuestions;
-    }
-    return filteredQuestions.filter(q => q.type === type);
-  }, [filteredQuestions]);
-  
-  // 同时修改questionTypes的计算方式
-  const questionTypes = useMemo(() => [
-    { type: 'single_choice', label: '单选题', count: getQuestionsByType('single_choice').length },
-    { type: 'multiple_choice', label: '多选题', count: getQuestionsByType('multiple_choice').length },
-    { type: 'true_false', label: '判断题', count: getQuestionsByType('true_false').length },
-    { type: 'fill_blank', label: '填空题', count: getQuestionsByType('fill_blank').length },
-    { type: 'short_answer', label: '简答题', count: getQuestionsByType('short_answer').length },
-    { type: 'essay', label: '论述题', count: getQuestionsByType('essay').length },
-  ], [getQuestionsByType]);
+  const filteredQuestions = useMemo(() => {
+    return questions.filter(question => {
+      const matchesSearch = question.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                            question.content.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesType = !selectedType || question.type === selectedType;
+      const matchesDifficulty = !selectedDifficulty || question.difficulty === selectedDifficulty;
+      const matchesChapter = !selectedChapter || question.knowledgePoint?.chapter?.id === selectedChapter;
+      const matchesKnowledgePoint = !selectedKnowledgePoint || question.knowledgePointId === selectedKnowledgePoint;
+      return matchesSearch && matchesType && matchesDifficulty && matchesChapter && matchesKnowledgePoint;
+    });
+  }, [questions, searchTerm, selectedType, selectedDifficulty, selectedChapter, selectedKnowledgePoint]);
 
   if (loading) {
     return (
@@ -620,7 +602,7 @@ const QuestionBankManagement: React.FC = () => {
                 总使用次数
               </Typography>
               <Typography variant="h4">
-                {questions.reduce((sum, q) => sum + q.usageCount, 0)}
+                {questions.reduce((sum, q) => sum + (q.usageCount || 0), 0)}
               </Typography>
             </CardContent>
           </Card>
@@ -689,222 +671,138 @@ const QuestionBankManagement: React.FC = () => {
 
       </Box>
 
-      <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 2 }}>
-        <Tabs value={tabValue} onChange={handleTabChange} aria-label="题目类型标签页">
-          <Tab label={`全部 (${questions.length})`} {...a11yProps(0)} />
-          {questionTypes.map((type, index) => (
-            <Tab 
-              key={type.type} 
-              label={`${type.label} (${type.count})`} 
-              {...a11yProps(index + 1)} 
-            />
-          ))}
-        </Tabs>
-      </Box>
-
-      <TabPanel value={tabValue} index={0}>
-        <TableContainer component={Paper}>
-          <Table>
-            <TableHead>
+      {/* 题目表格 */}
+      <TableContainer component={Paper}>
+        <Table>
+          <TableHead>
+            <TableRow>
+              <TableCell>题目标题</TableCell>
+              <TableCell>题型</TableCell>
+              <TableCell>难度</TableCell>
+              <TableCell>所属章节</TableCell>
+              <TableCell>关联知识点</TableCell>
+              <TableCell>分值</TableCell>
+              <TableCell>预估时间</TableCell>
+              <TableCell>状态</TableCell>
+              <TableCell>使用次数</TableCell>
+              <TableCell>创建时间</TableCell>
+              <TableCell>更新时间</TableCell>
+              <TableCell>操作</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {filteredQuestions.length === 0 ? (
               <TableRow>
-                <TableCell>题目标题</TableCell>
-                <TableCell>题型</TableCell>
-                <TableCell>难度</TableCell>
-                <TableCell>所属章节</TableCell>
-                <TableCell>关联知识点</TableCell>
-                <TableCell>分值</TableCell>
-                <TableCell>预估时间</TableCell>
-                <TableCell>状态</TableCell>
-                <TableCell>使用次数</TableCell>
-                <TableCell>创建时间</TableCell>
-                <TableCell>更新时间</TableCell>
-                <TableCell>操作</TableCell>
+                <TableCell colSpan={12} align="center">
+                  <Typography variant="body2" color="text.secondary">
+                    暂无题目数据
+                  </Typography>
+                </TableCell>
               </TableRow>
-            </TableHead>
-            <TableBody>
-              {filteredQuestions.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={12} align="center">
-                    <Typography variant="body2" color="text.secondary">
-                      暂无题目数据
-                    </Typography>
+            ) : (
+              filteredQuestions.map((question) => (
+                <TableRow key={question.id}>
+                  <TableCell>
+                    <Box>
+                      <Typography variant="body1" sx={{ fontWeight: 'bold' }}>
+                        {question.title}
+                      </Typography>
+                      <Typography variant="body2" color="textSecondary" sx={{ maxWidth: 200 }}>
+                        {question.content}
+                      </Typography>
+                    </Box>
                   </TableCell>
-                </TableRow>
-              ) : (
-                filteredQuestions.map((question) => (
-                  <TableRow key={question.id}>
-                    <TableCell>
-                      <Box>
-                        <Typography variant="body1" sx={{ fontWeight: 'bold' }}>
-                          {question.title}
-                        </Typography>
-                        <Typography variant="body2" color="textSecondary" sx={{ maxWidth: 200 }}>
-                          {question.content}
-                        </Typography>
+                  <TableCell>
+                    <Chip
+                      label={getTypeLabel(question.type)}
+                      color={getTypeColor(question.type) as any}
+                      size="small"
+                    />
+                  </TableCell>
+                  <TableCell>
+                    <Chip
+                      label={getDifficultyLabel(question.difficulty)}
+                      color={getDifficultyColor(question.difficulty) as any}
+                      size="small"
+                    />
+                  </TableCell>
+                  <TableCell>{question.knowledgePoint?.chapter?.title || '-'}</TableCell>
+                  <TableCell>{question.knowledgePoint?.title || '-'}</TableCell>
+                  <TableCell>{question.points}</TableCell>
+                  <TableCell>{question.estimatedTime}分钟</TableCell>
+                  <TableCell>
+                    {editingStatusQuestionId === question.id ? (
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Select
+                          value={newStatus}
+                          onChange={(e) => setNewStatus(e.target.value as 'draft' | 'published' | 'archived')}
+                          size="small"
+                          sx={{ minWidth: 100 }}
+                        >
+                          <MenuItem value="draft">草稿</MenuItem>
+                          <MenuItem value="published">已发布</MenuItem>
+                          <MenuItem value="archived">已归档</MenuItem>
+                        </Select>
+                        <IconButton 
+                          color="primary" 
+                          size="small"
+                          onClick={() => handleUpdateStatus(question.id, newStatus)}
+                        >
+                          <Check />
+                        </IconButton>
+                        <IconButton 
+                          color="secondary" 
+                          size="small"
+                          onClick={() => setEditingStatusQuestionId(null)}
+                        >
+                          <Close />
+                        </IconButton>
                       </Box>
-                    </TableCell>
-                    <TableCell>
-                      <Chip
-                        label={getTypeLabel(question.type)}
-                        color={getTypeColor(question.type) as any}
-                        size="small"
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <Chip
-                        label={getDifficultyLabel(question.difficulty)}
-                        color={getDifficultyColor(question.difficulty) as any}
-                        size="small"
-                      />
-                    </TableCell>
-                    <TableCell>{question.knowledgePoint?.chapter?.title || '-'}</TableCell>
-                    <TableCell>{question.knowledgePoint?.title || '-'}</TableCell>
-                    <TableCell>{question.points}</TableCell>
-                    <TableCell>{question.estimatedTime}分钟</TableCell>
-                    <TableCell>
+                    ) : (
                       <Chip
                         label={getStatusLabel(question.status)}
                         color={getStatusColor(question.status) as any}
                         size="small"
+                        onClick={() => {
+                          setEditingStatusQuestionId(question.id);
+                          setNewStatus(question.status);
+                        }}
+                        sx={{ cursor: 'pointer' }}
                       />
-                    </TableCell>
-                    <TableCell>{question.usageCount}</TableCell>
-                    <TableCell>
-                      {new Date(question.createdAt).toLocaleDateString('zh-CN')}
-                    </TableCell>
-                    <TableCell>
-                      {new Date(question.updatedAt).toLocaleDateString('zh-CN')}
-                    </TableCell>
-                    <TableCell>
-                      <IconButton color="primary" size="small">
-                        <Visibility />
-                      </IconButton>
-                      <IconButton 
-                        color="primary" 
-                        size="small"
-                        onClick={() => handleEdit(question)}
-                      >
-                        <Edit />
-                      </IconButton>
-                      <IconButton
-                        color="error"
-                        size="small"
-                        onClick={() => handleDelete(question.id)}
-                      >
-                        <Delete />
-                      </IconButton>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </TableContainer>
-      </TabPanel>
-
-      {questionTypes.map((type, index) => (
-        <TabPanel key={type.type} value={tabValue} index={index + 1}>
-          <TableContainer component={Paper}>
-            <Table>
-              <TableHead>
-                <TableRow>
-                  <TableCell>题目标题</TableCell>
-                  <TableCell>题型</TableCell>
-                  <TableCell>难度</TableCell>
-                  <TableCell>所属章节</TableCell>
-                  <TableCell>关联知识点</TableCell>
-                  <TableCell>分值</TableCell>
-                  <TableCell>预估时间</TableCell>
-                  <TableCell>状态</TableCell>
-                  <TableCell>使用次数</TableCell>
-                  <TableCell>创建时间</TableCell>
-                  <TableCell>更新时间</TableCell>
-                  <TableCell>操作</TableCell>
+                    )}
+                  </TableCell>
+                  <TableCell>{question.usageCount || 0}</TableCell>
+                  <TableCell>
+                    {new Date(question.createdAt).toLocaleDateString('zh-CN')}
+                  </TableCell>
+                  <TableCell>
+                    {new Date(question.updatedAt).toLocaleDateString('zh-CN')}
+                  </TableCell>
+                  <TableCell>
+                    <IconButton color="primary" size="small">
+                      <Visibility />
+                    </IconButton>
+                    <IconButton 
+                      color="primary" 
+                      size="small"
+                      onClick={() => handleEdit(question)}
+                    >
+                      <Edit />
+                    </IconButton>
+                    <IconButton
+                      color="error"
+                      size="small"
+                      onClick={() => handleDelete(question.id)}
+                    >
+                      <Delete />
+                    </IconButton>
+                  </TableCell>
                 </TableRow>
-              </TableHead>
-              <TableBody>
-                {getQuestionsByType(type.type).length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={12} align="center">
-                      <Typography variant="body2" color="text.secondary">
-                        暂无{type.label}数据
-                      </Typography>
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  getQuestionsByType(type.type).map((question) => (
-                    <TableRow key={question.id}>
-                      <TableCell>
-                        <Box>
-                          <Typography variant="body1" sx={{ fontWeight: 'bold' }}>
-                            {question.title}
-                          </Typography>
-                          <Typography variant="body2" color="textSecondary" sx={{ maxWidth: 200 }}>
-                            {question.content}
-                          </Typography>
-                        </Box>
-                      </TableCell>
-                      <TableCell>
-                        <Chip
-                          label={getTypeLabel(question.type)}
-                          color={getTypeColor(question.type) as any}
-                          size="small"
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <Chip
-                          label={getDifficultyLabel(question.difficulty)}
-                          color={getDifficultyColor(question.difficulty) as any}
-                          size="small"
-                        />
-                      </TableCell>
-                      <TableCell>{question.knowledgePoint?.chapter?.title || '-'}</TableCell>
-                      <TableCell>{question.knowledgePoint?.title || '-'}</TableCell>
-                      <TableCell>{question.points}</TableCell>
-                      <TableCell>{question.estimatedTime}分钟</TableCell>
-                      <TableCell>
-                        <Chip
-                          label={getStatusLabel(question.status)}
-                          color={getStatusColor(question.status) as any}
-                          size="small"
-                        />
-                      </TableCell>
-                      <TableCell>{question.usageCount}</TableCell>
-                      <TableCell>
-                        {new Date(question.createdAt).toLocaleDateString('zh-CN')}
-                      </TableCell>
-                      <TableCell>
-                        {new Date(question.updatedAt).toLocaleDateString('zh-CN')}
-                      </TableCell>
-                      <TableCell>
-                        <IconButton color="primary" size="small">
-                          <Visibility />
-                        </IconButton>
-                        <IconButton 
-                          color="primary" 
-                          size="small"
-                          onClick={() => handleEdit(question)}
-                        >
-                          <Edit />
-                        </IconButton>
-                        <IconButton
-                          color="error"
-                          size="small"
-                          onClick={() => handleDelete(question.id)}
-                        >
-                          <Delete />
-                        </IconButton>
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </TableContainer>
-        </TabPanel>
-      ))}
-
-
+              ))
+            )}
+          </TableBody>
+        </Table>
+      </TableContainer>
 
       {/* 创建题目对话框 */}
       <Dialog 
@@ -979,7 +877,7 @@ const QuestionBankManagement: React.FC = () => {
             <Typography variant="h6" color="primary" sx={{ mb: 2, fontWeight: 'bold' }}>
               题目属性
             </Typography>
-            
+
             <Box sx={{ display: 'flex', gap: 2, mb: 3 }}>
               <FormControl sx={{ flex: 1 }}>
                 <InputLabel id="type-label">题型</InputLabel>
@@ -1021,6 +919,20 @@ const QuestionBankManagement: React.FC = () => {
                 inputProps={{ min: 1, max: 100 }}
                 helperText="建议分值范围：1-100分"
               />
+              
+              <FormControl sx={{ flex: 1 }}>
+                <InputLabel id="status-label">状态</InputLabel>
+                <Select
+                  labelId="status-label"
+                  value={createForm.status}
+                  onChange={(e) => handleCreateFormChange('status', e.target.value)}
+                  label="状态"
+                >
+                  <MenuItem value="draft">草稿</MenuItem>
+                  <MenuItem value="published">已发布</MenuItem>
+                  <MenuItem value="archived">已归档</MenuItem>
+                </Select>
+              </FormControl>
             </Box>
 
             {/* 关联信息区域 */}
@@ -1143,13 +1055,13 @@ const QuestionBankManagement: React.FC = () => {
                   <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
                     {Array.isArray(createForm.options) && createForm.options.map((option, index) => {
                       const optionLetter = String.fromCharCode(65 + index);
-                      const isSelected = createForm.correctAnswer.split(',').includes(optionLetter);
+                      const isSelected = createForm.correctAnswer.split(',').filter(Boolean).includes(optionLetter);
                       return (
                         <Chip
                           key={optionLetter}
                           label={`${optionLetter}. ${option}`}
                           onClick={() => {
-                            const currentAnswers = createForm.correctAnswer.split(',');
+                            const currentAnswers = createForm.correctAnswer.split(',').filter(Boolean);
                             if (isSelected) {
                               // 取消选择
                               const newAnswers = currentAnswers.filter(ans => ans !== optionLetter);

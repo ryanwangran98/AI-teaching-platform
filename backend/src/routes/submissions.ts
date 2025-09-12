@@ -209,7 +209,7 @@ router.post('/', authenticateToken, authorizeRoles('STUDENT'), async (req: any, 
         assignmentId,
         userId: req.user!.id,
         score: totalScore,
-        status: 'GRADED',
+        status: 'SUBMITTED',
         submittedAt: new Date()
       },
       include: {

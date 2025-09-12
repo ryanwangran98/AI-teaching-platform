@@ -152,6 +152,7 @@ model Question {
   options          String?
   correctAnswer    String?
   explanation      String?
+  status           String         @default("draft")
   knowledgePointId String
   assignmentId     String?
   createdAt        DateTime       @default(now())

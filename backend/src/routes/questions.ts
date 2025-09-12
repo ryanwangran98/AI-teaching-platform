@@ -145,7 +145,8 @@ router.post('/', authenticateToken, authorizeRoles('TEACHER', 'ADMIN'), async (r
       difficulty,
       points,
       assignmentId,
-      knowledgePointId
+      knowledgePointId,
+      status
     } = req.body;
 
     if (!title || !type || !content || !correctAnswer || !knowledgePointId) {
@@ -185,7 +186,8 @@ router.post('/', authenticateToken, authorizeRoles('TEACHER', 'ADMIN'), async (r
         points: points || 1,
         assignmentId: assignmentId || null,
         knowledgePointId: knowledgePointId,
-        teacherId: req.user!.id
+        teacherId: req.user!.id,
+        status: status || 'draft'
       },
       include: {
         assignment: {
@@ -335,10 +337,15 @@ router.put('/:id', authenticateToken, authorizeRoles('TEACHER', 'ADMIN'), async 
     }
 
     // 处理options字段转换
-    const processedData = {
+    const processedData: any = {
       ...updateData,
       options: updateData.options ? JSON.stringify(updateData.options) : null
     };
+
+    // 确保status字段正确处理
+    if (updateData.status) {
+      processedData.status = updateData.status;
+    }
 
     const updatedQuestion = await prisma.question.update({
       where: { id },

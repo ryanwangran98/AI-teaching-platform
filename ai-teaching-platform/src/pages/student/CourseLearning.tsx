@@ -83,6 +83,9 @@ interface Assignment {
   totalPoints: number;
   status: 'pending' | 'submitted' | 'graded';
   score?: number;
+  // 添加提交相关字段
+  userSubmissionStatus?: 'pending' | 'submitted' | 'graded';
+  userScore?: number;
 }
 
 const CourseLearning: React.FC = () => {
@@ -130,26 +133,57 @@ const CourseLearning: React.FC = () => {
         }
       }
       
-      // 处理作业数据 - 增加更详细的处理逻辑
+      // 处理作业数据 - 优化数据提取逻辑
       let assignmentsData = [];
       if (assignmentsResponse && typeof assignmentsResponse === 'object') {
-        // 检查是否是分页数据结构
-        if (assignmentsResponse.data && assignmentsResponse.data.assignments) {
+        console.log('作业响应结构:', JSON.stringify(assignmentsResponse).substring(0, 200) + '...');
+        
+        // 首先检查标准API响应格式
+        if (assignmentsResponse.success && assignmentsResponse.data) {
+          // 检查是否是分页数据结构
+          if (assignmentsResponse.data.assignments && Array.isArray(assignmentsResponse.data.assignments)) {
+            assignmentsData = assignmentsResponse.data.assignments;
+            console.log('从标准API分页响应中提取的作业数据:', assignmentsData.length);
+          } else if (Array.isArray(assignmentsResponse.data)) {
+            assignmentsData = assignmentsResponse.data;
+            console.log('从data数组中提取的作业数据:', assignmentsData.length);
+          }
+        } 
+        // 直接从data.assignments获取（主要修复点）
+        else if (assignmentsResponse.data && assignmentsResponse.data.assignments && Array.isArray(assignmentsResponse.data.assignments)) {
           assignmentsData = assignmentsResponse.data.assignments;
-          console.log('从分页结构中提取的作业数据:', assignmentsData);
-        } else if (Array.isArray(assignmentsResponse)) {
+          console.log('从嵌套结构中提取的作业数据:', assignmentsData.length);
+        } 
+        // 兼容其他可能的数据结构
+        else if (Array.isArray(assignmentsResponse)) {
           assignmentsData = assignmentsResponse;
+          console.log('直接使用数组响应:', assignmentsData.length);
         } else if (Array.isArray(assignmentsResponse.data)) {
           assignmentsData = assignmentsResponse.data;
+          console.log('从data属性提取的数组:', assignmentsData.length);
         } else {
           console.log('无法识别的作业数据结构:', assignmentsResponse);
         }
       }
       
+      // 确保只显示已发布的作业（学生端）
+      // 修复：使用更宽松的条件检查作业状态
+      assignmentsData = assignmentsData.filter((assignment: any) => {
+        // 允许PUBLISHED/published状态的作业，或者没有明确状态的作业（默认视为已发布）
+        const status = assignment.status?.toString().toLowerCase();
+        console.log('作业状态检查:', { id: assignment.id, title: assignment.title, status });
+        return status === 'published' || status === 'PUBLISHED' || status === undefined || status === null || status === '';
+      });
+      console.log('筛选后已发布的作业数量:', assignmentsData.length);
+      
       // 记录处理后的作业数据
       console.log('处理后的作业数据:', assignmentsData);
       console.log('作业数量:', assignmentsData.length);
       
+      // 获取当前用户信息
+      const userInfo = JSON.parse(localStorage.getItem('user') || '{}');
+      const currentUserId = userInfo.id;
+
       // 构建课程对象
       const courseObj: Course = {
         id: courseData.id,
@@ -189,21 +223,37 @@ const CourseLearning: React.FC = () => {
             resources: [], // 需要从资料/课件中获取
           };
         }),
-        assignments: assignmentsData.map((assignment: any) => ({
-          id: assignment.id,
-          title: assignment.title || '未命名作业',
-          type: assignment.type.toLowerCase() === 'homework' ? 'homework' : 
-                assignment.type.toLowerCase() === 'quiz' ? 'quiz' : 
-                assignment.type.toLowerCase() === 'exam' ? 'exam' :
-                assignment.type.toLowerCase() === 'project' ? 'project' : assignment.type,
-          dueDate: assignment.dueDate || assignment.endTime || '',
-          totalPoints: assignment.totalPoints || assignment.totalScore || 0,
-          totalScore: assignment.totalScore || assignment.totalPoints || 0, // 与教师端字段名保持一致
-          status: assignment.status === 'pending' ? 'pending' :
-                  assignment.status === 'submitted' ? 'submitted' :
-                  assignment.status === 'graded' ? 'graded' : 'pending',
-          score: assignment.score,
-        })),
+        assignments: assignmentsData.map((assignment: any) => {
+          // 找到当前用户的提交记录
+          const userSubmission = assignment.submissions && assignment.submissions.length > 0 
+            ? assignment.submissions.find((sub: any) => sub.userId === currentUserId)
+            : null;
+
+          return {
+            id: assignment.id,
+            title: assignment.title || '未命名作业',
+            type: assignment.type.toLowerCase() === 'homework' ? 'homework' : 
+                  assignment.type.toLowerCase() === 'quiz' ? 'quiz' : 
+                  assignment.type.toLowerCase() === 'exam' ? 'exam' :
+                  assignment.type.toLowerCase() === 'project' ? 'project' : assignment.type,
+            dueDate: assignment.dueDate || assignment.endTime || '',
+            totalPoints: assignment.totalPoints || assignment.totalScore || 0,
+            totalScore: assignment.totalScore || assignment.totalPoints || 0, // 与教师端字段名保持一致
+            // 简化状态判断逻辑，确保状态显示准确
+            status: userSubmission 
+              ? (userSubmission.status?.toUpperCase() === 'GRADED')
+                ? 'graded' 
+                : 'submitted'
+              : 'pending',
+            score: userSubmission ? userSubmission.score : undefined,
+            userSubmissionStatus: userSubmission 
+              ? (userSubmission.status === 'GRADED' && (userSubmission.gradedAt !== null || userSubmission.feedback !== null || userSubmission.score !== 0))
+                ? 'graded' 
+                : 'submitted'
+              : 'pending',
+            userScore: userSubmission ? userSubmission.score : undefined,
+          };
+        }),
       };
       
       setCourse(courseObj);

@@ -25,11 +25,21 @@ router.get('/', authenticateToken, async (req: any, res) => {
 
     // 对学生角色，只返回已发布的作业
     if (req.user!.role === 'STUDENT') {
-      where.status = 'PUBLISHED';
+      // 修复：确保状态过滤正确处理大小写，支持多种格式
+      where.status = {
+        in: ['PUBLISHED', 'published']
+      };
+      console.log('学生角色，只返回已发布的作业');
     } else if (status) {
       // 对教师或管理员角色，可以根据传入的status参数过滤
       where.status = status as string;
+      console.log('教师或管理员角色，根据status参数过滤:', status);
+    } else if (req.user!.role !== 'STUDENT') {
+      // 教师或管理员默认返回所有状态的作业
+      console.log('教师或管理员角色，返回所有状态的作业');
     }
+
+    console.log('查询条件:', where);
 
     if (knowledgePointId) where.knowledgePointId = knowledgePointId as string;
     if (type) where.type = type as string;
@@ -42,24 +52,43 @@ router.get('/', authenticateToken, async (req: any, res) => {
       };
     }
 
+    // 调试日志
+    console.log('查询作业条件:', JSON.stringify(where, null, 2));
+    
+    // 根据用户角色决定是否包含提交信息
+    const include: any = {
+      knowledgePoint: {
+        include: {
+          chapter: {
+            include: {
+              course: true
+            }
+          }
+        }
+      },
+      questions: true // 包含关联的题目
+    };
+
+    // 如果是学生，包含提交信息
+    if (req.user!.role === 'STUDENT') {
+      include.submissions = {
+        where: {
+          userId: req.user!.id
+        }
+      };
+    }
+
     const assignments = await prisma.assignment.findMany({
       where,
       skip,
       take: Number(limit),
-      include: {
-        knowledgePoint: {
-          include: {
-            chapter: {
-              include: {
-                course: true
-              }
-            }
-          }
-        },
-        questions: true // 包含关联的题目
-      },
+      include,
       orderBy: { createdAt: 'desc' }
     });
+
+    // 调试日志
+    console.log('查询到的作业数量:', assignments.length);
+    console.log('作业数据:', JSON.stringify(assignments.slice(0, 2), null, 2));
 
     const total = await prisma.assignment.count({ where });
 
@@ -82,41 +111,53 @@ router.get('/', authenticateToken, async (req: any, res) => {
 });
 
 // 获取单个作业详情
-router.get('/:id', async (req, res) => {
+router.get('/:id', authenticateToken, async (req: any, res) => {
   try {
     const { id } = req.params;
 
-    const assignment = await prisma.assignment.findUnique({
-      where: { id },
-      include: {
-        knowledgePoint: {
-          include: {
-            chapter: {
-              include: {
-                course: true
-              }
+    // 构建包含信息的对象
+    const include: any = {
+      knowledgePoint: {
+        include: {
+          chapter: {
+            include: {
+              course: true
             }
           }
-        },
-        questions: {
-          select: {
-            id: true,
-            title: true,
-            content: true,
-            type: true,
-            difficulty: true,
-            points: true,
-            options: true,
-            correctAnswer: true,
-            explanation: true,
-            knowledgePointId: true,
-            assignmentId: true,
-            createdAt: true,
-            updatedAt: true,
-            teacherId: true
-          }
-        } // 包含关联的题目及题目内容
+        }
+      },
+      questions: {
+        select: {
+          id: true,
+          title: true,
+          content: true,
+          type: true,
+          difficulty: true,
+          points: true,
+          options: true,
+          correctAnswer: true,
+          explanation: true,
+          knowledgePointId: true,
+          assignmentId: true,
+          createdAt: true,
+          updatedAt: true,
+          teacherId: true
+        }
       }
+    };
+
+    // 如果是学生，包含该学生的提交信息
+    if (req.user!.role === 'STUDENT') {
+      include.submissions = {
+        where: {
+          userId: req.user!.id
+        }
+      };
+    }
+
+    const assignment = await prisma.assignment.findUnique({
+      where: { id },
+      include
     });
 
     if (!assignment) {
@@ -236,7 +277,7 @@ router.post('/', authenticateToken, authorizeRoles('TEACHER', 'ADMIN'), async (r
         knowledgePointId: String(knowledgePointId),
         dueDate: dueDate ? new Date(dueDate) : undefined,
         totalPoints: totalPoints ? Number(totalPoints) : 100,
-        status: 'DRAFT',
+        status: 'DRAFT', // 默认状态为草稿
         teacherId: req.user!.id,
         questions: {
           connect: validQuestionIds.map(id => ({ id }))
@@ -526,7 +567,8 @@ router.post('/:id/submit', authenticateToken, authorizeRoles('STUDENT'), upload.
           userId: req.user!.id,
           content: JSON.stringify(answers), // 保存答案数据
           score: totalScore,
-          status: 'GRADED',
+          // 修复：提交后状态应为SUBMITTED而不是GRADED
+          status: 'SUBMITTED',
           submittedAt: new Date()
         },
         include: {

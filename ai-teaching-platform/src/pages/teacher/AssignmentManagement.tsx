@@ -23,8 +23,6 @@ import {
   Paper,
   CircularProgress,
   Alert,
-  Tabs,
-  Tab,
   Switch,
   FormControlLabel,
   Grid,
@@ -39,9 +37,12 @@ import {
   ExpandMore,
   ExpandLess,
   ArrowBack,
+  Send,
+  Cancel,
+  Assignment,
 } from '@mui/icons-material';
 import { useNavigate, useParams } from 'react-router-dom';
-import { assignmentAPI, questionAPI, chapterAPI, knowledgePointAPI } from '../../services/api';
+import { assignmentAPI, chapterAPI, knowledgePointAPI } from '../../services/api';
 
 
 interface Assignment {
@@ -77,7 +78,6 @@ interface Assignment {
     averageScore: number;
     passRate: number;
   };
-  questions?: Question[]; // 添加题目列表
 }
 
 // 添加章节和知识点接口
@@ -96,43 +96,6 @@ interface KnowledgePoint {
   chapterId: string;
 }
 
-// 添加题目接口
-interface Question {
-  id: string;
-  title: string;
-  content: string;
-  type: string;
-  difficulty: string;
-  points: number;
-  selected?: boolean; // 用于标记是否选中
-}
-
-interface TabPanelProps {
-  children?: React.ReactNode;
-  index: number;
-  value: number;
-}
-
-function TabPanel(props: TabPanelProps) {
-  const { children, value, index, ...other } = props;
-
-  return (
-    <div
-      role="tabpanel"
-      hidden={value !== index}
-      id={`simple-tabpanel-${index}`}
-      aria-labelledby={`simple-tab-${index}`}
-      {...other}
-    >
-      {value === index && (
-        <Box sx={{ p: 3 }}>
-          <Typography>{children}</Typography>
-        </Box>
-      )}
-    </div>
-  );
-}
-
 const AssignmentManagement: React.FC = () => {
   const navigate = useNavigate();
   const params = useParams();
@@ -140,9 +103,8 @@ const AssignmentManagement: React.FC = () => {
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [tabValue, setTabValue] = useState(0);
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedType, setSelectedType] = '';
+  const [selectedType, setSelectedType] = useState('');
 
   // 添加章节和知识点状态
   const [chapters, setChapters] = useState<Chapter[]>([]);
@@ -167,23 +129,8 @@ const AssignmentManagement: React.FC = () => {
     courseId: '',
     chapterId: '',
     knowledgePointId: '',
-    questions: [] as string[], // 存储选中的题目ID
+    status: 'draft' as 'draft' | 'published' | 'grading' | 'completed',
   });
-
-  // 添加题目相关的状态
-  const [questions, setQuestions] = useState<Question[]>([]);
-  const [selectedQuestions, setSelectedQuestions] = useState<string[]>([]);
-  const [questionSearchTerm, setQuestionSearchTerm] = useState('');
-  const [showQuestionSelector, setShowQuestionSelector] = useState(false);
-  
-  // 添加缺少的函数
-  const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
-    setTabValue(newValue);
-  };
-
-  // 获取URL中的课程ID
-  const urlParams = new URLSearchParams(window.location.search);
-  const courseIdFromUrl = urlParams.get('course');
 
   useEffect(() => {
     fetchAssignments();
@@ -194,10 +141,10 @@ const AssignmentManagement: React.FC = () => {
   // 当章节改变时，过滤知识点
   useEffect(() => {
     if (formData.chapterId) {
-      const filtered = knowledgePoints.filter(kp => kp.chapterId === formData.chapterId);
+      const filtered = knowledgePoints.filter((kp: KnowledgePoint) => kp.chapterId === formData.chapterId);
       setFilteredKnowledgePoints(filtered);
       // 如果当前选中的知识点不在新的章节中，则清空知识点选择
-      if (formData.knowledgePointId && !filtered.some(kp => kp.id === formData.knowledgePointId)) {
+      if (formData.knowledgePointId && !filtered.some((kp: KnowledgePoint) => kp.id === formData.knowledgePointId)) {
         setFormData(prev => ({ ...prev, knowledgePointId: '' }));
       }
     } else {
@@ -212,8 +159,14 @@ const AssignmentManagement: React.FC = () => {
   const fetchAssignments = async () => {
     try {
       setLoading(true);
+      // 添加调试日志
+      console.log('Fetching assignments for courseId:', courseId);
+      
       // 修复：传递课程ID参数以获取特定课程的作业
-      const response = await assignmentAPI.getAssignments({ courseId: courseIdFromUrl || undefined });
+      const response = await assignmentAPI.getAssignments({ courseId: courseId || undefined });
+      
+      // 添加调试日志
+      console.log('API response:', response);
       
       // 处理后端返回的数据结构
       let assignmentsData = [];
@@ -229,6 +182,9 @@ const AssignmentManagement: React.FC = () => {
           : response.assignments || [];
       }
       
+      // 添加调试日志
+      console.log('Assignments data before transformation:', assignmentsData);
+      
       // 转换数据结构以匹配前端接口
       const transformedAssignments = assignmentsData.map((assignment: any) => ({
         id: assignment.id,
@@ -241,7 +197,7 @@ const AssignmentManagement: React.FC = () => {
         timeLimit: assignment.timeLimit || 60,
         startTime: assignment.createdAt || '',
         endTime: assignment.dueDate || '',
-        status: assignment.status || 'draft',
+        status: assignment.status?.toLowerCase() || 'draft', // 确保状态是小写
         course: assignment.knowledgePoint?.chapter?.course ? {
           id: assignment.knowledgePoint.chapter.course.id,
           title: assignment.knowledgePoint.chapter.course.name || assignment.knowledgePoint.chapter.course.title
@@ -257,6 +213,9 @@ const AssignmentManagement: React.FC = () => {
         questions: assignment.questions || []
       }));
       
+      // 添加调试日志
+      console.log('转换后的作业数据:', transformedAssignments);
+      
       setAssignments(transformedAssignments);
       setError(null);
     } catch (error: any) {
@@ -271,9 +230,9 @@ const AssignmentManagement: React.FC = () => {
   // 获取章节数据
   const fetchChapters = async () => {
     try {
-      console.log('Fetching chapters for course:', courseIdFromUrl);
+      console.log('Fetching chapters for course:', courseId);
       // 修复：确保正确传递课程ID参数
-      const response = await chapterAPI.getChapters(courseIdFromUrl || undefined, 'published');
+      const response = await chapterAPI.getChapters(courseId || undefined, 'published');
       console.log('Chapters response:', response);
       const data = response.data || response;
       const chaptersData = Array.isArray(data) ? data : data.chapters || [];
@@ -281,7 +240,7 @@ const AssignmentManagement: React.FC = () => {
       
       // 同时获取所有知识点
       // 修复：确保正确传递课程ID参数
-      const kpResponse = await knowledgePointAPI.getKnowledgePoints({ courseId: courseIdFromUrl || undefined });
+      const kpResponse = await knowledgePointAPI.getKnowledgePoints({ courseId: courseId || undefined });
       console.log('Knowledge points response:', kpResponse);
       const kpData = kpResponse.data || kpResponse;
       const knowledgePointsData = Array.isArray(kpData) ? kpData : kpData.knowledgePoints || [];
@@ -289,7 +248,7 @@ const AssignmentManagement: React.FC = () => {
       
       // 如果已经有选中的章节，需要更新知识点过滤
       if (formData.chapterId) {
-        const filtered = knowledgePointsData.filter(kp => kp.chapterId === formData.chapterId);
+        const filtered = knowledgePointsData.filter((kp: KnowledgePoint) => kp.chapterId === formData.chapterId);
         setFilteredKnowledgePoints(filtered);
       }
     } catch (error: any) {
@@ -310,12 +269,11 @@ const AssignmentManagement: React.FC = () => {
       timeLimit: 60,
       startTime: '',
       endTime: '',
-      courseId: courseIdFromUrl || '',
+      courseId: courseId || '',
       chapterId: '',
       knowledgePointId: '',
-      questions: [],
+      status: 'draft',
     });
-    setSelectedQuestions([]);
     setCreateDialogOpen(true);
     // 修复：每次打开创建对话框时重新获取章节数据
     fetchChapters();
@@ -342,16 +300,14 @@ const AssignmentManagement: React.FC = () => {
       timeLimit: assignment.timeLimit,
       startTime: assignment.startTime ? assignment.startTime.slice(0, 16) : '',
       endTime: assignment.endTime ? assignment.endTime.slice(0, 16) : '',
-      courseId: assignment.course?.id || courseIdFromUrl || '',
+      courseId: assignment.course?.id || courseId || '',
       chapterId: chapterId,
       knowledgePointId: assignment.knowledgePoint?.id || '',
-      questions: assignment.questions?.map(q => q.id) || [],
+      status: assignment.status || 'draft', // 确保状态被正确设置
     });
-    setSelectedQuestions(assignment.questions?.map(q => q.id) || []);
     setCreateDialogOpen(true);
     // 修复：每次打开编辑对话框时重新获取章节数据和题目数据
     fetchChapters();
-    fetchQuestions(); // 确保题目数据已加载
   };
 
   const handleDialogClose = () => {
@@ -424,9 +380,9 @@ const AssignmentManagement: React.FC = () => {
         knowledgePointId: formData.knowledgePointId, // 直接传递知识点ID
         dueDate: formData.endTime ? new Date(formData.endTime).toISOString() : undefined,
         timeLimit: formData.timeLimit ? Number(formData.timeLimit) : undefined,
-        questionIds: formData.questions,
-        totalPoints: formData.totalScore
-        // 注意：编辑时不要强制设置状态为DRAFT，保留原有状态
+        totalPoints: formData.totalScore,
+        status: formData.status // 添加状态字段
+        // 移除状态字段，让后端设置默认状态
       };
 
       // 移除undefined值
@@ -435,11 +391,6 @@ const AssignmentManagement: React.FC = () => {
           delete assignmentData[key];
         }
       });
-
-      // 如果是编辑作业且没有修改题目，则不传递questionIds字段
-      if (editingAssignment && (!assignmentData.questionIds || assignmentData.questionIds.length === 0)) {
-        delete assignmentData.questionIds;
-      }
 
       console.log('Sending assignment data:', assignmentData);
 
@@ -473,6 +424,32 @@ const AssignmentManagement: React.FC = () => {
     }
   };
 
+  // 添加发布作业的函数
+  const handlePublish = async (id: string) => {
+    try {
+      // 更新作业状态为PUBLISHED（与数据库保持一致）
+      await assignmentAPI.updateAssignment(id, { status: 'PUBLISHED' });
+      // 重新获取作业列表以更新状态
+      fetchAssignments();
+    } catch (error) {
+      console.error('发布作业失败:', error);
+      setError('发布作业失败，请稍后重试');
+    }
+  };
+
+  // 添加取消发布作业的函数
+  const handleUnpublish = async (id: string) => {
+    try {
+      // 更新作业状态为DRAFT（与数据库保持一致）
+      await assignmentAPI.updateAssignment(id, { status: 'DRAFT' });
+      // 重新获取作业列表以更新状态
+      fetchAssignments();
+    } catch (error) {
+      console.error('取消发布作业失败:', error);
+      setError('取消发布作业失败，请稍后重试');
+    }
+  };
+
   const toggleRowExpand = (id: string) => {
     const newExpandedRows = new Set(expandedRows);
     if (newExpandedRows.has(id)) {
@@ -483,54 +460,18 @@ const AssignmentManagement: React.FC = () => {
     setExpandedRows(newExpandedRows);
   };
 
-  // 添加题目选择相关的函数
-  const handleQuestionSelect = (questionId: string) => {
-    setSelectedQuestions(prev => {
-      if (prev.includes(questionId)) {
-        return prev.filter(id => id !== questionId);
-      } else {
-        return [...prev, questionId];
-      }
-    });
-  };
-
-  const handleSelectAllQuestions = () => {
-    if (selectedQuestions.length === questions.length) {
-      setSelectedQuestions([]);
-    } else {
-      setSelectedQuestions(questions.map(q => q.id));
-    }
-  };
-
-  const handleAddQuestions = () => {
-    setFormData(prev => ({
-      ...prev,
-      questions: selectedQuestions,
-    }));
-    setShowQuestionSelector(false);
-  };
-
-  const handleRemoveQuestion = (questionId: string) => {
-    const newSelectedQuestions = selectedQuestions.filter(id => id !== questionId);
-    setSelectedQuestions(newSelectedQuestions);
-    setFormData(prev => ({
-      ...prev,
-      questions: newSelectedQuestions,
-    }));
-  };
-
   const getStatusColor = (status: string) => {
-    switch (status) {
+    switch (status?.toLowerCase()) {
       case 'draft': return 'default';
-      case 'published': return 'info';
+      case 'published': return 'success'; // 改为绿色表示已发布
       case 'grading': return 'warning';
-      case 'completed': return 'success';
+      case 'completed': return 'info';
       default: return 'default';
     }
   };
 
   const getStatusLabel = (status: string) => {
-    switch (status) {
+    switch (status?.toLowerCase()) {
       case 'draft': return '草稿';
       case 'published': return '已发布';
       case 'grading': return '批改中';
@@ -625,16 +566,6 @@ const AssignmentManagement: React.FC = () => {
         </Typography>
       </Box>
 
-      <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
-        <Tabs value={tabValue} onChange={handleTabChange}>
-          <Tab label="全部作业" />
-          <Tab label="作业" />
-          <Tab label="测验" />
-          <Tab label="考试" />
-          <Tab label="项目" />
-        </Tabs>
-      </Box>
-
       <Box sx={{ display: 'flex', gap: 2, mb: 3 }}>
         <TextField
           placeholder="搜索作业..."
@@ -687,7 +618,7 @@ const AssignmentManagement: React.FC = () => {
               <TableCell>提交人数</TableCell>
               <TableCell>平均分数</TableCell>
               <TableCell>及格率</TableCell>
-              <TableCell>关联关系</TableCell>
+              <TableCell>关联知识点</TableCell>
               <TableCell>操作</TableCell>
             </TableRow>
           </TableHead>
@@ -765,6 +696,22 @@ const AssignmentManagement: React.FC = () => {
                         <Edit />
                       </IconButton>
                       <IconButton
+                        color="secondary"
+                        size="small"
+                        onClick={() => navigate(`/teacher/courses/${courseId}/assignments/${assignment.id}/questions`)}
+                        title="组卷"
+                      >
+                        <Link />
+                      </IconButton>
+                      <IconButton
+                        color="success"
+                        size="small"
+                        onClick={() => navigate(`/teacher/courses/${courseId}/assignments/${assignment.id}/grading`)}
+                        title="批改作业"
+                      >
+                        <Assignment />
+                      </IconButton>
+                      <IconButton
                         color="error"
                         size="small"
                         onClick={() => handleDelete(assignment.id)}
@@ -777,24 +724,16 @@ const AssignmentManagement: React.FC = () => {
                     <TableRow>
                       <TableCell colSpan={15} sx={{ backgroundColor: 'action.hover', p: 2 }}>
                         <Typography variant="subtitle2" gutterBottom>
-                          关联资源:
+                          关联知识点:
                         </Typography>
                         <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                          {assignment.id === '1' && (
-                            <>
-                              <Chip 
-                                label="极限练习题" 
-                                color="primary" 
-                                variant="outlined"
-                                size="small"
-                              />
-                              <Chip 
-                                label="极限概念PPT" 
-                                color="secondary" 
-                                variant="outlined"
-                                size="small"
-                              />
-                            </>
+                          {assignment.knowledgePoint && (
+                            <Chip 
+                              label={assignment.knowledgePoint.title}
+                              color="secondary" 
+                              variant="outlined"
+                              size="small"
+                            />
                           )}
                         </Box>
                       </TableCell>
@@ -860,7 +799,7 @@ const AssignmentManagement: React.FC = () => {
               </Typography>
               
               <Grid container spacing={3}>
-                <Grid item xs={12} sm={6}>
+                <Grid size={{ xs: 12, sm: 6 }}>
                   <FormControl fullWidth required>
                     <InputLabel>作业类型</InputLabel>
                     <Select
@@ -871,9 +810,9 @@ const AssignmentManagement: React.FC = () => {
                     >
                       <MenuItem value="homework">
                         <Box sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
-                          <Typography sx={{ 
-                            overflow: 'hidden', 
-                            textOverflow: 'ellipsis', 
+                          <Typography sx={{
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
                             maxWidth: '100%',
                             width: '100%'
                           }} title="作业">
@@ -883,9 +822,9 @@ const AssignmentManagement: React.FC = () => {
                       </MenuItem>
                       <MenuItem value="quiz">
                         <Box sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
-                          <Typography sx={{ 
-                            overflow: 'hidden', 
-                            textOverflow: 'ellipsis', 
+                          <Typography sx={{
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
                             maxWidth: '100%',
                             width: '100%'
                           }} title="测验">
@@ -895,9 +834,9 @@ const AssignmentManagement: React.FC = () => {
                       </MenuItem>
                       <MenuItem value="exam">
                         <Box sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
-                          <Typography sx={{ 
-                            overflow: 'hidden', 
-                            textOverflow: 'ellipsis', 
+                          <Typography sx={{
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
                             maxWidth: '100%',
                             width: '100%'
                           }} title="考试">
@@ -907,9 +846,9 @@ const AssignmentManagement: React.FC = () => {
                       </MenuItem>
                       <MenuItem value="project">
                         <Box sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
-                          <Typography sx={{ 
-                            overflow: 'hidden', 
-                            textOverflow: 'ellipsis', 
+                          <Typography sx={{
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
                             maxWidth: '100%',
                             width: '100%'
                           }} title="项目">
@@ -920,7 +859,7 @@ const AssignmentManagement: React.FC = () => {
                     </Select>
                   </FormControl>
                 </Grid>
-                <Grid item xs={12} sm={6}>
+                <Grid size={{ xs: 12, sm: 6 }}>
                   <FormControl fullWidth required>
                     <InputLabel>难度</InputLabel>
                     <Select
@@ -931,9 +870,9 @@ const AssignmentManagement: React.FC = () => {
                     >
                       <MenuItem value="easy">
                         <Box sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
-                          <Typography sx={{ 
-                            overflow: 'hidden', 
-                            textOverflow: 'ellipsis', 
+                          <Typography sx={{
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
                             maxWidth: '100%',
                             width: '100%'
                           }} title="简单">
@@ -943,9 +882,9 @@ const AssignmentManagement: React.FC = () => {
                       </MenuItem>
                       <MenuItem value="medium">
                         <Box sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
-                          <Typography sx={{ 
-                            overflow: 'hidden', 
-                            textOverflow: 'ellipsis', 
+                          <Typography sx={{
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
                             maxWidth: '100%',
                             width: '100%'
                           }} title="中等">
@@ -955,9 +894,9 @@ const AssignmentManagement: React.FC = () => {
                       </MenuItem>
                       <MenuItem value="hard">
                         <Box sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
-                          <Typography sx={{ 
-                            overflow: 'hidden', 
-                            textOverflow: 'ellipsis', 
+                          <Typography sx={{
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
                             maxWidth: '100%',
                             width: '100%'
                           }} title="困难">
@@ -969,6 +908,35 @@ const AssignmentManagement: React.FC = () => {
                   </FormControl>
                 </Grid>
               </Grid>
+            </Box>
+            
+            {/* 作业状态设置 */}
+            <Box sx={{
+              p: 2,
+              border: '1px solid',
+              borderColor: 'divider',
+              borderRadius: 1,
+              backgroundColor: 'background.paper'
+            }}>
+              <Typography variant="h6" gutterBottom sx={{ mb: 2, color: 'primary.main' }}>
+                作业状态
+              </Typography>
+              
+              <FormControl fullWidth>
+                <InputLabel>状态</InputLabel>
+                <Select
+                  value={formData.status}
+                  onChange={(e) => handleFormChange('status', e.target.value)}
+                  label="状态"
+                >
+                  <MenuItem value="draft">草稿</MenuItem>
+                  <MenuItem value="published">已发布</MenuItem>
+                </Select>
+              </FormControl>
+              
+              <Typography variant="body2" color="textSecondary" sx={{ mt: 1 }}>
+                选择"已发布"状态可立即发布作业给学生，选择"草稿"状态可保存为草稿
+              </Typography>
             </Box>
             
             {/* 分数设置 */}
@@ -984,7 +952,7 @@ const AssignmentManagement: React.FC = () => {
               </Typography>
               
               <Grid container spacing={3}>
-                <Grid item xs={12} sm={6}>
+                <Grid size={{ xs: 12, sm: 6 }}>
                   <TextField
                     label="总分"
                     type="number"
@@ -994,7 +962,7 @@ const AssignmentManagement: React.FC = () => {
                     required
                   />
                 </Grid>
-                <Grid item xs={12} sm={6}>
+                <Grid size={{ xs: 12, sm: 6 }}>
                   <TextField
                     label="及格分"
                     type="number"
@@ -1020,7 +988,7 @@ const AssignmentManagement: React.FC = () => {
               </Typography>
               
               <Grid container spacing={3}>
-                <Grid item xs={12} sm={6}>
+                <Grid size={{ xs: 12, sm: 6 }}>
                   <TextField
                     label="时间限制(分钟)"
                     type="number"
@@ -1033,7 +1001,7 @@ const AssignmentManagement: React.FC = () => {
               </Grid>
               
               <Grid container spacing={3} sx={{ mt: 1 }}>
-                <Grid item xs={12} sm={6}>
+                <Grid size={{ xs: 12, sm: 6 }}>
                   <TextField
                     label="开始时间"
                     type="datetime-local"
@@ -1048,7 +1016,7 @@ const AssignmentManagement: React.FC = () => {
                     helperText={!formData.startTime ? '开始时间为必填项' : ''}
                   />
                 </Grid>
-                <Grid item xs={12} sm={6}>
+                <Grid size={{ xs: 12, sm: 6 }}>
                   <TextField
                     label="结束时间"
                     type="datetime-local"
@@ -1079,7 +1047,7 @@ const AssignmentManagement: React.FC = () => {
               </Typography>
               
               <Grid container spacing={3}>
-                <Grid item xs={12} sm={6}>
+                <Grid size={{ xs: 12, sm: 6 }}>
                   <FormControl fullWidth required>
                     <InputLabel>章节 *</InputLabel>
                     <Select
@@ -1113,7 +1081,7 @@ const AssignmentManagement: React.FC = () => {
                     )}
                   </FormControl>
                 </Grid>
-                <Grid item xs={12} sm={6}>
+                <Grid size={{ xs: 12, sm: 6 }}>
                   <FormControl fullWidth required disabled={!formData.chapterId}>
                     <InputLabel>知识点 *</InputLabel>
                     <Select
@@ -1149,107 +1117,6 @@ const AssignmentManagement: React.FC = () => {
                 </Grid>
               </Grid>
             </Box>
-
-            {/* 题目选择部分 */}
-            <Box sx={{ 
-              p: 2, 
-              border: '1px solid', 
-              borderColor: 'divider', 
-              borderRadius: 1,
-              backgroundColor: 'background.paper'
-            }}>
-              <Typography variant="h6" gutterBottom sx={{ mb: 2, color: 'primary.main' }}>
-                题目设置
-              </Typography>
-              
-              <Button 
-                variant="outlined" 
-                startIcon={<Link />}
-                onClick={() => {
-                  fetchQuestions();
-                  setShowQuestionSelector(true);
-                }}
-                sx={{ mb: 2 }}
-              >
-                从题库选择题目
-              </Button>
-              
-              {/* 已选择的题目列表 */}
-              {selectedQuestions.length > 0 && (
-                <TableContainer component={Paper} sx={{ mt: 2, boxShadow: 2 }}>
-                  <Table>
-                    <TableHead>
-                      <TableRow sx={{ backgroundColor: 'primary.light' }}>
-                        <TableCell sx={{ color: 'white', fontWeight: 'bold' }}>题目</TableCell>
-                        <TableCell sx={{ color: 'white', fontWeight: 'bold' }}>类型</TableCell>
-                        <TableCell sx={{ color: 'white', fontWeight: 'bold' }}>难度</TableCell>
-                        <TableCell sx={{ color: 'white', fontWeight: 'bold' }}>分值</TableCell>
-                        <TableCell sx={{ color: 'white', fontWeight: 'bold' }}>操作</TableCell>
-                      </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {questions
-                        .filter(q => selectedQuestions.includes(q.id))
-                        .map((question) => (
-                          <TableRow 
-                            key={question.id} 
-                            sx={{ '&:hover': { backgroundColor: 'action.hover' } }}
-                          >
-                            <TableCell>
-                              <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
-                                {question.title}
-                              </Typography>
-                              <Typography variant="body2" color="textSecondary">
-                                {question.content}
-                              </Typography>
-                            </TableCell>
-                            <TableCell>
-                              <Chip 
-                                label={getTypeLabel(question.type)} 
-                                size="small" 
-                                color={
-                                  question.type === 'single_choice' ? 'primary' :
-                                  question.type === 'multiple_choice' ? 'secondary' :
-                                  question.type === 'short_answer' ? 'success' : 'default'
-                                }
-                              />
-                            </TableCell>
-                            <TableCell>
-                              <Chip 
-                                label={getDifficultyLabel(question.difficulty)} 
-                                size="small" 
-                                color={
-                                  question.difficulty === 'easy' ? 'success' :
-                                  question.difficulty === 'medium' ? 'warning' :
-                                  question.difficulty === 'hard' ? 'error' : 'default'
-                                }
-                              />
-                            </TableCell>
-                            <TableCell>{question.points}</TableCell>
-                            <TableCell>
-                              <IconButton 
-                                size="small" 
-                                onClick={() => handleRemoveQuestion(question.id)}
-                                color="error"
-                                sx={{ '&:hover': { backgroundColor: 'error.light', color: 'white' } }}
-                              >
-                                <Delete />
-                              </IconButton>
-                            </TableCell>
-                          </TableRow>
-                        ))
-                      }
-                    </TableBody>
-                  </Table>
-                </TableContainer>
-              )}
-              
-              {selectedQuestions.length === 0 && (
-                <Typography variant="body2" color="textSecondary" sx={{ mt: 2, textAlign: 'center', p: 2, border: '1px dashed', borderColor: 'divider', borderRadius: 1 }}>
-                  尚未选择任何题目，请点击"从题库选择题目"按钮添加题目
-                </Typography>
-              )}
-            </Box>
           </Box>
         </DialogContent>
         <DialogActions sx={{ p: 2, backgroundColor: 'background.default' }}>
@@ -1263,147 +1130,6 @@ const AssignmentManagement: React.FC = () => {
             sx={{ minWidth: 100 }}
           >
             {editingAssignment ? '更新' : '创建'}
-          </Button>
-        </DialogActions>
-      </Dialog>
-
-      {/* 题目选择对话框 */}
-      <Dialog 
-        open={showQuestionSelector} 
-        onClose={() => setShowQuestionSelector(false)} 
-        maxWidth="lg" 
-        fullWidth
-        sx={{ '& .MuiDialog-paper': { maxHeight: '90vh' } }}
-      >
-        <DialogTitle sx={{ pb: 1, backgroundColor: 'primary.main', color: 'white' }}>
-          选择题目
-          <TextField
-            placeholder="搜索题目..."
-            value={questionSearchTerm}
-            onChange={(e) => setQuestionSearchTerm(e.target.value)}
-            InputProps={{
-              startAdornment: <Search sx={{ color: 'white' }} />,
-            }}
-            sx={{ mt: 2, backgroundColor: 'white', borderRadius: 1 }}
-            fullWidth
-          />
-        </DialogTitle>
-        <DialogContent sx={{ p: 0 }}>
-          <TableContainer component={Paper} sx={{ maxHeight: '60vh' }}>
-            <Table stickyHeader>
-              <TableHead>
-                <TableRow sx={{ backgroundColor: 'grey.100' }}>
-                  <TableCell padding="checkbox" sx={{ backgroundColor: 'primary.light' }}>
-                    <IconButton 
-                      size="small" 
-                      onClick={handleSelectAllQuestions}
-                      sx={{ color: 'white' }}
-                    >
-                      {selectedQuestions.length === questions.length && questions.length > 0 ? (
-                        <ExpandLess />
-                      ) : (
-                        <ExpandMore />
-                      )}
-                    </IconButton>
-                  </TableCell>
-                  <TableCell sx={{ backgroundColor: 'primary.light', color: 'white', fontWeight: 'bold' }}>题目</TableCell>
-                  <TableCell sx={{ backgroundColor: 'primary.light', color: 'white', fontWeight: 'bold' }}>类型</TableCell>
-                  <TableCell sx={{ backgroundColor: 'primary.light', color: 'white', fontWeight: 'bold' }}>难度</TableCell>
-                  <TableCell sx={{ backgroundColor: 'primary.light', color: 'white', fontWeight: 'bold' }}>分值</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {questions
-                  .filter(q => 
-                    q.title.toLowerCase().includes(questionSearchTerm.toLowerCase()) ||
-                    q.content.toLowerCase().includes(questionSearchTerm.toLowerCase())
-                  )
-                  .map((question) => (
-                    <TableRow 
-                      key={question.id} 
-                      selected={selectedQuestions.includes(question.id)}
-                      sx={{ 
-                        '&:hover': { backgroundColor: 'action.hover' },
-                        '&.Mui-selected': { backgroundColor: 'primary.light' }
-                      }}
-                    >
-                      <TableCell padding="checkbox">
-                        <IconButton 
-                          size="small" 
-                          onClick={() => handleQuestionSelect(question.id)}
-                          sx={{ 
-                            backgroundColor: selectedQuestions.includes(question.id) ? 'primary.main' : 'transparent',
-                            color: selectedQuestions.includes(question.id) ? 'white' : 'inherit',
-                            '&:hover': { 
-                              backgroundColor: selectedQuestions.includes(question.id) ? 'primary.dark' : 'action.hover' 
-                            }
-                          }}
-                        >
-                          {selectedQuestions.includes(question.id) ? (
-                            <ExpandLess />
-                          ) : (
-                            <ExpandMore />
-                          )}
-                        </IconButton>
-                      </TableCell>
-                      <TableCell>
-                        <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
-                          {question.title}
-                        </Typography>
-                        <Typography variant="body2" color="textSecondary">
-                          {question.content}
-                        </Typography>
-                      </TableCell>
-                      <TableCell>
-                        <Chip 
-                          label={getTypeLabel(question.type)} 
-                          size="small" 
-                          color={
-                            question.type === 'single_choice' ? 'primary' :
-                            question.type === 'multiple_choice' ? 'secondary' :
-                            question.type === 'short_answer' ? 'success' : 'default'
-                          }
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <Chip 
-                          label={getDifficultyLabel(question.difficulty)} 
-                          size="small" 
-                          color={
-                            question.difficulty === 'easy' ? 'success' :
-                            question.difficulty === 'medium' ? 'warning' :
-                            question.difficulty === 'hard' ? 'error' : 'default'
-                          }
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <Chip 
-                          label={question.points} 
-                          size="small" 
-                          color="info"
-                        />
-                      </TableCell>
-                    </TableRow>
-                  ))
-                }
-              </TableBody>
-            </Table>
-          </TableContainer>
-        </DialogContent>
-        <DialogActions sx={{ p: 2, backgroundColor: 'background.default' }}>
-          <Button 
-            onClick={() => setShowQuestionSelector(false)} 
-            variant="outlined"
-          >
-            取消
-          </Button>
-          <Button 
-            onClick={handleAddQuestions} 
-            variant="contained"
-            disabled={selectedQuestions.length === 0}
-            sx={{ minWidth: 150 }}
-          >
-            添加选中的题目 ({selectedQuestions.length})
           </Button>
         </DialogActions>
       </Dialog>

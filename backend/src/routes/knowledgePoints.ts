@@ -45,6 +45,12 @@ router.get('/', async (req, res) => {
               }
             }
           }
+        },
+        _count: {
+          select: {
+            Assignment: true,
+            Question: true
+          }
         }
       },
       orderBy: { [sortBy as string]: sortOrder }
@@ -52,10 +58,33 @@ router.get('/', async (req, res) => {
 
     const total = await prisma.knowledgePoint.count({ where });
 
+    // 添加资料和课件计数
+    const knowledgePointsWithCounts = await Promise.all(knowledgePoints.map(async (kp) => {
+      const materialsCount = await prisma.material.count({
+        where: {
+          chapterId: kp.chapterId
+        }
+      });
+      
+      const coursewareCount = await prisma.courseware.count({
+        where: {
+          chapterId: kp.chapterId
+        }
+      });
+      
+      return {
+        ...kp,
+        materialsCount: materialsCount || 0,
+        coursewareCount: coursewareCount || 0,
+        assignmentsCount: kp._count?.Assignment || 0,
+        questionsCount: kp._count?.Question || 0
+      };
+    }));
+
     res.json({
       success: true,
       data: {
-        knowledgePoints,
+        knowledgePoints: knowledgePointsWithCounts,
         pagination: {
           page: Number(page),
           limit: Number(limit),

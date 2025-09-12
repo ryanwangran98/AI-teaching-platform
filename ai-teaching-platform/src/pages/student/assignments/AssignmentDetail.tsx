@@ -105,26 +105,24 @@ const AssignmentDetail: React.FC = () => {
       const userInfo = JSON.parse(localStorage.getItem('user') || '{}');
       console.log('用户信息:', userInfo);
       
-      // 检查作业是否已经被提交的多种可能性
+      // 简化状态判断逻辑，提高准确性
       let hasSubmitted = false;
       let submissionStatus = 'pending';
       
-      // 检查1: 从assignmentData.submissions查找
+      // 优先从submissions数组中查找当前用户的提交记录
       if (assignmentData.submissions && Array.isArray(assignmentData.submissions)) {
-        console.log('作业提交列表:', assignmentData.submissions);
         const userSubmission = assignmentData.submissions.find((sub: any) => 
           sub.userId === userInfo.id
         );
-        console.log('找到的用户提交记录:', userSubmission);
         
         if (userSubmission) {
           hasSubmitted = true;
-          const status = userSubmission.status?.toLowerCase() || '';
-          submissionStatus = status === 'graded' ? 'graded' : 'submitted';
-          console.log('提交状态:', submissionStatus);
+          // 统一状态判断，避免大小写问题
+          const status = userSubmission.status?.toUpperCase();
+          submissionStatus = status === 'GRADED' ? 'graded' : 'submitted';
           
           // 如果已经提交，加载已提交的答案
-          if (status === 'submitted' || status === 'graded') {
+          if (status === 'SUBMITTED' || status === 'GRADED') {
             setTimeout(() => {
               setAnswers(
                 userSubmission.content 
@@ -136,21 +134,10 @@ const AssignmentDetail: React.FC = () => {
         }
       }
       
-      // 检查2: 检查是否有直接的提交状态标志
-      if (!hasSubmitted && assignmentData.userSubmissionStatus) {
-        console.log('从userSubmissionStatus获取状态:', assignmentData.userSubmissionStatus);
-        const status = assignmentData.userSubmissionStatus.toLowerCase();
-        if (status === 'submitted' || status === 'graded') {
-          hasSubmitted = true;
-          submissionStatus = status === 'graded' ? 'graded' : 'submitted';
-        }
-      }
-      
-      // 检查3: 检查是否有score字段，表示已评分
-      if (!hasSubmitted && assignmentData.score !== undefined) {
-        console.log('检测到score字段，标记为已评分');
-        hasSubmitted = true;
-        submissionStatus = 'graded';
+      // 如果后端没有返回提交记录，但本地存储有，优先使用后端数据
+      if (!hasSubmitted && hasLocalSubmission) {
+        console.warn('本地存储与后端数据不同步，以后端数据为准');
+        setHasLocalSubmission(false);
       }
       
       console.log('最终提交状态:', submissionStatus);
@@ -179,9 +166,10 @@ const AssignmentDetail: React.FC = () => {
           sub.userId === userInfo.id
         );
         if (userSubmission) {
-          // 更新状态
+          // 统一状态判断
+          const status = userSubmission.status?.toUpperCase();
           setUserSubmissionStatus(
-            userSubmission.status === 'GRADED' || userSubmission.status === 'graded' ? 'graded' : 'submitted'
+            status === 'GRADED' ? 'graded' : 'submitted'
           );
           return true; // 已经提交过
         }
@@ -253,16 +241,16 @@ const AssignmentDetail: React.FC = () => {
     const questionType = question.type?.toLowerCase() || '';
 
     return (
-      <Card key={question.id} sx={{ mb: 3 }}>
+      <Card key={question.id || index} sx={{ mb: 3 }}>
         <CardContent>
           <Typography variant="h6" gutterBottom>
-            {index + 1}. {question.content}
+            {index + 1}. {question.content || '问题内容缺失'}
           </Typography>
           <Typography variant="body2" color="textSecondary" gutterBottom>
-            分值: {question.points}分 | 难度: {question.difficulty} | 类型: {question.type}
+            分值: {question.points || 0}分 | 难度: {question.difficulty || '未知'} | 类型: {question.type || '未知'}
           </Typography>
           
-          {/* 修复：使用不区分大小写的方式判断题目类型 */}
+          {/* 单选题 */}
           {questionType === 'single_choice' && (
             <FormControl component="fieldset" disabled={isDisabled} sx={{ mt: 2 }}>
               <RadioGroup
@@ -271,46 +259,122 @@ const AssignmentDetail: React.FC = () => {
                 aria-label={`Question ${index + 1}`}
                 disabled={isDisabled}
               >
-                {(question.options ? JSON.parse(question.options) : []).map((option: string, optIndex: number) => (
-                  <FormControlLabel
-                    key={optIndex}
-                    value={String.fromCharCode(65 + optIndex)} // A, B, C, D...
-                    control={<Radio />}
-                    label={`${String.fromCharCode(65 + optIndex)}. ${option}`}
-                    disabled={isDisabled}
-                    sx={{
-                      opacity: isDisabled ? 0.6 : 1,
-                      cursor: isDisabled ? 'not-allowed' : 'pointer'
-                    }}
-                  />
-                ))}
+                {(() => {
+                  try {
+                    const options = question.options ? JSON.parse(question.options) : [];
+                    return options.length > 0 ? (
+                      options.map((option: string, optIndex: number) => (
+                        <FormControlLabel
+                          key={optIndex}
+                          value={String.fromCharCode(65 + optIndex)} // A, B, C, D...
+                          control={<Radio />}
+                          label={`${String.fromCharCode(65 + optIndex)}. ${option}`}
+                          disabled={isDisabled}
+                          sx={{
+                            opacity: isDisabled ? 0.6 : 1,
+                            cursor: isDisabled ? 'not-allowed' : 'pointer'
+                          }}
+                        />
+                      ))
+                    ) : (
+                      <Typography variant="body2" color="warning">
+                        该题目暂无选项，默认显示文本输入框
+                      </Typography>
+                    );
+                  } catch (error) {
+                    console.error('解析选项失败:', error);
+                    return (
+                      <>
+                        <Typography variant="body2" color="error">
+                          题目选项解析错误
+                        </Typography>
+                        <TextareaAutosize
+                          minRows={4}
+                          placeholder="请在这里输入你的答案..."
+                          value={answerValue as string || ''}
+                          onChange={(e) => handleTextChange(question.id, e.target.value)}
+                          style={{
+                            width: '100%',
+                            padding: '12px',
+                            border: '1px solid #e0e0e0',
+                            borderRadius: '4px',
+                            resize: 'vertical',
+                            fontFamily: 'inherit',
+                            marginTop: '8px',
+                            backgroundColor: isDisabled ? '#f5f5f5' : 'white'
+                          }}
+                          disabled={isDisabled}
+                        />
+                      </>
+                    );
+                  }
+                })()}
               </RadioGroup>
             </FormControl>
           )}
           
+          {/* 多选题 */}
           {questionType === 'multiple_choice' && (
             <FormControl component="fieldset" sx={{ mt: 2 }}>
-              {(question.options ? JSON.parse(question.options) : []).map((option: string, optIndex: number) => {
-                const optionKey = String.fromCharCode(65 + optIndex);
-                const isChecked = Array.isArray(answerValue) && answerValue.includes(optionKey);
-                
-                return (
-                  <FormControlLabel
-                    key={optIndex}
-                    control={
-                      <Checkbox
-                        checked={isChecked}
-                        onChange={(e) => handleMultipleChoiceChange(question.id, optionKey, e.target.checked)}
+              {(() => {
+                try {
+                  const options = question.options ? JSON.parse(question.options) : [];
+                  return options.length > 0 ? (
+                    options.map((option: string, optIndex: number) => {
+                      const optionKey = String.fromCharCode(65 + optIndex);
+                      const isChecked = Array.isArray(answerValue) && answerValue.includes(optionKey);
+                      
+                      return (
+                        <FormControlLabel
+                          key={optIndex}
+                          control={
+                            <Checkbox
+                              checked={isChecked}
+                              onChange={(e) => handleMultipleChoiceChange(question.id, optionKey, e.target.checked)}
+                              disabled={isDisabled}
+                            />
+                          }
+                          label={`${optionKey}. ${option}`}
+                        />
+                      );
+                    })
+                  ) : (
+                    <Typography variant="body2" color="warning">
+                      该题目暂无选项，默认显示文本输入框
+                    </Typography>
+                  );
+                } catch (error) {
+                  console.error('解析选项失败:', error);
+                  return (
+                    <>
+                      <Typography variant="body2" color="error">
+                        题目选项解析错误
+                      </Typography>
+                      <TextareaAutosize
+                        minRows={4}
+                        placeholder="请在这里输入你的答案..."
+                        value={answerValue as string || ''}
+                        onChange={(e) => handleTextChange(question.id, e.target.value)}
+                        style={{
+                          width: '100%',
+                          padding: '12px',
+                          border: '1px solid #e0e0e0',
+                          borderRadius: '4px',
+                          resize: 'vertical',
+                          fontFamily: 'inherit',
+                          marginTop: '8px',
+                          backgroundColor: isDisabled ? '#f5f5f5' : 'white'
+                        }}
                         disabled={isDisabled}
                       />
-                    }
-                    label={`${optionKey}. ${option}`}
-                  />
-                );
-              })}
+                    </>
+                  );
+                }
+              })()}
             </FormControl>
           )}
           
+          {/* 判断题 */}
           {questionType === 'true_false' && (
             <FormControl component="fieldset" sx={{ mt: 2 }}>
               <RadioGroup
@@ -325,7 +389,7 @@ const AssignmentDetail: React.FC = () => {
             </FormControl>
           )}
           
-          {/* 修复：增加对文本类题目的支持 */}
+          {/* 文本类题目 */}
           {(questionType === 'short_answer' || questionType === 'essay') && (
             <TextareaAutosize
               minRows={questionType === 'essay' ? 8 : 4}
@@ -346,29 +410,8 @@ const AssignmentDetail: React.FC = () => {
             />
           )}
           
-          {/* 修复：如果题目类型不匹配任何已知类型，默认显示文本输入框 */}
-          {question.type && !['single_choice', 'multiple_choice', 'true_false', 'short_answer', 'essay'].includes(questionType) && (
-            <TextareaAutosize
-              minRows={4}
-              placeholder="请在这里输入你的答案..."
-              value={answerValue as string || ''}
-              onChange={(e) => handleTextChange(question.id, e.target.value)}
-              style={{
-                width: '100%',
-                padding: '12px',
-                border: '1px solid #e0e0e0',
-                borderRadius: '4px',
-                resize: 'vertical',
-                fontFamily: 'inherit',
-                marginTop: '8px',
-                backgroundColor: isDisabled ? '#f5f5f5' : 'white'
-              }}
-              disabled={isDisabled}
-            />
-          )}
-          
-          {/* 修复：如果没有题目类型，默认显示文本输入框 */}
-          {!question.type && (
+          {/* 默认文本输入框 - 确保任何情况下都有作答区域 */}
+          {!(questionType === 'single_choice' || questionType === 'multiple_choice' || questionType === 'true_false' || questionType === 'short_answer' || questionType === 'essay') && (
             <TextareaAutosize
               minRows={4}
               placeholder="请在这里输入你的答案..."
@@ -470,19 +513,20 @@ const AssignmentDetail: React.FC = () => {
     let statusColor = 'warning';
     let statusText = '待完成';
 
-    if (userSubmissionStatus === 'submitted' || hasLocalSubmission) {
-      statusColor = 'info';
-      statusText = '已提交';
-    } else if (userSubmissionStatus === 'graded') {
+    if (userSubmissionStatus === 'graded') {
       statusColor = 'success';
-      statusText = '已评分';
+      statusText = `已评分 - ${assignment?.score || 0}/${assignment?.totalPoints || 0}分`;
+    } else if (userSubmissionStatus === 'submitted' || hasLocalSubmission) {
+      statusColor = 'info';
+      statusText = '已提交，等待评分';
     }
 
     return (
       <Chip
         label={statusText}
         color={statusColor}
-        sx={{ mr: 2 }}
+        icon={<CheckCircle size={16} />}
+        sx={{ fontWeight: 500, fontSize: '0.9rem' }}
       />
     );
   };
@@ -533,23 +577,8 @@ const AssignmentDetail: React.FC = () => {
               <Typography variant="h4" gutterBottom>
                 {assignment.title}
               </Typography>
-              {/* 已提交状态显示在作业标题旁边，更加醒目 */}
-              {(userSubmissionStatus === 'submitted' || userSubmissionStatus === 'pending') && (
-                <Chip
-                  label="已提交，等待评分"
-                  color="info"
-                  icon={<CheckCircle size={16} />}
-                  sx={{ fontWeight: 500, fontSize: '0.9rem' }}
-                />
-              )}
-              {userSubmissionStatus === 'graded' && assignment.score !== undefined && (
-                <Chip
-                  label={`已评分 - ${assignment.score}/${assignment.totalPoints}分`}
-                  color="success"
-                  icon={<CheckCircle size={16} />}
-                  sx={{ fontWeight: 500, fontSize: '0.9rem' }}
-                />
-              )}
+              {/* 统一的状态显示 */}
+              {renderSubmissionStatus()}
             </div>
             <Typography variant="body1" paragraph>
               {assignment.description}
@@ -625,11 +654,13 @@ const AssignmentDetail: React.FC = () => {
             返回课程
           </Button>
           
-          {assignment.status === 'PUBLISHED' && userSubmissionStatus === 'pending' && !hasLocalSubmission && (
+          {/* 调试信息：显示当前状态值 */}
+          <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
+            {/* 始终显示提交按钮，但根据状态调整可用性 */}
             <Button
               variant="contained"
               onClick={handleSubmit}
-              disabled={isSubmitting || !assignment.questions?.length}
+              disabled={isSubmitting || !assignment.questions?.length || assignment.status === 'DRAFT'}
               sx={{ backgroundColor: '#4caf50' }}
             >
               {isSubmitting ? (
@@ -641,19 +672,20 @@ const AssignmentDetail: React.FC = () => {
                 '提交作业'
               )}
             </Button>
-          )}
-          
-          {userSubmissionStatus === 'submitted' && (
-            <Alert severity="info" sx={{ width: 'fit-content' }}>
-              作业已提交，等待评分
-            </Alert>
-          )}
-          
-          {userSubmissionStatus === 'graded' && assignment.score !== undefined && (
-            <Alert severity="success" sx={{ width: 'fit-content' }}>
-              作业已评分 - 得分: {assignment.score}/{assignment.totalPoints}
-            </Alert>
-          )}
+            
+            {/* 显示当前状态信息，但不替代提交按钮 */}
+            {(userSubmissionStatus === 'submitted' || hasLocalSubmission) && userSubmissionStatus !== 'graded' && (
+              <Typography variant="body2" color="textSecondary">
+                （作业已提交，等待评分）
+              </Typography>
+            )}
+            
+            {userSubmissionStatus === 'graded' && assignment.score !== undefined && (
+              <Typography variant="body2" color="textSecondary">
+                （已评分: {assignment.score}/{assignment.totalPoints}分）
+              </Typography>
+            )}
+          </div>
         </div>
       </Box>
     </div>

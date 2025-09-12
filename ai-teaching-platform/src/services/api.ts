@@ -431,6 +431,40 @@ export const learningRecordAPI = {
   },
 };
 
+// 提交相关
+export const submissionAPI = {
+  getSubmissions: async (params?: { 
+    assignmentId?: string; 
+    studentId?: string; 
+    status?: string; 
+    page?: number; 
+    limit?: number; 
+  }) => {
+    const response = await api.get('/submissions', { params });
+    return response.data;
+  },
+
+  getSubmission: async (id: string) => {
+    const response = await api.get(`/submissions/${id}`);
+    return response.data;
+  },
+
+  createSubmission: async (submissionData: any) => {
+    const response = await api.post('/submissions', submissionData);
+    return response.data;
+  },
+
+  updateSubmission: async (id: string, submissionData: any) => {
+    const response = await api.put(`/submissions/${id}`, submissionData);
+    return response.data;
+  },
+
+  deleteSubmission: async (id: string) => {
+    const response = await api.delete(`/submissions/${id}`);
+    return response.data;
+  },
+};
+
 // 通知相关
 export const notificationAPI = {
   getNotifications: async (params?: { page?: number; limit?: number; isRead?: boolean }) => {
