@@ -282,7 +282,9 @@ router.delete('/:id', authenticateToken, authorizeRoles('TEACHER', 'ADMIN'), asy
         await prisma.question.deleteMany({
           where: {
             knowledgePointId: kpId,
-            assignmentId: null,
+            assignments: {
+              none: {}
+            },
             knowledgePoint: {
               chapterId: id
             }

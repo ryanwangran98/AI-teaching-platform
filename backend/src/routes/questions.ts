@@ -20,13 +20,22 @@ router.get('/', authenticateToken, async (req: AuthRequest, res) => {
     const skip = (Number(page) - 1) * Number(limit);
     const where: any = {};
 
-    if (assignmentId) where.assignmentId = assignmentId as string;
+    // 如果指定了作业ID，查找关联到该作业的题目
+    if (assignmentId) {
+      const questionAssignments = await prisma.questionAssignment.findMany({
+        where: { assignmentId: assignmentId as string },
+        select: { questionId: true }
+      });
+      const questionIds = questionAssignments.map(qa => qa.questionId);
+      where.id = { in: questionIds };
+    }
+    
     if (type) where.type = type as string;
     if (difficulty) where.difficulty = difficulty as string;
     if (knowledgePointId) where.knowledgePointId = knowledgePointId as string;
 
     // 教师只能查看自己课程的题目
-    if (req.user!.role === 'TEACHER' && !courseId) {
+    if (req.user!.role === 'TEACHER' && !courseId && !assignmentId) {
       // 获取教师所有课程ID
       const teacherCourses = await prisma.course.findMany({
         where: { teacherId: req.user!.id },
@@ -56,10 +65,15 @@ router.get('/', authenticateToken, async (req: AuthRequest, res) => {
       skip,
       take: Number(limit),
       include: {
-        assignment: {
-          select: {
-            id: true,
-            title: true
+        // 修改关联信息的包含方式
+        assignments: {
+          include: {
+            assignment: {
+              select: {
+                id: true,
+                title: true
+              }
+            }
           }
         },
         knowledgePoint: {
@@ -103,13 +117,18 @@ router.get('/:id', async (req, res) => {
     const question = await prisma.question.findUnique({
       where: { id },
       include: {
-        assignment: {
+        // 修改关联信息的包含方式
+        assignments: {
           include: {
-            knowledgePoint: {
+            assignment: {
               include: {
-                chapter: {
+                knowledgePoint: {
                   include: {
-                    course: true
+                    chapter: {
+                      include: {
+                        course: true
+                      }
+                    }
                   }
                 }
               }
@@ -144,7 +163,6 @@ router.post('/', authenticateToken, authorizeRoles('TEACHER', 'ADMIN'), async (r
       explanation,
       difficulty,
       points,
-      assignmentId,
       knowledgePointId,
       status
     } = req.body;
@@ -184,18 +202,11 @@ router.post('/', authenticateToken, authorizeRoles('TEACHER', 'ADMIN'), async (r
         explanation,
         difficulty: difficulty || 'MEDIUM',
         points: points || 1,
-        assignmentId: assignmentId || null,
         knowledgePointId: knowledgePointId,
         teacherId: req.user!.id,
         status: status || 'draft'
       },
       include: {
-        assignment: {
-          select: {
-            id: true,
-            title: true
-          }
-        },
         knowledgePoint: {
           include: {
             chapter: {
@@ -251,9 +262,11 @@ router.post('/batch', authenticateToken, authorizeRoles('TEACHER', 'ADMIN'), asy
       return res.status(403).json({ error: 'Not authorized to add questions to this assignment' });
     }
 
+    // 创建题目并关联到作业
     const createdQuestions = await Promise.all(
       questions.map(async (q, index) => {
-        return prisma.question.create({
+        // 创建题目
+        const question = await prisma.question.create({
           data: {
             title: q.title,
             type: q.type,
@@ -263,11 +276,20 @@ router.post('/batch', authenticateToken, authorizeRoles('TEACHER', 'ADMIN'), asy
             explanation: q.explanation,
             difficulty: q.difficulty || 'MEDIUM',
             points: q.points || 1,
-            assignmentId,
             knowledgePointId: assignment.knowledgePointId,
             teacherId: req.user!.id
           }
         });
+        
+        // 创建题目和作业的关联关系
+        await prisma.questionAssignment.create({
+          data: {
+            questionId: question.id,
+            assignmentId: assignmentId
+          }
+        });
+        
+        return question;
       })
     );
 
@@ -289,14 +311,18 @@ router.put('/:id', authenticateToken, authorizeRoles('TEACHER', 'ADMIN'), async 
     const question = await prisma.question.findUnique({
       where: { id },
       include: {
-        assignment: {
+        assignments: {
           include: {
-            knowledgePoint: {
+            assignment: {
               include: {
-                chapter: {
+                knowledgePoint: {
                   include: {
-                    course: {
-                      select: { teacherId: true }
+                    chapter: {
+                      include: {
+                        course: {
+                          select: { teacherId: true }
+                        }
+                      }
                     }
                   }
                 }
@@ -324,8 +350,8 @@ router.put('/:id', authenticateToken, authorizeRoles('TEACHER', 'ADMIN'), async 
 
     // 验证教师权限 - 通过assignment或直接通过knowledgePoint
     let authorizedTeacherId;
-    if (question.assignment) {
-      authorizedTeacherId = question.assignment.knowledgePoint.chapter.course.teacherId;
+    if (question.assignments && question.assignments.length > 0) {
+      authorizedTeacherId = question.assignments[0].assignment.knowledgePoint.chapter.course.teacherId;
     } else if (question.knowledgePoint) {
       authorizedTeacherId = question.knowledgePoint.chapter.course.teacherId;
     } else {
@@ -351,10 +377,14 @@ router.put('/:id', authenticateToken, authorizeRoles('TEACHER', 'ADMIN'), async 
       where: { id },
       data: processedData,
       include: {
-        assignment: {
-          select: {
-            id: true,
-            title: true
+        assignments: {
+          include: {
+            assignment: {
+              select: {
+                id: true,
+                title: true
+              }
+            }
           }
         },
         knowledgePoint: {
@@ -388,14 +418,18 @@ router.delete('/:id', authenticateToken, authorizeRoles('TEACHER', 'ADMIN'), asy
     const question = await prisma.question.findUnique({
       where: { id },
       include: {
-        assignment: {
+        assignments: {
           include: {
-            knowledgePoint: {
+            assignment: {
               include: {
-                chapter: {
+                knowledgePoint: {
                   include: {
-                    course: {
-                      select: { teacherId: true }
+                    chapter: {
+                      include: {
+                        course: {
+                          select: { teacherId: true }
+                        }
+                      }
                     }
                   }
                 }
@@ -423,8 +457,8 @@ router.delete('/:id', authenticateToken, authorizeRoles('TEACHER', 'ADMIN'), asy
 
     // 验证教师权限 - 通过assignment或直接通过knowledgePoint
     let authorizedTeacherId;
-    if (question.assignment) {
-      authorizedTeacherId = question.assignment.knowledgePoint.chapter.course.teacherId;
+    if (question.assignments && question.assignments.length > 0) {
+      authorizedTeacherId = question.assignments[0].assignment.knowledgePoint.chapter.course.teacherId;
     } else if (question.knowledgePoint) {
       authorizedTeacherId = question.knowledgePoint.chapter.course.teacherId;
     } else {

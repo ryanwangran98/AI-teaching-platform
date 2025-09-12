@@ -164,7 +164,13 @@ router.post('/', authenticateToken, authorizeRoles('STUDENT'), async (req: any, 
 
     // 获取该作业的所有题目
     const questions = await prisma.question.findMany({
-      where: { assignmentId }
+      where: { 
+        assignments: {
+          some: {
+            assignmentId: assignmentId
+          }
+        }
+      }
     });
 
     // 计算总分

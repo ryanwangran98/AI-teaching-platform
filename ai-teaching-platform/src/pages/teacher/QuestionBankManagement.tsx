@@ -57,7 +57,6 @@ interface Question {
   tags: string[];
   status: 'draft' | 'published' | 'archived';
   usageCount: number;
-  assignmentId?: string;
   createdAt: string;
   updatedAt: string;
   knowledgePoint?: {
@@ -68,12 +67,21 @@ interface Question {
       title: string;
     };
   };
+  // 添加关联的作业信息
+  assignments?: Array<{
+    id: string;
+    assignment: {
+      id: string;
+      title: string;
+    };
+  }>;
 }
 
 const QuestionBankManagement: React.FC = () => {
   const navigate = useNavigate();
   const params = useParams();
   const courseId = params.courseId as string;
+  const assignmentId = params.assignmentId as string; // 获取作业ID
   const [questions, setQuestions] = useState<Question[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -113,7 +121,7 @@ const QuestionBankManagement: React.FC = () => {
     fetchChapters();
     fetchKnowledgePoints();
 
-  }, [courseId]);
+  }, [courseId, assignmentId]); // 添加assignmentId到依赖数组
 
 
 
@@ -171,7 +179,10 @@ const QuestionBankManagement: React.FC = () => {
   const fetchQuestions = async () => {
     try {
       setLoading(true);
-      const response = await questionAPI.getQuestions({ courseId });
+      // 如果在作业组卷页面，只获取该作业关联的题目
+      const response = assignmentId 
+        ? await questionAPI.getQuestions({ assignmentId }) 
+        : await questionAPI.getQuestions({ courseId });
       const data = response.data || response;
       setQuestions(Array.isArray(data) ? data : data.questions || []);
       setError(null);
@@ -685,6 +696,7 @@ const QuestionBankManagement: React.FC = () => {
               <TableCell>预估时间</TableCell>
               <TableCell>状态</TableCell>
               <TableCell>使用次数</TableCell>
+              <TableCell>关联作业</TableCell> {/* 添加这一列 */}
               <TableCell>创建时间</TableCell>
               <TableCell>更新时间</TableCell>
               <TableCell>操作</TableCell>
@@ -772,6 +784,24 @@ const QuestionBankManagement: React.FC = () => {
                     )}
                   </TableCell>
                   <TableCell>{question.usageCount || 0}</TableCell>
+                  <TableCell>
+                    {question.assignments && question.assignments.length > 0 ? (
+                      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                        {question.assignments.map((assignmentItem) => (
+                          <Chip
+                            key={assignmentItem.assignment.id}
+                            label={assignmentItem.assignment.title}
+                            size="small"
+                            variant="outlined"
+                          />
+                        ))}
+                      </Box>
+                    ) : (
+                      <Typography variant="body2" color="textSecondary">
+                        未关联作业
+                      </Typography>
+                    )}
+                  </TableCell>
                   <TableCell>
                     {new Date(question.createdAt).toLocaleDateString('zh-CN')}
                   </TableCell>

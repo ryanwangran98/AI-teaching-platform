@@ -248,7 +248,7 @@ export const assignmentAPI = {
 
 // 题库相关
 export const questionAPI = {
-  getQuestions: async (params?: { courseId?: string; chapterId?: string; type?: string; difficulty?: string }) => {
+  getQuestions: async (params?: { courseId?: string; chapterId?: string; type?: string; difficulty?: string; assignmentId?: string }) => {
     const response = await api.get('/questions', { params });
     return response.data;
   },

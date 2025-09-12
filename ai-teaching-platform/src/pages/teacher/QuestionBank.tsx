@@ -88,7 +88,8 @@ const QuestionBank: React.FC = () => {
   useEffect(() => {
     fetchChapters();
     fetchQuestions();
-  }, []);
+    fetchAssignmentQuestions(); // 获取作业已关联的题目
+  }, [assignmentId]); // 添加assignmentId依赖
 
   // 当章节改变时，过滤知识点
   useEffect(() => {
@@ -171,6 +172,21 @@ const QuestionBank: React.FC = () => {
       setError(null);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // 获取作业已关联的题目
+  const fetchAssignmentQuestions = async () => {
+    try {
+      const response = await assignmentAPI.getAssignment(assignmentId);
+      const assignment = response.data || response;
+      if (assignment.questions && Array.isArray(assignment.questions)) {
+        // 设置已选择的题目ID
+        const questionIds = assignment.questions.map((q: any) => q.question.id);
+        setSelectedQuestions(questionIds);
+      }
+    } catch (error) {
+      console.error('获取作业题目失败:', error);
     }
   };
 

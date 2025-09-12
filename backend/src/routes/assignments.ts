@@ -66,7 +66,11 @@ router.get('/', authenticateToken, async (req: any, res) => {
           }
         }
       },
-      questions: true // 包含关联的题目
+      questions: {
+        include: {
+          question: true
+        }
+      }
     };
 
     // 如果是学生，包含提交信息
@@ -127,21 +131,24 @@ router.get('/:id', authenticateToken, async (req: any, res) => {
         }
       },
       questions: {
-        select: {
-          id: true,
-          title: true,
-          content: true,
-          type: true,
-          difficulty: true,
-          points: true,
-          options: true,
-          correctAnswer: true,
-          explanation: true,
-          knowledgePointId: true,
-          assignmentId: true,
-          createdAt: true,
-          updatedAt: true,
-          teacherId: true
+        include: {
+          question: {
+            select: {
+              id: true,
+              title: true,
+              content: true,
+              type: true,
+              difficulty: true,
+              points: true,
+              options: true,
+              correctAnswer: true,
+              explanation: true,
+              knowledgePointId: true,
+              createdAt: true,
+              updatedAt: true,
+              teacherId: true
+            }
+          }
         }
       }
     };
@@ -222,7 +229,7 @@ router.post('/', authenticateToken, authorizeRoles('TEACHER', 'ADMIN'), async (r
       timeLimit,
       totalPoints,
       orderIndex = 0,
-      questionIds // 新增：题目ID列表
+      questionIds // 题目ID列表
     } = req.body;
 
     if (!title || !type || !knowledgePointId) {
@@ -278,10 +285,8 @@ router.post('/', authenticateToken, authorizeRoles('TEACHER', 'ADMIN'), async (r
         dueDate: dueDate ? new Date(dueDate) : undefined,
         totalPoints: totalPoints ? Number(totalPoints) : 100,
         status: 'DRAFT', // 默认状态为草稿
-        teacherId: req.user!.id,
-        questions: {
-          connect: validQuestionIds.map(id => ({ id }))
-        }
+        teacherId: req.user!.id
+        // 移除了直接关联题目的部分，将在创建后单独处理关联关系
       },
       include: {
         knowledgePoint: {
@@ -292,14 +297,49 @@ router.post('/', authenticateToken, authorizeRoles('TEACHER', 'ADMIN'), async (r
               }
             }
           }
+        }
+        // 移除了直接包含题目的部分
+      }
+    });
+
+    // 创建题目和作业的关联关系
+    if (validQuestionIds.length > 0) {
+      await Promise.all(
+        validQuestionIds.map(questionId => 
+          prisma.questionAssignment.create({
+            data: {
+              questionId,
+              assignmentId: assignment.id
+            }
+          })
+        )
+      );
+    }
+
+    // 重新获取作业信息，包含关联的题目
+    const fullAssignment = await prisma.assignment.findUnique({
+      where: { id: assignment.id },
+      include: {
+        knowledgePoint: {
+          include: {
+            chapter: {
+              include: {
+                course: true
+              }
+            }
+          }
         },
-        questions: true // 包含关联的题目
+        questions: {
+          include: {
+            question: true
+          }
+        }
       }
     });
 
     res.status(201).json({
       success: true,
-      data: assignment
+      data: fullAssignment
     });
   } catch (error) {
     res.status(500).json({ error: 'Server error' });
@@ -311,7 +351,7 @@ router.put('/:id', authenticateToken, authorizeRoles('TEACHER', 'ADMIN'), async 
   try {
     const { id } = req.params;
     const {
-      questionIds, // 新增：题目ID列表
+      questionIds, // 题目ID列表
       ...updateData
     } = req.body;
 
@@ -339,34 +379,47 @@ router.put('/:id', authenticateToken, authorizeRoles('TEACHER', 'ADMIN'), async 
     }
 
     // 处理题目关联
-    let questionUpdateData: any = {};
     if (questionIds !== undefined) {
-      if (Array.isArray(questionIds) && questionIds.length > 0) {
+      if (Array.isArray(questionIds)) {
         // 验证题目ID
         const questions = await prisma.question.findMany({
           where: {
             id: { in: questionIds },
+            // 验证这些题目属于当前教师
             teacherId: req.user!.id
           }
         });
 
         const validQuestionIds = questions.map(q => q.id);
-        questionUpdateData = {
-          questions: {
-            set: validQuestionIds.map(id => ({ id }))
+        
+        // 先删除现有的关联关系
+        await prisma.questionAssignment.deleteMany({
+          where: {
+            assignmentId: id
           }
-        };
+        });
+        
+        // 再创建新的关联关系
+        if (validQuestionIds.length > 0) {
+          await Promise.all(
+            validQuestionIds.map(questionId => 
+              prisma.questionAssignment.create({
+                data: {
+                  questionId,
+                  assignmentId: id
+                }
+              })
+            )
+          );
+        }
       } else {
-        // 如果提供了空数组或null，断开所有题目关联
-        questionUpdateData = {
-          questions: {
-            set: []
+        // 如果提供了非数组值，断开所有题目关联
+        await prisma.questionAssignment.deleteMany({
+          where: {
+            assignmentId: id
           }
-        };
+        });
       }
-    } else {
-      // 如果没有提供questionIds，不更新题目关联
-      delete questionUpdateData.questions;
     }
 
     // 处理totalPoints字段
@@ -387,10 +440,7 @@ router.put('/:id', authenticateToken, authorizeRoles('TEACHER', 'ADMIN'), async 
 
     const updatedAssignment = await prisma.assignment.update({
       where: { id },
-      data: {
-        ...updateData,
-        ...questionUpdateData
-      },
+      data: updateData,
       include: {
         knowledgePoint: {
           include: {
@@ -401,7 +451,11 @@ router.put('/:id', authenticateToken, authorizeRoles('TEACHER', 'ADMIN'), async 
             }
           }
         },
-        questions: true // 包含关联的题目
+        questions: {
+          include: {
+            question: true
+          }
+        }
       }
     });
 
@@ -445,17 +499,19 @@ router.delete('/:id', authenticateToken, authorizeRoles('TEACHER', 'ADMIN'), asy
     // 删除与该作业关联的所有题目（确保只删除属于当前课程的题目）
     await prisma.question.deleteMany({
       where: {
-        assignmentId: id,
-        assignment: {
-          knowledgePoint: {
-            chapter: {
-              courseId: assignment.knowledgePoint.chapter.course.id
-            }
+        assignments: {
+          some: {
+            assignmentId: id
+          }
+        },
+        knowledgePoint: {
+          chapter: {
+            courseId: assignment.knowledgePoint.chapter.course.id
           }
         }
       }
     });
-    
+
     // 然后删除作业本身
     await prisma.assignment.delete({
       where: { id }
@@ -527,7 +583,13 @@ router.post('/:id/submit', authenticateToken, authorizeRoles('STUDENT'), upload.
 
       // 获取该作业的所有题目
       const questions = await prisma.question.findMany({
-        where: { assignmentId }
+        where: { 
+          assignments: {
+            some: {
+              assignmentId: assignmentId
+            }
+          }
+        }
       });
 
       // 计算总分

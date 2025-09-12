@@ -330,18 +330,20 @@ router.delete('/:id', authenticateToken, authorizeRoles('TEACHER', 'ADMIN'), asy
         }
       }
     });
-    
+
     // 删除知识点下不关联作业的题目
     await prisma.question.deleteMany({
       where: {
         knowledgePointId: id,
-        assignmentId: null,
+        assignments: {
+          none: {}
+        },
         knowledgePoint: {
           chapterId: knowledgePoint.chapterId
         }
       }
     });
-    
+
     // 最后删除知识点
     await prisma.knowledgePoint.delete({
       where: { id }

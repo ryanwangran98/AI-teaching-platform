@@ -364,7 +364,9 @@ router.delete('/:id', authenticateToken, authorizeRoles('TEACHER', 'ADMIN'), asy
           await prisma.question.deleteMany({
             where: { 
               knowledgePointId: kp.id, 
-              assignmentId: null,
+              assignments: {
+                none: {}
+              },
               // 额外确保这些问题属于当前课程
               knowledgePoint: {
                 chapter: {
@@ -373,6 +375,7 @@ router.delete('/:id', authenticateToken, authorizeRoles('TEACHER', 'ADMIN'), asy
               }
             }
           });
+
         }
         
         // 删除知识点

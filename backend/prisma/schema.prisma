@@ -118,7 +118,7 @@ model Assignment {
   updatedAt        DateTime       @updatedAt
   knowledgePoint   KnowledgePoint @relation(fields: [knowledgePointId], references: [id])
   teacher          User           @relation(fields: [teacherId], references: [id])
-  questions        Question[]
+  questions        QuestionAssignment[]
   submissions      Submission[]
 
   @@map("assignments")
@@ -154,13 +154,12 @@ model Question {
   explanation      String?
   status           String         @default("draft")
   knowledgePointId String
-  assignmentId     String?
   createdAt        DateTime       @default(now())
   updatedAt        DateTime       @updatedAt
   teacherId        String
   knowledgePoint   KnowledgePoint @relation(fields: [knowledgePointId], references: [id])
-  assignment       Assignment?    @relation(fields: [assignmentId], references: [id])
   teacher          User           @relation(fields: [teacherId], references: [id])
+  assignments      QuestionAssignment[]
 
   @@map("questions")
 }
@@ -213,4 +212,18 @@ model Notification {
   user        User     @relation(fields: [userId], references: [id])
 
   @@map("notifications")
+}
+
+// 添加题目和作业的关联模型
+model QuestionAssignment {
+  id           String     @id @default(cuid())
+  questionId   String
+  assignmentId String
+  question     Question   @relation(fields: [questionId], references: [id])
+  assignment   Assignment @relation(fields: [assignmentId], references: [id])
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  @@unique([questionId, assignmentId])
+  @@map("question_assignments")
 }

@@ -47,8 +47,15 @@ export interface Question {
   correctAnswer?: string;
   explanation?: string;
   knowledgePointId: string;
-  assignmentId?: string;
   createdAt: string;
   updatedAt: string;
   selected?: boolean; // 用于标记是否选中
+  // 添加关联的作业信息
+  assignments?: Array<{
+    id: string;
+    assignment: {
+      id: string;
+      title: string;
+    };
+  }>;
 }
