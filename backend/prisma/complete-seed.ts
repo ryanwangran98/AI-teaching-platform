@@ -434,6 +434,54 @@ async function main() {
     }
   }
 
+  // 创建通知
+  const notificationsData = [
+    {
+      title: '欢迎使用智能教学平台',
+      content: '欢迎教师用户teacher1登录智能教学平台，您可以开始创建课程和题目了。',
+      type: 'info',
+      userId: teacher.id,
+    },
+    {
+      title: '新课程已创建',
+      content: '您的课程"高等数学"已成功创建，可以开始添加章节和知识点。',
+      type: 'success',
+      userId: teacher.id,
+    },
+    {
+      title: '作业已发布',
+      content: '您创建的作业"函数与极限练习"已成功发布给学生。',
+      type: 'info',
+      userId: teacher.id,
+    },
+    {
+      title: '欢迎使用智能教学平台',
+      content: '欢迎学生用户student1登录智能教学平台，您可以开始学习课程和完成作业了。',
+      type: 'info',
+      userId: student.id,
+    },
+    {
+      title: '新作业已发布',
+      content: '您的课程"高等数学"中发布了新的作业"函数与极限练习"，请按时完成。',
+      type: 'info',
+      userId: student.id,
+    }
+  ];
+
+  const notifications = [];
+  for (const notificationData of notificationsData) {
+    let notification;
+    try {
+      notification = await prisma.notification.create({
+        data: notificationData,
+      });
+      console.log('创建通知:', notification.title);
+    } catch (error) {
+      console.log('通知创建失败或已存在:', notificationData.title);
+    }
+    notifications.push(notification);
+  }
+
   console.log('\n=== 测试数据创建完成 ===');
   console.log('教师:', teacher.username);
   console.log('学生:', student.username);
@@ -442,6 +490,7 @@ async function main() {
   console.log('知识点数量:', knowledgePoints.length);
   console.log('题目数量:', questions.length);
   console.log('作业数量:', assignments.length);
+  console.log('通知数量:', notifications.length);
   console.log('题目-作业关联数量:', questionAssignments.length);
 }
 
