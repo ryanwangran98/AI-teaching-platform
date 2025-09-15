@@ -130,7 +130,7 @@ const StudentDashboard: React.FC = () => {
       notificationsData.slice(0, 5).forEach((notification: any) => {
         activities.push({
           id: `notification-${notification.id}`,
-          type: '通知',
+          type: getTypeLabel(notification.type),
           content: notification.title,
           time: formatDate(notification.createdAt),
           icon: getTypeIcon(notification.type),
@@ -184,6 +184,17 @@ const StudentDashboard: React.FC = () => {
       case 'error': return <Error color="error" />;
       case 'success': return <CheckCircle color="success" />;
       default: return <NotificationsIcon color="action" />;
+    }
+  };
+
+  // 获取通知类型对应的中文标签
+  const getTypeLabel = (type: string) => {
+    switch (type.toLowerCase()) {
+      case 'info': return '信息';
+      case 'warning': return '警告';
+      case 'error': return '错误';
+      case 'success': return '成功';
+      default: return type;
     }
   };
 

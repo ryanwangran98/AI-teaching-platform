@@ -34,18 +34,22 @@ import {
   Info,
   Warning,
   School,
+  Assignment,
+  Event,
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
-import { courseAPI, notificationAPI } from '../../services/api';
+import { courseAPI, notificationAPI, assignmentAPI } from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
 
 interface Notification {
   id: string;
   title: string;
   content: string;
-  type: 'info' | 'warning' | 'error' | 'success';
+  type: 'info' | 'warning' | 'error' | 'success' | 'course' | 'assignment' | 'exam' | 'general';
   isRead: boolean;
   createdAt: string;
+  relatedId?: string;
+  relatedType?: string;
   relatedCourse?: {
     id: string;
     title: string;
@@ -62,10 +66,11 @@ const NotificationsPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'all' | 'unread' | 'read'>('all');
   const [selectedCourse, setSelectedCourse] = useState<string>('');
   const [courses, setCourses] = useState<{id: string, title: string}[]>([]);
+  const [assignments, setAssignments] = useState<{id: string, title: string}[]>([]);
 
-  // 获取学生课程
+  // 获取学生课程和作业
   useEffect(() => {
-    fetchCourses();
+    fetchCoursesAndAssignments();
   }, []);
 
   useEffect(() => {
@@ -76,11 +81,11 @@ const NotificationsPage: React.FC = () => {
     filterNotifications();
   }, [notifications, activeTab]);
 
-  const fetchCourses = async () => {
+  const fetchCoursesAndAssignments = async () => {
     try {
       // 获取学生已加入的课程
-      const response = await courseAPI.getStudentCourses();
-      const coursesData = response.data || response || [];
+      const courseResponse = await courseAPI.getStudentCourses();
+      const coursesData = courseResponse.data || courseResponse || [];
       
       // 转换课程数据格式
       const convertedCourses = Array.isArray(coursesData) 
@@ -91,8 +96,14 @@ const NotificationsPage: React.FC = () => {
         : [];
       
       setCourses(convertedCourses);
+      
+      // 获取作业列表
+      const assignmentResponse = await assignmentAPI.getAssignments();
+      if (assignmentResponse.success) {
+        setAssignments(assignmentResponse.data.assignments || assignmentResponse.data);
+      }
     } catch (error) {
-      console.error('获取课程列表失败:', error);
+      console.error('获取课程或作业列表失败:', error);
     }
   };
 
@@ -105,9 +116,11 @@ const NotificationsPage: React.FC = () => {
       const response = await notificationAPI.getNotifications();
       
       // 处理通知数据，确保数据格式正确
-      const notificationsData = Array.isArray(response.data?.notifications) 
+      let notificationsData = Array.isArray(response.data?.notifications) 
         ? response.data.notifications
         : [];
+      
+      // 后端已经过滤了已发布的通知，这里不需要再次过滤
       
       // 根据选中的课程过滤通知
       let filtered = notificationsData;
@@ -141,24 +154,40 @@ const NotificationsPage: React.FC = () => {
     }
   };
 
-  const handleMarkAsRead = (id: string) => {
-    setNotifications(notifications.map(n => 
-      n.id === id ? { ...n, isRead: true } : n
-    ));
+  const handleMarkAsRead = async (id: string) => {
+    try {
+      await notificationAPI.markAsRead(id);
+      setNotifications(notifications.map(n => 
+        n.id === id ? { ...n, isRead: true } : n
+      ));
+    } catch (error) {
+      console.error('标记为已读失败:', error);
+    }
   };
 
-  const handleMarkAsUnread = (id: string) => {
-    setNotifications(notifications.map(n => 
-      n.id === id ? { ...n, isRead: false } : n
-    ));
+  const handleMarkAsUnread = async (id: string) => {
+    try {
+      // 这里需要实现一个标记为未读的API
+      setNotifications(notifications.map(n => 
+        n.id === id ? { ...n, isRead: false } : n
+      ));
+    } catch (error) {
+      console.error('标记为未读失败:', error);
+    }
   };
 
-  const handleDelete = (id: string) => {
-    setNotifications(notifications.filter(n => n.id !== id));
+  // 学生端不提供删除通知功能，因为通知由教师/管理员创建和管理
+  const handleDelete = async (id: string) => {
+    console.log('学生无权限删除通知');
   };
 
-  const handleMarkAllAsRead = () => {
-    setNotifications(notifications.map(n => ({ ...n, isRead: true })));
+  const handleMarkAllAsRead = async () => {
+    try {
+      await notificationAPI.markAllAsRead();
+      setNotifications(notifications.map(n => ({ ...n, isRead: true })));
+    } catch (error) {
+      console.error('全部标记为已读失败:', error);
+    }
   };
 
   const getTypeIcon = (type: string) => {
@@ -167,6 +196,9 @@ const NotificationsPage: React.FC = () => {
       case 'warning': return <Warning color="warning" />;
       case 'error': return <Error color="error" />;
       case 'success': return <CheckCircle color="success" />;
+      case 'course': return <School color="primary" />;
+      case 'assignment': return <Assignment color="warning" />;
+      case 'exam': return <Event color="error" />;
       default: return <NotificationsIcon color="action" />;
     }
   };
@@ -177,7 +209,40 @@ const NotificationsPage: React.FC = () => {
       case 'warning': return 'warning';
       case 'error': return 'error';
       case 'success': return 'success';
+      case 'course': return 'primary';
+      case 'assignment': return 'warning';
+      case 'exam': return 'error';
       default: return 'default';
+    }
+  };
+
+  const getTypeLabel = (type: string) => {
+    switch (type.toLowerCase()) {
+      case 'info': return '信息';
+      case 'warning': return '警告';
+      case 'error': return '错误';
+      case 'success': return '成功';
+      case 'course': return '课程';
+      case 'assignment': return '作业';
+      case 'exam': return '考试';
+      default: return type;
+    }
+  };
+
+  const getRelatedContent = (notification: Notification) => {
+    if (!notification.relatedId || !notification.relatedType) {
+      return null;
+    }
+    
+    switch (notification.relatedType) {
+      case 'COURSE':
+        const course = courses.find(c => c.id === notification.relatedId);
+        return course ? `课程: ${course.title}` : '关联课程';
+      case 'ASSIGNMENT':
+        const assignment = assignments.find(a => a.id === notification.relatedId);
+        return assignment ? `作业: ${assignment.title}` : '关联作业';
+      default:
+        return null;
     }
   };
 
@@ -310,9 +375,9 @@ const NotificationsPage: React.FC = () => {
                           variant="outlined" 
                         />
                       )}
-                      {notification.relatedCourse && (
+                      {notification.relatedType && (
                         <Chip 
-                          label={notification.relatedCourse.title} 
+                          label={getTypeLabel(notification.type)} 
                           color={getTypeColor(notification.type) as any}
                           size="small" 
                           variant="outlined" 
@@ -329,6 +394,16 @@ const NotificationsPage: React.FC = () => {
                       >
                         {notification.content}
                       </Typography>
+                      <br />
+                      {notification.relatedId && notification.relatedType && (
+                        <Typography
+                          component="span"
+                          variant="caption"
+                          color="primary"
+                        >
+                          {getRelatedContent(notification)}
+                        </Typography>
+                      )}
                       <br />
                       <Typography
                         component="span"
@@ -351,14 +426,6 @@ const NotificationsPage: React.FC = () => {
                     }
                   >
                     {notification.isRead ? <Markunread /> : <Drafts />}
-                  </IconButton>
-                  <IconButton 
-                    edge="end" 
-                    aria-label="删除"
-                    onClick={() => handleDelete(notification.id)}
-                    sx={{ ml: 1 }}
-                  >
-                    <Delete />
                   </IconButton>
                 </ListItemSecondaryAction>
               </ListItem>

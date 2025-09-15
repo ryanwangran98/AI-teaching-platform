@@ -60,6 +60,18 @@ export const knowledgePointSchema = z.object({
   tags: z.array(z.string()).optional(),
 });
 
+// 通知验证模式
+export const notificationSchema = z.object({
+  title: z.string().min(1, '请输入通知标题').max(200, '通知标题最多200个字符'),
+  content: z.string().optional(),
+  type: z.enum(['course', 'assignment', 'exam', 'general']),
+  status: z.enum(['DRAFT', 'PUBLISHED']).optional(),
+  targetType: z.enum(['all', 'course', 'individual']).optional(),
+  targetValue: z.string().optional().nullable(),
+  relatedId: z.string().optional().nullable(),
+  relatedType: z.string().optional().nullable(),
+});
+
 // 分页验证模式
 export const paginationSchema = z.object({
   page: z.string().transform(Number).pipe(z.number().int().min(1).optional()),
