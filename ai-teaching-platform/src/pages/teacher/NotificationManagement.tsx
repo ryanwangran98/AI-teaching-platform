@@ -259,7 +259,7 @@ const NotificationManagement: React.FC = () => {
   };
 
   const getTypeLabel = (type: string) => {
-    switch (type) {
+    switch (type.toLowerCase()) {
       case 'course': return '课程通知';
       case 'assignment': return '作业通知';
       case 'exam': return '考试通知';

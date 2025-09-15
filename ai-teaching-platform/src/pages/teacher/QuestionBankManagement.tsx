@@ -460,7 +460,7 @@ const QuestionBankManagement: React.FC = () => {
   }, []);
 
   const getTypeLabel = (type: string) => {
-    switch (type) {
+    switch (type.toLowerCase()) {
       case 'single_choice': return '单选题';
       case 'multiple_choice': return '多选题';
       case 'true_false': return '判断题';
@@ -472,7 +472,7 @@ const QuestionBankManagement: React.FC = () => {
   };
 
   const getTypeColor = (type: string) => {
-    switch (type) {
+    switch (type.toLowerCase()) {
       case 'single_choice': return 'primary';
       case 'multiple_choice': return 'secondary';
       case 'true_false': return 'success';
@@ -484,7 +484,7 @@ const QuestionBankManagement: React.FC = () => {
   };
 
   const getDifficultyColor = (difficulty: string) => {
-    switch (difficulty) {
+    switch (difficulty.toLowerCase()) {
       case 'easy': return 'success';
       case 'medium': return 'warning';
       case 'hard': return 'error';
@@ -493,7 +493,7 @@ const QuestionBankManagement: React.FC = () => {
   };
 
   const getDifficultyLabel = (difficulty: string) => {
-    switch (difficulty) {
+    switch (difficulty.toLowerCase()) {
       case 'easy': return '简单';
       case 'medium': return '中等';
       case 'hard': return '困难';
@@ -1091,7 +1091,7 @@ const QuestionBankManagement: React.FC = () => {
                           key={optionLetter}
                           label={`${optionLetter}. ${option}`}
                           onClick={() => {
-                            const currentAnswers = createForm.correctAnswer.split(',').filter(Boolean);
+                            const currentAnswers = createForm.correctAnswer.split(',');
                             if (isSelected) {
                               // 取消选择
                               const newAnswers = currentAnswers.filter(ans => ans !== optionLetter);

@@ -105,19 +105,19 @@ model Enrollment {
 }
 
 model Assignment {
-  id               String         @id @default(cuid())
+  id               String               @id @default(cuid())
   title            String
   description      String?
-  type             String         @default("HOMEWORK")
-  totalPoints      Int            @default(100)
+  type             String               @default("HOMEWORK")
+  totalPoints      Int                  @default(100)
   dueDate          DateTime
-  status           String         @default("DRAFT")
+  status           String               @default("DRAFT")
   knowledgePointId String
   teacherId        String
-  createdAt        DateTime       @default(now())
-  updatedAt        DateTime       @updatedAt
-  knowledgePoint   KnowledgePoint @relation(fields: [knowledgePointId], references: [id])
-  teacher          User           @relation(fields: [teacherId], references: [id])
+  createdAt        DateTime             @default(now())
+  updatedAt        DateTime             @updatedAt
+  knowledgePoint   KnowledgePoint       @relation(fields: [knowledgePointId], references: [id])
+  teacher          User                 @relation(fields: [teacherId], references: [id])
   questions        QuestionAssignment[]
   submissions      Submission[]
 
@@ -143,23 +143,23 @@ model Submission {
 }
 
 model Question {
-  id               String         @id @default(cuid())
+  id               String               @id @default(cuid())
   title            String
   content          String
-  type             String         @default("SINGLE_CHOICE")
-  difficulty       String         @default("MEDIUM")
-  points           Int            @default(1)
+  type             String               @default("SINGLE_CHOICE")
+  difficulty       String               @default("MEDIUM")
+  points           Int                  @default(1)
   options          String?
   correctAnswer    String?
   explanation      String?
-  status           String         @default("draft")
+  status           String               @default("draft")
   knowledgePointId String
-  createdAt        DateTime       @default(now())
-  updatedAt        DateTime       @updatedAt
+  createdAt        DateTime             @default(now())
+  updatedAt        DateTime             @updatedAt
   teacherId        String
-  knowledgePoint   KnowledgePoint @relation(fields: [knowledgePointId], references: [id])
-  teacher          User           @relation(fields: [teacherId], references: [id])
   assignments      QuestionAssignment[]
+  teacher          User                 @relation(fields: [teacherId], references: [id])
+  knowledgePoint   KnowledgePoint       @relation(fields: [knowledgePointId], references: [id])
 
   @@map("questions")
 }
@@ -214,15 +214,14 @@ model Notification {
   @@map("notifications")
 }
 
-// 添加题目和作业的关联模型
 model QuestionAssignment {
   id           String     @id @default(cuid())
   questionId   String
   assignmentId String
-  question     Question   @relation(fields: [questionId], references: [id])
-  assignment   Assignment @relation(fields: [assignmentId], references: [id])
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
+  assignment   Assignment @relation(fields: [assignmentId], references: [id])
+  question     Question   @relation(fields: [questionId], references: [id])
 
   @@unique([questionId, assignmentId])
   @@map("question_assignments")

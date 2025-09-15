@@ -186,7 +186,7 @@ const AssignmentQuestions: React.FC = () => {
   };
 
   const getTypeLabel = (type: string) => {
-    switch (type) {
+    switch (type.toLowerCase()) {
       case 'single_choice': return '单选题';
       case 'multiple_choice': return '多选题';
       case 'true_false': return '判断题';
@@ -198,7 +198,7 @@ const AssignmentQuestions: React.FC = () => {
   };
 
   const getTypeColor = (type: string) => {
-    switch (type) {
+    switch (type.toLowerCase()) {
       case 'single_choice': return 'primary';
       case 'multiple_choice': return 'secondary';
       case 'true_false': return 'success';
@@ -210,7 +210,7 @@ const AssignmentQuestions: React.FC = () => {
   };
 
   const getDifficultyColor = (difficulty: string) => {
-    switch (difficulty) {
+    switch (difficulty.toLowerCase()) {
       case 'easy': return 'success';
       case 'medium': return 'warning';
       case 'hard': return 'error';
@@ -219,7 +219,7 @@ const AssignmentQuestions: React.FC = () => {
   };
 
   const getDifficultyLabel = (difficulty: string) => {
-    switch (difficulty) {
+    switch (difficulty.toLowerCase()) {
       case 'easy': return '简单';
       case 'medium': return '中等';
       case 'hard': return '困难';

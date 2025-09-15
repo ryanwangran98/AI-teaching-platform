@@ -239,7 +239,8 @@ const KnowledgePointManagement: React.FC = () => {
   };
 
   const getDifficultyColor = (difficulty: string) => {
-    switch (difficulty) {
+    const lowerDifficulty = difficulty.toLowerCase();
+    switch (lowerDifficulty) {
       case 'easy': return 'success';
       case 'medium': return 'warning';
       case 'hard': return 'error';
@@ -251,7 +252,8 @@ const KnowledgePointManagement: React.FC = () => {
   };
 
   const getDifficultyLabel = (difficulty: string) => {
-    switch (difficulty) {
+    const lowerDifficulty = difficulty.toLowerCase();
+    switch (lowerDifficulty) {
       case 'easy': return '简单';
       case 'medium': return '中等';
       case 'hard': return '困难';
@@ -263,7 +265,8 @@ const KnowledgePointManagement: React.FC = () => {
   };
 
   const getImportanceColor = (importance: string) => {
-    switch (importance) {
+    const lowerImportance = importance.toLowerCase();
+    switch (lowerImportance) {
       case 'low': return 'default';
       case 'medium': return 'warning';
       case 'high': return 'error';
@@ -275,7 +278,8 @@ const KnowledgePointManagement: React.FC = () => {
   };
 
   const getImportanceLabel = (importance: string) => {
-    switch (importance) {
+    const lowerImportance = importance.toLowerCase();
+    switch (lowerImportance) {
       case 'low': return '低';
       case 'medium': return '中';
       case 'high': return '高';
@@ -290,7 +294,7 @@ const KnowledgePointManagement: React.FC = () => {
     const matchesSearch = kp.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
                            kp.description.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesChapter = !selectedChapter || kp.chapterId === selectedChapter;
-    const matchesDifficulty = !selectedDifficulty || kp.difficulty === selectedDifficulty;
+    const matchesDifficulty = !selectedDifficulty || kp.difficulty.toLowerCase() === selectedDifficulty;
     return matchesSearch && matchesChapter && matchesDifficulty;
   });
 

@@ -262,7 +262,7 @@ const AssignmentManagement: React.FC = () => {
     setFormData({
       title: '',
       description: '',
-      type: 'homework',
+      type: 'homework', // 确保使用英文小写值
       difficulty: 'medium',
       totalScore: 100,
       passingScore: 60,
@@ -293,7 +293,7 @@ const AssignmentManagement: React.FC = () => {
     setFormData({
       title: assignment.title,
       description: assignment.description,
-      type: assignment.type,
+      type: assignment.type.toLowerCase(), // 确保使用英文小写值
       difficulty: assignment.difficulty,
       totalScore: assignment.totalScore,
       passingScore: assignment.passingScore,
@@ -481,7 +481,7 @@ const AssignmentManagement: React.FC = () => {
   };
 
   const getTypeLabel = (type: string) => {
-    switch (type) {
+    switch (type.toLowerCase()) {
       case 'homework': return '作业';
       case 'quiz': return '测验';
       case 'exam': return '考试';
@@ -495,7 +495,7 @@ const AssignmentManagement: React.FC = () => {
   };
 
   const getDifficultyColor = (difficulty: string) => {
-    switch (difficulty) {
+    switch (difficulty.toLowerCase()) {
       case 'easy': return 'success';
       case 'medium': return 'warning';
       case 'hard': return 'error';
@@ -504,7 +504,7 @@ const AssignmentManagement: React.FC = () => {
   };
 
   const getDifficultyLabel = (difficulty: string) => {
-    switch (difficulty) {
+    switch (difficulty.toLowerCase()) {
       case 'easy': return '简单';
       case 'medium': return '中等';
       case 'hard': return '困难';

@@ -213,7 +213,7 @@ const QuestionBank: React.FC = () => {
   };
 
   const getTypeLabel = (type: string) => {
-    switch (type) {
+    switch (type.toLowerCase()) {
       case 'single_choice': return '单选题';
       case 'multiple_choice': return '多选题';
       case 'short_answer': return '简答题';
@@ -223,7 +223,7 @@ const QuestionBank: React.FC = () => {
   };
 
   const getDifficultyColor = (difficulty: string) => {
-    switch (difficulty) {
+    switch (difficulty.toLowerCase()) {
       case 'easy': return 'success';
       case 'medium': return 'warning';
       case 'hard': return 'error';
@@ -232,7 +232,7 @@ const QuestionBank: React.FC = () => {
   };
 
   const getDifficultyLabel = (difficulty: string) => {
-    switch (difficulty) {
+    switch (difficulty.toLowerCase()) {
       case 'easy': return '简单';
       case 'medium': return '中等';
       case 'hard': return '困难';

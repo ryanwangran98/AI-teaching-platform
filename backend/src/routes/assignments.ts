@@ -280,7 +280,7 @@ router.post('/', authenticateToken, authorizeRoles('TEACHER', 'ADMIN'), async (r
       data: {
         title: String(title),
         description: description ? String(description) : undefined,
-        type: String(type),
+        type: String(type).toUpperCase(), // 统一转换为大写
         knowledgePointId: String(knowledgePointId),
         dueDate: dueDate ? new Date(dueDate) : undefined,
         totalPoints: totalPoints ? Number(totalPoints) : 100,
@@ -425,6 +425,11 @@ router.put('/:id', authenticateToken, authorizeRoles('TEACHER', 'ADMIN'), async 
     // 处理totalPoints字段
     if (updateData.totalPoints !== undefined) {
       updateData.totalPoints = Number(updateData.totalPoints);
+    }
+    
+    // 统一作业类型为大写格式
+    if (updateData.type !== undefined) {
+      updateData.type = String(updateData.type).toUpperCase();
     }
     
     // 处理knowledgePointId字段，转换为knowledgePoint关系
