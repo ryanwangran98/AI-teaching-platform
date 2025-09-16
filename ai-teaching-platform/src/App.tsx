@@ -137,6 +137,7 @@ function App() {
         <Route path="my-courses" element={<MyCourses />} />
         <Route path="course/:courseId">
           <Route index element={<CourseLearning />} />
+          <Route path="chapter/:chapterId" element={<ChapterLearning />} />
           <Route path="assignment/:assignmentId" element={<AssignmentDetail />} />
         </Route>
         <Route path="courses" element={<StudentCourseManagement />} />

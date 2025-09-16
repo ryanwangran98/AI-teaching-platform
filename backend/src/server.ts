@@ -29,11 +29,29 @@ const PORT = process.env.PORT || 3002;
 
 // 中间件
 app.use(helmet());
+
+// 全局CORS配置
+app.use((req, res, next) => {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization, Range');
+  res.setHeader('Access-Control-Expose-Headers', 'Content-Length, Content-Range');
+  res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+  
+  if (req.method === 'OPTIONS') {
+    res.status(200).end();
+    return;
+  }
+  
+  next();
+});
+
 app.use(cors({
   origin: process.env.FRONTEND_URL || ['http://localhost:5173', 'http://localhost:5174', 'http://localhost:5175', 'http://127.0.0.1:5173', 'http://127.0.0.1:5174', 'http://127.0.0.1:5175'],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Origin', 'X-Requested-With', 'Content-Type', 'Accept', 'Authorization'],
+  allowedHeaders: ['Origin', 'X-Requested-With', 'Content-Type', 'Accept', 'Authorization', 'Range'],
+  exposedHeaders: ['Content-Length', 'Content-Range']
 }));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
@@ -89,67 +107,82 @@ const previewableExtensions = [
   // 文档类型
   'pdf', 'html', 'htm', 'txt', 'md', 'css', 'js',
   // Office文档
-  'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx'
+  'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx',
+  // 视频类型
+  'mp4', 'webm', 'ogg', 'mp3', 'wav'
 ];
 
-// 创建一个修改后的静态文件服务中间件
-app.use('/uploads', (req, res, next) => {
-  // 获取文件扩展名
-  const extension = req.path.split('.').pop()?.toLowerCase() || '';
-  
-  // 检查是否是可预览的文件类型
-  const isPreviewable = previewableExtensions.includes(extension);
-  
-  if (isPreviewable) {
-    // 对于可预览的文件，显式设置Content-Disposition为inline
-    res.setHeader('Content-Disposition', 'inline');
+// 使用express.static提供更好的静态文件服务，包括范围请求支持
+const path = require('path');
+const uploadsPath = path.join(__dirname, '..', 'uploads');
+
+// 配置静态文件服务，设置适当的头信息
+app.use('/uploads', express.static(uploadsPath, {
+  setHeaders: (res, filePath) => {
+    // 设置CORS头
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization, Range');
+    res.setHeader('Access-Control-Expose-Headers', 'Content-Length, Content-Range');
+    res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
     
-    // 为不同类型的文件设置适当的Content-Type
-    const contentTypeMap = {
-      'pdf': 'application/pdf',
-      'txt': 'text/plain',
-      'md': 'text/markdown',
-      'css': 'text/css',
-      'js': 'application/javascript',
-      'html': 'text/html',
-      'htm': 'text/html',
-      'jpg': 'image/jpeg',
-      'jpeg': 'image/jpeg',
-      'png': 'image/png',
-      'gif': 'image/gif',
-      'svg': 'image/svg+xml',
-      'webp': 'image/webp',
-      'bmp': 'image/bmp'
-      // 对于Office文档，我们不设置特定的Content-Type，让浏览器自己处理
-    };
+    // 获取文件扩展名
+    const extension = filePath.split('.').pop()?.toLowerCase() || '';
     
-    // 如果文件类型在contentTypeMap中，设置对应的Content-Type
-    if (contentTypeMap[extension]) {
-      res.setHeader('Content-Type', contentTypeMap[extension]);
+    // 检查是否是可预览的文件类型
+    const isPreviewable = previewableExtensions.includes(extension);
+    
+    if (isPreviewable) {
+      // 对于可预览的文件，显式设置Content-Disposition为inline
+      res.setHeader('Content-Disposition', 'inline');
+      
+      // 为不同类型的文件设置适当的Content-Type
+      const contentTypeMap = {
+        'pdf': 'application/pdf',
+        'txt': 'text/plain',
+        'md': 'text/markdown',
+        'css': 'text/css',
+        'js': 'application/javascript',
+        'html': 'text/html',
+        'htm': 'text/html',
+        'jpg': 'image/jpeg',
+        'jpeg': 'image/jpeg',
+        'png': 'image/png',
+        'gif': 'image/gif',
+        'svg': 'image/svg+xml',
+        'webp': 'image/webp',
+        'bmp': 'image/bmp',
+        'mp4': 'video/mp4',
+        'webm': 'video/webm',
+        'ogg': 'video/ogg',
+        'mp3': 'audio/mpeg',
+        'wav': 'audio/wav'
+        // 对于Office文档，我们不设置特定的Content-Type，让浏览器自己处理
+      };
+      
+      // 如果文件类型在contentTypeMap中，设置对应的Content-Type
+      if (contentTypeMap[extension]) {
+        res.setHeader('Content-Type', contentTypeMap[extension]);
+      }
+    } else {
+      // 对于其他文件类型，设置nosniff头以确保安全
+      res.setHeader('X-Content-Type-Options', 'nosniff');
     }
-  } else {
-    // 对于其他文件类型，设置nosniff头以确保安全
-    res.setHeader('X-Content-Type-Options', 'nosniff');
+    
+    // 为视频文件添加额外的头信息以支持流式播放
+    if (filePath.endsWith('.mp4') || filePath.endsWith('.webm') || filePath.endsWith('.ogg')) {
+      res.setHeader('Accept-Ranges', 'bytes');
+    }
   }
-  
-  // 使用fs模块直接读取文件并发送，而不是使用express.static
-  const path = require('path');
-  const fs = require('fs');
-  const filePath = path.join(__dirname, '..', 'uploads', req.path);
-  
-  fs.stat(filePath, (err, stats) => {
-    if (err) {
-      return next(err);
-    }
-    
-    if (!stats.isFile()) {
-      return next();
-    }
-    
-    // 创建文件流并发送
-    const fileStream = fs.createReadStream(filePath);
-    fileStream.pipe(res);
-  });
+}));
+
+// 处理OPTIONS预检请求
+app.use('/uploads', (req, res, next) => {
+  if (req.method === 'OPTIONS') {
+    res.status(200).end();
+    return;
+  }
+  next();
 });
 
 // Swagger UI

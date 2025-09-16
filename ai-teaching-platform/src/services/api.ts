@@ -194,6 +194,16 @@ export const chapterAPI = {
     const response = await api.delete(`/chapters/${chapterId}`);
     return response.data;
   },
+
+  // 上传章节学习视频
+  uploadChapterVideo: async (chapterId: string, formData: FormData) => {
+    const response = await api.post(`/chapters/${chapterId}/video`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return response.data;
+  },
 };
 
 // 作业相关

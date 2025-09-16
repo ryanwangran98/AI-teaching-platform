@@ -29,6 +29,7 @@ import {
   Card,
   CardContent,
   Stack,
+  Snackbar,
 } from '@mui/material';
 import {
   Add,
@@ -42,6 +43,8 @@ import {
   Publish,
   Drafts,
   FiberNew,
+  Upload,
+  VideoFile,
 } from '@mui/icons-material';
 import { useNavigate, useParams } from 'react-router-dom'; // 修改这里，使用useParams而不是useSearchParams
 import { chapterAPI, courseAPI } from '../../services/api';
@@ -76,6 +79,7 @@ interface Chapter {
     knowledgePoints: number;
   };
   knowledgePoints?: Array<any>;
+  videoUrl?: string; // 章节学习视频URL
 }
 
 interface ChapterFormData {
@@ -109,6 +113,19 @@ const ChapterManagement: React.FC = () => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [chapterToDelete, setChapterToDelete] = useState<Chapter | null>(null);
   const [deleting, setDeleting] = useState(false);
+  
+  // 视频上传相关状态
+  const [videoUploadOpen, setVideoUploadOpen] = useState(false);
+  const [uploadingChapter, setUploadingChapter] = useState<Chapter | null>(null);
+  const [videoFile, setVideoFile] = useState<File | null>(null);
+  const [videoUploading, setVideoUploading] = useState(false);
+  
+  // Snackbar状态
+  const [snackbar, setSnackbar] = useState({
+    open: false,
+    message: '',
+    severity: 'success' as 'success' | 'error' | 'warning' | 'info'
+  });
 
   useEffect(() => {
     if (currentCourseId) {
@@ -149,7 +166,8 @@ const ChapterManagement: React.FC = () => {
         content: chapter.content,
         course: chapter.course,
         _count: chapter._count,
-        knowledgePoints: chapter.knowledgePoints
+        knowledgePoints: chapter.knowledgePoints,
+        videoUrl: chapter.videoUrl // 添加视频URL字段
       }));
       
       setChapters(mappedChapters);
@@ -291,6 +309,59 @@ const ChapterManagement: React.FC = () => {
     }
   };
 
+  // 视频上传相关函数
+  const handleVideoUploadOpen = (chapter: Chapter) => {
+    setUploadingChapter(chapter);
+    setVideoUploadOpen(true);
+  };
+
+  const handleVideoUploadClose = () => {
+    setVideoUploadOpen(false);
+    setUploadingChapter(null);
+    setVideoFile(null);
+  };
+
+  const handleVideoFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      setVideoFile(file);
+    }
+  };
+
+  const handleVideoUpload = async () => {
+    if (!uploadingChapter || !videoFile) return;
+
+    setVideoUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append('video', videoFile);
+      formData.append('chapterId', uploadingChapter.id);
+
+      const response = await chapterAPI.uploadChapterVideo(uploadingChapter.id, formData);
+
+      if (response.success) {
+        setSnackbar({
+          open: true,
+          message: '视频上传成功',
+          severity: 'success',
+        });
+        handleVideoUploadClose();
+        fetchChapters();
+      } else {
+        throw new Error(response.message || '视频上传失败');
+      }
+    } catch (error) {
+      console.error('视频上传失败:', error);
+      setSnackbar({
+        open: true,
+        message: '视频上传失败',
+        severity: 'error',
+      });
+    } finally {
+      setVideoUploading(false);
+    }
+  };
+
   const handleDeleteClick = (chapter: Chapter) => {
     setChapterToDelete(chapter);
     setDeleteDialogOpen(true);
@@ -352,6 +423,10 @@ const ChapterManagement: React.FC = () => {
   const handleSelectChange = (e: any) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleSnackbarClose = () => {
+    setSnackbar(prev => ({ ...prev, open: false }));
   };
 
   if (!currentCourseId) {
@@ -510,14 +585,15 @@ const ChapterManagement: React.FC = () => {
               <TableCell>所属课程</TableCell>
               <TableCell>描述</TableCell>
               <TableCell>排序</TableCell>
-              <TableCell>状态</TableCell>
-              <TableCell>知识点</TableCell>
-              <TableCell>资料</TableCell>
-              <TableCell>课件</TableCell>
-              <TableCell>作业</TableCell>
-              <TableCell>创建时间</TableCell>
-              <TableCell>更新时间</TableCell>
-              <TableCell>操作</TableCell>
+                  <TableCell>状态</TableCell>
+                  <TableCell>知识点</TableCell>
+                  <TableCell>资料</TableCell>
+                  <TableCell>课件</TableCell>
+                  <TableCell>作业</TableCell>
+                  <TableCell>学习视频</TableCell>
+                  <TableCell>创建时间</TableCell>
+                  <TableCell>更新时间</TableCell>
+                  <TableCell>操作</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -586,25 +662,63 @@ const ChapterManagement: React.FC = () => {
                     />
                   </TableCell>
                   <TableCell>
+                    {chapter.videoUrl ? (
+                      <Chip 
+                        icon={<VideoFile />} 
+                        label="已上传" 
+                        color="success" 
+                        size="small"
+                      />
+                    ) : (
+                      <Chip 
+                        icon={<Upload />} 
+                        label="未上传" 
+                        color="default" 
+                        size="small"
+                      />
+                    )}
+                  </TableCell>
+                  <TableCell>
                     {new Date(chapter.createdAt).toLocaleDateString('zh-CN')}
                   </TableCell>
                   <TableCell>
                     {new Date(chapter.updatedAt).toLocaleDateString('zh-CN')}
                   </TableCell>
                   <TableCell>
-                    <IconButton color="primary" size="small">
-                      <Visibility />
-                    </IconButton>
-                    <IconButton color="primary" size="small" onClick={() => handleEdit(chapter)}>
-                      <Edit />
-                    </IconButton>
-                    <IconButton
-                      color="error"
-                      size="small"
-                      onClick={() => handleDeleteClick(chapter)}
-                    >
-                      <Delete />
-                    </IconButton>
+                    <Box sx={{ display: 'flex', gap: 1 }}>
+                      <IconButton
+                        size="small"
+                        color="primary"
+                        onClick={() => handleView(chapter)}
+                        title="查看详情"
+                      >
+                        <Visibility />
+                      </IconButton>
+                      <IconButton
+                        size="small"
+                        color="secondary"
+                        onClick={() => handleEdit(chapter)}
+                        title="编辑"
+                      >
+                        <Edit />
+                      </IconButton>
+                      <IconButton
+                        size="small"
+                        color="info"
+                        onClick={() => handleVideoUploadOpen(chapter)}
+                        title="上传学习视频"
+                      >
+                        {chapter.videoUrl ? <VideoFile color="success" /> : <Upload />}
+                      </IconButton>
+                      <IconButton
+                        size="small"
+                        color="error"
+                        onClick={() => handleDeleteClick(chapter)}
+                        title="删除"
+                      >
+                        <Delete />
+                      </IconButton>
+                    </Box>
                   </TableCell>
                 </TableRow>
               ))
@@ -733,6 +847,79 @@ const ChapterManagement: React.FC = () => {
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* 视频上传对话框 */}
+      <Dialog
+        open={videoUploadOpen}
+        onClose={handleVideoUploadClose}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>
+          上传章节学习视频 - {uploadingChapter?.title}
+        </DialogTitle>
+        <DialogContent>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
+            <Typography variant="body2" color="textSecondary">
+              请选择一个视频文件作为本章节的学习视频。支持常见的视频格式（MP4、AVI、MOV等）。
+            </Typography>
+            <Button
+              variant="outlined"
+              component="label"
+              startIcon={<Upload />}
+              fullWidth
+            >
+              {videoFile ? videoFile.name : '选择视频文件'}
+              <input
+                type="file"
+                hidden
+                accept="video/*"
+                onChange={handleVideoFileChange}
+              />
+            </Button>
+            {uploadingChapter?.videoUrl && (
+              <Alert severity="info" sx={{ mt: 1 }}>
+                当前已存在学习视频，上传新视频将替换现有视频。
+              </Alert>
+            )}
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleVideoUploadClose} disabled={videoUploading}>
+            取消
+          </Button>
+          <Button 
+            onClick={handleVideoUpload} 
+            variant="contained"
+            disabled={!videoFile || videoUploading}
+          >
+            {videoUploading ? (
+              <>
+                <CircularProgress size={20} sx={{ mr: 1 }} />
+                上传中...
+              </>
+            ) : (
+              '上传'
+            )}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* 提示消息Snackbar */}
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={6000}
+        onClose={handleSnackbarClose}
+        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+      >
+        <Alert 
+          onClose={handleSnackbarClose} 
+          severity={snackbar.severity}
+          sx={{ width: '100%' }}
+        >
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 };

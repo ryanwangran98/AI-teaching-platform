@@ -20,8 +20,13 @@ const storage = multer.diskStorage({
   filename: (req, file, cb) => {
     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
     const ext = path.extname(file.originalname);
-    const name = path.basename(file.originalname, ext);
-    cb(null, `${name}-${uniqueSuffix}${ext}`);
+    
+    // 使用安全的文件名：移除特殊字符，保留基本名称
+    const originalName = path.basename(file.originalname, ext);
+    const safeName = originalName.replace(/[^\w\u4e00-\u9fa5\u3040-\u309f\u30a0-\u30ff\-_.\s]/g, '');
+    const finalName = safeName || 'file';
+    
+    cb(null, `${finalName}-${uniqueSuffix}${ext}`);
   }
 });
 
@@ -62,7 +67,7 @@ export const upload = multer({
   storage,
   fileFilter,
   limits: {
-    fileSize: 10 * 1024 * 1024 // 10MB
+    fileSize: 500 * 1024 * 1024 // 500MB - 支持大视频文件上传
   }
 });
 

@@ -352,9 +352,7 @@ const CoursewareManagement: React.FC = () => {
   const getTypeColor = (type: string) => {
     const colorMap: Record<string, 'primary' | 'secondary' | 'success' | 'error' | 'warning' | 'info'> = {
       'SLIDES': 'primary',
-      'DOCUMENT': 'info',
-      'VIDEO': 'secondary',
-      'INTERACTIVE': 'warning'
+      'DOCUMENT': 'info'
     };
     return colorMap[type] || 'default';
   };
@@ -362,9 +360,7 @@ const CoursewareManagement: React.FC = () => {
   const getTypeText = (type: string) => {
     const textMap: Record<string, string> = {
       'SLIDES': '幻灯片',
-      'DOCUMENT': '文档',
-      'VIDEO': '视频',
-      'INTERACTIVE': '互动课件'
+      'DOCUMENT': '文档'
     };
     return textMap[type] || type;
   };
@@ -461,8 +457,6 @@ const CoursewareManagement: React.FC = () => {
               <MenuItem value="">全部类型</MenuItem>
               <MenuItem value="SLIDES">幻灯片</MenuItem>
               <MenuItem value="DOCUMENT">文档</MenuItem>
-              <MenuItem value="VIDEO">视频</MenuItem>
-              <MenuItem value="INTERACTIVE">互动课件</MenuItem>
             </Select>
           </FormControl>
         </Box>
@@ -624,8 +618,6 @@ const CoursewareManagement: React.FC = () => {
               >
                 <MenuItem value="SLIDES">幻灯片</MenuItem>
                 <MenuItem value="DOCUMENT">文档</MenuItem>
-                <MenuItem value="VIDEO">视频</MenuItem>
-                <MenuItem value="INTERACTIVE">互动课件</MenuItem>
               </Select>
             </FormControl>
             

@@ -1,6 +1,7 @@
 import express from 'express';
 import prisma from '../config/database';
 import { authenticateToken, authorizeRoles, AuthRequest } from '../middleware/auth';
+import { upload, getFileUrl } from '../utils/fileUpload';
 
 const router = express.Router();
 
@@ -351,6 +352,61 @@ router.put('/batch/order', authenticateToken, authorizeRoles('TEACHER', 'ADMIN')
     });
   } catch (error) {
     res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// 上传章节学习视频
+router.post('/:id/video', authenticateToken, authorizeRoles('TEACHER', 'ADMIN'), upload.single('video'), async (req: AuthRequest, res) => {
+  try {
+    const { id } = req.params;
+
+    if (!req.file) {
+      return res.status(400).json({ error: 'No video file uploaded' });
+    }
+
+    // 验证章节是否存在
+    const chapter = await prisma.chapter.findUnique({
+      where: { id },
+      include: {
+        course: {
+          select: { teacherId: true }
+        }
+      }
+    });
+
+    if (!chapter) {
+      return res.status(404).json({ error: 'Chapter not found' });
+    }
+
+    // 验证权限
+    if (req.user!.role !== 'ADMIN' && chapter.course.teacherId !== req.user!.id) {
+      return res.status(403).json({ error: 'Not authorized to upload video to this chapter' });
+    }
+
+    // 生成视频文件URL
+    const videoUrl = getFileUrl(req.file.filename, req.file.fieldname);
+
+    // 更新章节视频URL
+    const updatedChapter = await prisma.chapter.update({
+      where: { id },
+      data: { videoUrl },
+      include: {
+        course: {
+          select: {
+            id: true,
+            name: true
+          }
+        }
+      }
+    });
+
+    res.json({
+      success: true,
+      data: updatedChapter
+    });
+  } catch (error) {
+    console.error('视频上传失败:', error);
+    res.status(500).json({ error: 'Video upload failed' });
   }
 });
 
