@@ -142,7 +142,6 @@ function App() {
         <Route path="courses" element={<StudentCourseManagement />} />
         <Route path="courses/explore" element={<StudentCourseManagement />} />
         <Route path="courses/materials" element={<Materials />} />
-        <Route path="courses/graph" element={<CourseGraph />} />
         <Route path="notifications" element={<NotificationsPage />} />
       </Route>
 

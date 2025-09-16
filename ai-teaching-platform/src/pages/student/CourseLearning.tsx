@@ -588,7 +588,7 @@ const CourseLearning: React.FC = () => {
       {/* 课程图谱 - 现在是tabValue=3 */}
       {tabValue === 3 && (
         <Box sx={{ mt: 2 }}>
-          <CourseGraph courseId={courseId} />
+          <CourseGraph courseId={courseId} hideTitle={true} hideLegend={false} />
         </Box>
       )}
     </Box>

@@ -428,47 +428,66 @@ const StudentCourseManagement: React.FC = () => {
             <Grid container spacing={3}>
               {displayCourses.map((course) => (
                 <Grid size={{ xs: 12, sm: 6, md: 4 }} key={course.id}>
-                  <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-                    <CardMedia
-                      component="img"
-                      height="140"
-                      image={course.thumbnail}
-                      alt={course.title}
-                    />
-                    <CardContent sx={{ flexGrow: 1 }}>
+                  <Card sx={{ 
+                    height: '100%', 
+                    display: 'flex', 
+                    flexDirection: 'column',
+                    borderRadius: 3,
+                    boxShadow: '0 4px 20px rgba(0, 0, 0, 0.08)',
+                    transition: 'all 0.3s ease',
+                    '&:hover': {
+                      transform: 'translateY(-4px)',
+                      boxShadow: '0 8px 30px rgba(0, 0, 0, 0.12)'
+                    }
+                  }}>
+                    <CardContent sx={{ flexGrow: 1, pt: 3 }}>
                       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
-                        <Box sx={{ position: 'relative' }}>
-                          <Typography variant="h6" component="h2" noWrap>
+                        <Box sx={{ position: 'relative', flex: 1 }}>
+                          <Typography variant="h6" component="h2" noWrap sx={{ fontWeight: 600, fontSize: '1.1rem' }}>
                             {course.title}
                           </Typography>
-                          {isExploreMode && course.enrolled && (
+                          <Box sx={{ display: 'flex', gap: 1, mt: 0.5 }}>
+                            {isExploreMode && course.enrolled && (
+                              <Chip 
+                                label="已加入" 
+                                size="small" 
+                                color="success" 
+                                sx={{ 
+                                  bgcolor: '#4CAF50', 
+                                  color: 'white',
+                                  fontWeight: 500,
+                                  '& .MuiChip-label': {
+                                    fontSize: '0.75rem'
+                                  }
+                                }}
+                              />
+                            )}
                             <Chip 
-                              label="已加入" 
+                              label={getLevelText(course.level)} 
                               size="small" 
-                              color="success" 
-                              sx={{ position: 'absolute', top: 0, right: 0, bgcolor: '#4CAF50', color: 'white' }}
+                              color={getLevelColor(course.level)}
+                              sx={{ 
+                                fontWeight: 500,
+                                '& .MuiChip-label': {
+                                  fontSize: '0.75rem'
+                                }
+                              }}
                             />
-                          )}
-                          <Chip 
-                            label={getLevelText(course.level)} 
-                            size="small" 
-                            color={getLevelColor(course.level)}
-                            sx={{ marginTop: isExploreMode && course.enrolled ? 1 : 0 }}
-                          />
+                          </Box>
                         </Box>
                       </Box>
                       
-                      <Typography variant="body2" color="textSecondary" gutterBottom>
-                        {course.instructor} | {course.category}
+                      <Typography variant="body2" color="textSecondary" gutterBottom sx={{ fontSize: '0.875rem', mt: 1 }}>
+                        {course.instructor} • {course.category}
                       </Typography>
                       
-                      <Typography variant="body2" color="textSecondary" sx={{ mb: 1 }}>
-                        {course.description.substring(0, 80)}...
+                      <Typography variant="body2" color="textSecondary" sx={{ mb: 2, lineHeight: 1.6 }}>
+                        {course.description.substring(0, 100)}{course.description.length > 100 ? '...' : ''}
                       </Typography>
 
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                        <Rating value={course.rating} readOnly size="small" />
-                        <Typography variant="body2" color="textSecondary">
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+                        <Rating value={course.rating} readOnly size="small" sx={{ color: '#FFB400' }} />
+                        <Typography variant="body2" color="textSecondary" sx={{ fontWeight: 500 }}>
                           {course.rating}
                         </Typography>
                         <Typography variant="body2" color="textSecondary">
@@ -476,38 +495,51 @@ const StudentCourseManagement: React.FC = () => {
                         </Typography>
                       </Box>
 
-                      <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mb: 1 }}>
+                      <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mb: 2 }}>
                         {course.tags.slice(0, 2).map((tag) => (
-                          <Chip key={tag} label={tag} size="small" variant="outlined" />
+                          <Chip 
+                            key={tag} 
+                            label={tag} 
+                            size="small" 
+                            variant="outlined"
+                            sx={{
+                              borderColor: '#E0E0E0',
+                              color: '#666',
+                              '& .MuiChip-label': {
+                                fontSize: '0.75rem'
+                              }
+                            }}
+                          />
                         ))}
                       </Box>
 
                       {course.enrolled && (
-                        <Box sx={{ mb: 1 }}>
-                          <Typography variant="body2" color="textSecondary">
+                        <Box sx={{ mb: 2 }}>
+                          <Typography variant="body2" color="textSecondary" sx={{ fontSize: '0.875rem', mb: 0.5 }}>
                             进度: {course.completedChapters || 0}/{course.totalChapters || 0} 章节
                           </Typography>
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.5 }}>
-                            <Box sx={{ flex: 1, bgcolor: 'grey.200', borderRadius: 1, height: 6 }}>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <Box sx={{ flex: 1, bgcolor: '#F5F5F5', borderRadius: 4, height: 8, overflow: 'hidden' }}>
                               <Box 
                                 sx={{ 
                                   width: `${isNaN(Number(course.progress)) ? 0 : Math.max(0, Math.min(100, course.progress || 0))}%`, 
-                                  bgcolor: 'primary.main', 
-                                  height: 6, 
-                                  borderRadius: 1 
+                                  background: 'linear-gradient(90deg, #2196F3 0%, #21CBF3 100%)', 
+                                  height: 8, 
+                                  borderRadius: 4,
+                                  transition: 'width 0.3s ease'
                                 }} 
                               />
                             </Box>
-                            <Typography variant="body2" color="textSecondary">
+                            <Typography variant="body2" color="textSecondary" sx={{ fontWeight: 500, minWidth: 35 }}>
                               {isNaN(Number(course.progress)) ? 0 : Math.max(0, Math.min(100, course.progress || 0))}%
                             </Typography>
                           </Box>
                         </Box>
                       )}
                     </CardContent>
-                    <CardActions sx={{ justifyContent: 'space-between', px: 2, pb: 2 }}>
-                      <Typography variant="body2" color="textSecondary">
-                        <AccessTime sx={{ fontSize: 16, mr: 0.5 }} />
+                    <CardActions sx={{ justifyContent: 'space-between', px: 2.5, pb: 2.5, pt: 1 }}>
+                      <Typography variant="body2" color="textSecondary" sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                        <AccessTime sx={{ fontSize: 16 }} />
                         {course.duration}小时
                       </Typography>
                       {isExploreMode ? (
@@ -518,6 +550,17 @@ const StudentCourseManagement: React.FC = () => {
                             variant="contained"
                             startIcon={<PlayCircle />}
                             onClick={() => handleStartLearning(course.id)}
+                            sx={{
+                              borderRadius: 2,
+                              textTransform: 'none',
+                              fontWeight: 500,
+                              px: 2,
+                              py: 0.5,
+                              boxShadow: '0 2px 8px rgba(33, 150, 243, 0.3)',
+                              '&:hover': {
+                                boxShadow: '0 4px 12px rgba(33, 150, 243, 0.4)'
+                              }
+                            }}
                           >
                             进入学习
                           </Button>
@@ -527,6 +570,19 @@ const StudentCourseManagement: React.FC = () => {
                             variant="outlined"
                             startIcon={<School />}
                             onClick={() => handleEnrollCourse(course.id)}
+                            sx={{
+                              borderRadius: 2,
+                              textTransform: 'none',
+                              fontWeight: 500,
+                              px: 2,
+                              py: 0.5,
+                              borderColor: '#2196F3',
+                              color: '#2196F3',
+                              '&:hover': {
+                                borderColor: '#1976D2',
+                                backgroundColor: 'rgba(33, 150, 243, 0.04)'
+                              }
+                            }}
                           >
                             加入学习
                           </Button>
