@@ -1163,7 +1163,7 @@ const CourseGraph: React.FC<CourseGraphProps> = ({ courseId: propCourseId, hideT
                             <Typography variant="body2"><strong>难度:</strong> {node.difficulty}</Typography>
                             <Typography variant="body2"><strong>重要性:</strong> {node.importance}</Typography>
                             <Typography variant="body2"><strong>预计时长:</strong> {node.estimatedTime}分钟</Typography>
-                            <Typography variant="body2"><strong>进度:</strong> {node.progress}%</Typography>
+                            <Typography variant="body2"><strong>进度:</strong> {isNaN(Number(node.progress)) ? '0.0' : Math.max(0, Math.min(100, node.progress || 0)).toFixed(1)}%</Typography>
                           </>
                         )}
                         {node.type === 'chapter' && (
@@ -1173,7 +1173,7 @@ const CourseGraph: React.FC<CourseGraphProps> = ({ courseId: propCourseId, hideT
                           <>
                             <Typography variant="body2"><strong>总章节:</strong> {node.totalChapters}</Typography>
                             <Typography variant="body2"><strong>已完成:</strong> {node.completedChapters}</Typography>
-                            <Typography variant="body2"><strong>进度:</strong> {node.progress}%</Typography>
+                            <Typography variant="body2"><strong>进度:</strong> {isNaN(Number(node.progress)) ? '0.0' : Math.max(0, Math.min(100, node.progress || 0)).toFixed(1)}%</Typography>
                           </>
                         )}
                       </Box>

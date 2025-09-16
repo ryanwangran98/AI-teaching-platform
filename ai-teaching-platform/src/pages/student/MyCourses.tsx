@@ -32,7 +32,7 @@ import {
   ArrowBack,
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
-import { courseAPI } from '../../services/api';
+import { courseAPI, videoSegmentAPI } from '../../services/api';
 
 interface Course {
   id: string;
@@ -126,7 +126,27 @@ const MyCourses: React.FC = () => {
         tags: course.tags || [],
       }));
       
-      setCourses(formattedCourses);
+      // 获取基于视频播放片段计算的进度
+      const coursesWithVideoProgress = await Promise.all(
+        formattedCourses.map(async (course) => {
+          try {
+            const videoProgressResponse = await videoSegmentAPI.getCourseProgressByVideoSegments(course.id);
+            if (videoProgressResponse.data && videoProgressResponse.data.success) {
+              // 使用基于视频播放片段计算的进度
+              return {
+                ...course,
+                progress: videoProgressResponse.data.data.progress
+              };
+            }
+            return course;
+          } catch (error) {
+            console.error(`获取课程 ${course.id} 的视频进度失败:`, error);
+            return course;
+          }
+        })
+      );
+      
+      setCourses(coursesWithVideoProgress);
     } catch (err: any) {
       console.error('获取课程数据失败:', err);
       
@@ -435,7 +455,7 @@ const MyCourses: React.FC = () => {
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
                       <Typography variant="body2">学习进度</Typography>
                       <Typography variant="body2" color="primary">
-                        {isNaN(Number(course.progress)) ? 0 : Math.max(0, Math.min(100, course.progress || 0))}%
+                        {isNaN(Number(course.progress)) ? '0.0' : Math.max(0, Math.min(100, course.progress || 0)).toFixed(1)}%
                       </Typography>
                     </Box>
                     <LinearProgress 

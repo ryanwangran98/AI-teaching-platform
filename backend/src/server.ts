@@ -19,6 +19,9 @@ import submissionRoutes from './routes/submissions';
 import notificationRoutes from './routes/notifications';
 import uploadRoutes from './routes/upload';
 import learningRecordRoutes from './routes/learningRecords';
+import studentStatsRoutes from './routes/studentStats';
+import chapterProgressRoutes from './routes/chapterProgress';
+import videoSegmentRoutes from './routes/videoSegments';
 import { specs, swaggerUi } from './utils/swagger';
 
 // 加载环境变量
@@ -94,6 +97,9 @@ app.use('/api/materials', materialRoutes);
 app.use('/api/submissions', submissionRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/learning-records', learningRecordRoutes);
+app.use('/api/student-stats', studentStatsRoutes);
+app.use('/api/chapter-progress', chapterProgressRoutes);
+app.use('/api/video-segments', videoSegmentRoutes);
 app.use('/api/upload', uploadRoutes);
 
 // 文件上传服务

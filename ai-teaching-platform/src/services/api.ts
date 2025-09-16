@@ -441,6 +441,41 @@ export const learningRecordAPI = {
   },
 };
 
+// 章节进度相关
+export const chapterProgressAPI = {
+  getChapterProgress: async (params?: { courseId?: string; chapterId?: string }) => {
+    const response = await api.get('/chapter-progress', { params });
+    return response.data;
+  },
+
+  getChapterProgressById: async (chapterId: string) => {
+    const response = await api.get(`/chapter-progress/${chapterId}`);
+    return response.data;
+  },
+
+  updateChapterProgress: async (chapterId: string, progressData: { 
+    watchedTime?: number; 
+    progress?: number; 
+    courseId: string; 
+  }) => {
+    const response = await api.put(`/chapter-progress/${chapterId}`, progressData);
+    return response.data;
+  },
+
+  deleteChapterProgress: async (chapterId: string) => {
+    const response = await api.delete(`/chapter-progress/${chapterId}`);
+    return response.data;
+  },
+};
+
+// 学生统计信息相关
+export const studentStatsAPI = {
+  getStudentStats: async (courseId: string) => {
+    const response = await api.get(`/student-stats/student-stats/${courseId}`);
+    return response.data;
+  },
+};
+
 // 提交相关
 export const submissionAPI = {
   getSubmissions: async (params?: { 
@@ -504,6 +539,24 @@ export const notificationAPI = {
 
   deleteNotification: async (id: string) => {
     const response = await api.delete(`/notifications/${id}`);
+    return response.data;
+  },
+};
+
+// 视频播放片段相关
+export const videoSegmentAPI = {
+  getVideoSegments: async (chapterId: string) => {
+    const response = await api.get(`/video-segments/chapter/${chapterId}`);
+    return response.data;
+  },
+
+  addVideoSegment: async (chapterId: string, segmentData: { startTime: number; endTime: number }) => {
+    const response = await api.post(`/video-segments/chapter/${chapterId}`, segmentData);
+    return response.data;
+  },
+
+  getCourseProgressByVideoSegments: async (courseId: string) => {
+    const response = await api.get(`/video-segments/course/${courseId}/progress`);
     return response.data;
   },
 };

@@ -32,7 +32,7 @@ import {
   ArrowBack
 } from '@mui/icons-material';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { courseAPI } from '../../services/api';
+import { courseAPI, videoSegmentAPI } from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
 
 interface Course {
@@ -204,8 +204,58 @@ const StudentCourseManagement: React.FC = () => {
       console.log('格式化后的我的课程数据:', formattedMyCourses);
       console.log('格式化后的所有课程数据:', formattedAllCourses);
       
-      setMyCourses(formattedMyCourses);
-      setAllCourses(formattedAllCourses);
+      // 获取基于视频片段计算的课程进度
+      try {
+        // 为我的课程获取视频进度
+        const myCoursesWithVideoProgress = await Promise.all(
+          formattedMyCourses.map(async (course) => {
+            try {
+              const videoProgressResponse = await videoSegmentAPI.getCourseProgressByVideoSegments(course.id);
+              console.log(`获取课程 ${course.id} 的视频进度:`, videoProgressResponse);
+              if (videoProgressResponse && videoProgressResponse.data) {
+                return {
+                  ...course,
+                  progress: videoProgressResponse.data.overallProgress || 0
+                };
+              }
+              return course;
+            } catch (err) {
+              console.error(`获取课程 ${course.id} 的视频进度失败:`, err);
+              return course;
+            }
+          })
+        );
+        
+        // 为所有课程获取视频进度（仅针对已加入的课程）
+        const allCoursesWithVideoProgress = await Promise.all(
+          formattedAllCourses.map(async (course) => {
+            // 只为已加入的课程获取视频进度
+            if (course.enrolled) {
+              try {
+                const videoProgressResponse = await videoSegmentAPI.getCourseProgressByVideoSegments(course.id);
+                console.log(`获取课程 ${course.id} 的视频进度:`, videoProgressResponse);
+                if (videoProgressResponse && videoProgressResponse.data) {
+                  return {
+                    ...course,
+                    progress: videoProgressResponse.data.overallProgress || 0
+                  };
+                }
+              } catch (err) {
+                console.error(`获取课程 ${course.id} 的视频进度失败:`, err);
+              }
+            }
+            return course;
+          })
+        );
+        
+        setMyCourses(myCoursesWithVideoProgress);
+        setAllCourses(allCoursesWithVideoProgress);
+      } catch (err) {
+        console.error('获取视频进度失败:', err);
+        // 如果获取视频进度失败，仍然使用原始数据
+        setMyCourses(formattedMyCourses);
+        setAllCourses(formattedAllCourses);
+      }
       setError(null);
     } catch (err: any) {
       console.error('获取课程数据失败:', err);
@@ -531,7 +581,7 @@ const StudentCourseManagement: React.FC = () => {
                               />
                             </Box>
                             <Typography variant="body2" color="textSecondary" sx={{ fontWeight: 500, minWidth: 35 }}>
-                              {isNaN(Number(course.progress)) ? 0 : Math.max(0, Math.min(100, course.progress || 0))}%
+                              {isNaN(Number(course.progress)) ? '0.0' : Math.max(0, Math.min(100, course.progress || 0)).toFixed(1)}%
                             </Typography>
                           </Box>
                         </Box>

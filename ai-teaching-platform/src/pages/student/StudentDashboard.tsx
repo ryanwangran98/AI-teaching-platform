@@ -228,7 +228,7 @@ const StudentDashboard: React.FC = () => {
     },
     {
       title: '学习进度',
-      value: `${stats.learningProgress}%`,
+      value: `${isNaN(Number(stats.learningProgress)) ? '0.0' : Math.max(0, Math.min(100, stats.learningProgress || 0)).toFixed(1)}%`,
       icon: <TrendingUp />,
       color: 'info',
     },
@@ -310,7 +310,7 @@ const StudentDashboard: React.FC = () => {
                   </Typography>
                   <Box sx={{ textAlign: 'center', py: 2 }}>
                     <Typography variant="h3" color="primary">
-                      {stats.learningProgress}%
+                      {isNaN(Number(stats.learningProgress)) ? '0.0' : Math.max(0, Math.min(100, stats.learningProgress || 0)).toFixed(1)}%
                     </Typography>
                     <Typography variant="body1" color="textSecondary">
                       平均学习进度

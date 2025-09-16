@@ -345,7 +345,7 @@ const TeacherDashboard: React.FC = () => {
                     </Typography>
                     <Box sx={{ mb: 1 }}>
                       <Typography variant="body2" gutterBottom>
-                        课程进度: {course.progress}%
+                        课程进度: {isNaN(Number(course.progress)) ? '0.0' : Math.max(0, Math.min(100, course.progress || 0)).toFixed(1)}%
                       </Typography>
                       <LinearProgress 
                         variant="determinate" 

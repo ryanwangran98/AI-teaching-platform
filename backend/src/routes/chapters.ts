@@ -2,6 +2,8 @@ import express from 'express';
 import prisma from '../config/database';
 import { authenticateToken, authorizeRoles, AuthRequest } from '../middleware/auth';
 import { upload, getFileUrl } from '../utils/fileUpload';
+import { getVideoDurationInMinutes } from '../utils/videoUtils';
+import path from 'path';
 
 const router = express.Router();
 
@@ -385,11 +387,27 @@ router.post('/:id/video', authenticateToken, authorizeRoles('TEACHER', 'ADMIN'),
 
     // 生成视频文件URL
     const videoUrl = getFileUrl(req.file.filename, req.file.fieldname);
+    
+    // 获取视频文件完整路径
+    const videoFilePath = path.join('uploads', req.file.fieldname || 'general', req.file.filename);
+    
+    // 获取视频时长（分钟）
+    let duration = null;
+    try {
+      duration = await getVideoDurationInMinutes(videoFilePath);
+      console.log(`视频时长获取成功: ${duration} 分钟`);
+    } catch (error) {
+      console.error('获取视频时长失败:', error);
+      // 即使获取时长失败，也继续上传流程，只是不设置时长
+    }
 
-    // 更新章节视频URL
+    // 更新章节视频URL和时长
     const updatedChapter = await prisma.chapter.update({
       where: { id },
-      data: { videoUrl },
+      data: { 
+        videoUrl,
+        duration
+      },
       include: {
         course: {
           select: {

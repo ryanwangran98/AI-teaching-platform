@@ -39,7 +39,7 @@ import {
   TrendingUp,
   School,
 } from '@mui/icons-material';
-import { learningRecordAPI, courseAPI } from '../../services/api';
+import { learningRecordAPI, courseAPI, videoSegmentAPI } from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
 
 interface LearningRecord {
@@ -94,6 +94,13 @@ const LearningRecords: React.FC = () => {
     fetchLearningRecords();
   }, [selectedCourse]);
 
+  // 获取课程进度
+  useEffect(() => {
+    if (tabValue === 1) {
+      fetchCourseProgress();
+    }
+  }, [tabValue, selectedCourse]);
+
   const fetchCourses = async () => {
     try {
       // 获取学生已加入的课程
@@ -115,44 +122,135 @@ const LearningRecords: React.FC = () => {
   };
 
   const fetchLearningRecords = async () => {
+  try {
+    setLoading(true);
+    // 调用API获取学习记录，根据选中的课程过滤
+    const params: any = {};
+    if (user?.id) {
+      params.studentId = user.id;
+    }
+    if (selectedCourse) {
+      params.courseId = selectedCourse;
+    }
+    
+    const response = await learningRecordAPI.getLearningRecords(params);
+    // 修复数据处理逻辑，正确提取学习记录数据
+    const recordsData = response.data?.records || response.data || [];
+    
+    // 获取基于视频片段计算的进度
+    const recordsWithVideoProgress = await Promise.all(
+      recordsData.map(async (record) => {
+        try {
+          const videoProgressResponse = await videoSegmentAPI.getCourseProgressByVideoSegments(record.courseId);
+          const videoProgress = videoProgressResponse.data?.overallProgress || 0;
+          
+          // 如果是视频类型的学习记录，使用基于视频片段计算的进度
+          if (record.type === 'video') {
+            return {
+              ...record,
+              progress: videoProgress
+            };
+          }
+          return record;
+        } catch (error) {
+          console.error('获取视频进度失败:', error);
+          return record;
+        }
+      })
+    );
+    
+    // 转换学习记录数据格式
+    const convertedRecords = Array.isArray(recordsWithVideoProgress) 
+      ? recordsWithVideoProgress.map(record => ({
+          id: record.id,
+          courseName: record.courseName || '未知课程',
+          chapterName: record.chapterName || '未知章节',
+          duration: record.duration || 0,
+          completed: record.completed || false,
+          startTime: record.lastStudyTime ? new Date(record.lastStudyTime).toLocaleString() : '',
+          endTime: record.lastStudyTime ? new Date(record.lastStudyTime).toLocaleString() : '',
+          progress: isNaN(Number(record.progress)) ? 0 : Math.max(0, Math.min(100, record.progress || 0)),
+          score: record.score || 0,
+          type: record.type || 'video',
+          notes: record.notes || '',
+        }))
+      : [];
+    
+    setRecords(convertedRecords);
+    setError(null);
+    setLoading(false);
+  } catch (error) {
+    console.error('获取学习记录失败:', error);
+    setError('获取学习记录失败，请稍后重试');
+    setLoading(false);
+  }
+};
+
+  // 获取课程进度数据
+  const fetchCourseProgress = async () => {
     try {
       setLoading(true);
-      // 调用API获取学习记录，根据选中的课程过滤
-      const params: any = {};
-      if (user?.id) {
-        params.studentId = user.id;
-      }
-      if (selectedCourse) {
-        params.courseId = selectedCourse;
-      }
       
-      const response = await learningRecordAPI.getLearningRecords(params);
-      // 修复数据处理逻辑，正确提取学习记录数据
-      const recordsData = response.data?.records || response.data || [];
+      // 获取学生课程数据
+      const coursesResponse = await courseAPI.getStudentCourses();
+      const coursesData = coursesResponse.data || [];
       
-      // 转换学习记录数据格式
-      const convertedRecords = Array.isArray(recordsData) 
-        ? recordsData.map(record => ({
-            id: record.id,
-            courseName: record.courseName || '未知课程',
-            chapterName: record.chapterName || '未知章节',
-            duration: record.duration || 0,
-            completed: record.completed || false,
-            startTime: record.lastStudyTime ? new Date(record.lastStudyTime).toLocaleString() : '',
-            endTime: record.lastStudyTime ? new Date(record.lastStudyTime).toLocaleString() : '',
-            progress: isNaN(Number(record.progress)) ? 0 : Math.max(0, Math.min(100, record.progress || 0)),
-            score: record.score || 0,
-            type: record.type || 'video',
-            notes: record.notes || '',
-          }))
-        : [];
+      // 获取基于视频片段计算的课程进度
+      const courseProgressWithVideo = await Promise.all(
+        coursesData.map(async (course) => {
+          try {
+            const videoProgressResponse = await videoSegmentAPI.getCourseProgressByVideoSegments(course.id);
+            const videoProgress = videoProgressResponse.data?.overallProgress || 0;
+            const chapterProgresses = videoProgressResponse.data?.chapterProgresses || [];
+            
+            // 转换章节数据格式
+            const chapters = chapterProgresses.map((chapter: any) => ({
+              id: chapter.chapterId,
+              name: chapter.chapterName || '未命名章节',
+              progress: chapter.progress || 0,
+              lastStudyTime: new Date().toLocaleString() // 这里可以根据需要设置
+            }));
+            
+            return {
+              courseId: course.id,
+              courseName: course.title || course.name || '未命名课程',
+              progress: videoProgress,
+              completedDuration: Math.round(videoProgress * 10), // 假设总时长为1000分钟
+              totalDuration: 1000, // 假设总时长为1000分钟
+              lastStudyTime: new Date().toLocaleString(), // 这里可以根据需要设置
+              chapters: chapters
+            };
+          } catch (error) {
+            console.error('获取课程视频进度失败:', error);
+            return {
+              courseId: course.id,
+              courseName: course.title || course.name || '未命名课程',
+              progress: 0,
+              completedDuration: 0,
+              totalDuration: 1000,
+              lastStudyTime: new Date().toLocaleString(),
+              chapters: []
+            };
+          }
+        })
+      );
       
-      setRecords(convertedRecords);
-      setError(null);
-      setLoading(false);
+      // 过滤选中的课程
+      const filteredProgress = selectedCourse 
+        ? courseProgressWithVideo.filter(course => course.courseId === selectedCourse)
+        : courseProgressWithVideo;
+      
+      // 计算课程进度百分比
+      const finalCourseProgress = filteredProgress.map(course => ({
+        ...course,
+        progress: isNaN(Number(course.progress)) ? 0 : Math.max(0, Math.min(100, course.progress || 0))
+      }));
+      
+      setCourseProgress(finalCourseProgress);
     } catch (error) {
-      console.error('获取学习记录失败:', error);
-      setError('获取学习记录失败，请稍后重试');
+      console.error('获取课程进度失败:', error);
+      setError('获取课程进度失败，请稍后重试');
+    } finally {
       setLoading(false);
     }
   };
@@ -342,7 +440,7 @@ const LearningRecords: React.FC = () => {
                     />
                   </Box>
                   <Typography variant="body2" color="textSecondary">
-                    {isNaN(Number(record.progress)) ? 0 : Math.max(0, Math.min(100, record.progress || 0))}%
+                    {isNaN(Number(record.progress)) ? '0.0' : Math.max(0, Math.min(100, record.progress || 0)).toFixed(1)}%
                   </Typography>
                     </Box>
                   </TableCell>
@@ -377,7 +475,7 @@ const LearningRecords: React.FC = () => {
                   </Typography>
                   <Box sx={{ mb: 2 }}>
                     <Typography variant="body2" color="textSecondary">
-                      总进度: {isNaN(Number(course.progress)) ? 0 : Math.max(0, Math.min(100, course.progress || 0))}%
+                      总进度: {isNaN(Number(course.progress)) ? '0.0' : Math.max(0, Math.min(100, course.progress || 0)).toFixed(1)}%
                     </Typography>
                     <LinearProgress
                       variant="determinate"
@@ -400,7 +498,7 @@ const LearningRecords: React.FC = () => {
                       <ListItem key={chapter.id} component="div">
                         <ListItemText
                           primary={chapter.name}
-                          secondary={`进度: ${chapter.progress}%`}
+                          secondary={`进度: ${isNaN(Number(chapter.progress)) ? '0.0' : Math.max(0, Math.min(100, chapter.progress || 0)).toFixed(1)}%`}
                         />
                         <Box sx={{ width: 100 }}>
                           <LinearProgress
@@ -465,7 +563,7 @@ const LearningRecords: React.FC = () => {
                 学习时长: {formatDuration(selectedRecord.duration)}
               </Typography>
               <Typography variant="body1" gutterBottom>
-                学习进度: {selectedRecord.progress}%
+                学习进度: {isNaN(Number(selectedRecord.progress)) ? '0.0' : Math.max(0, Math.min(100, selectedRecord.progress || 0)).toFixed(1)}%
               </Typography>
               {selectedRecord.completed && (
                 <Typography variant="body1" gutterBottom>

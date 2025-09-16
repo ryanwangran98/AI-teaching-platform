@@ -37,7 +37,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 // 引入学习资料和课程图谱组件
 import Materials from './Materials';
 import CourseGraph from './CourseGraph';
-import { courseAPI, chapterAPI, assignmentAPI } from '../../services/api';
+import { courseAPI, chapterAPI, assignmentAPI, studentStatsAPI, chapterProgressAPI, videoSegmentAPI } from '../../services/api';
 
 interface Chapter {
   id: string;
@@ -95,12 +95,31 @@ const CourseLearning: React.FC = () => {
   const [course, setCourse] = useState<Course | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [studentStats, setStudentStats] = useState<{
+    studyTime: number;
+    averageScore: number;
+    gradedAssignmentsCount: number;
+  } | null>(null);
 
   useEffect(() => {
     if (courseId) {
       fetchCourseData();
     }
   }, [courseId]);
+
+  // 添加获取学生统计数据的函数
+  const fetchStudentStats = async () => {
+    try {
+      console.log('开始获取学生统计数据, courseId:', courseId);
+      const statsResponse = await studentStatsAPI.getStudentStats(courseId!);
+      console.log('获取到的学生统计数据:', statsResponse);
+      console.log('学生统计数据详情:', JSON.stringify(statsResponse, null, 2));
+      setStudentStats(statsResponse.data);
+    } catch (err: any) {
+      console.error('获取学生统计数据失败:', err);
+      console.error('错误详情:', err.response?.data || err.message);
+    }
+  };
 
   // 在fetchCourseData函数中增加更详细的作业数据处理和日志
   const fetchCourseData = async () => {
@@ -120,6 +139,29 @@ const CourseLearning: React.FC = () => {
       console.log('获取到的作业数据类型:', typeof assignmentsResponse);
       console.log('获取到的作业数据是否为数组:', Array.isArray(assignmentsResponse));
       
+      // 获取学生统计数据
+      await fetchStudentStats();
+      
+      // 获取基于视频片段计算的课程进度
+      let videoProgress = 0;
+      const chapterVideoProgressMap = new Map(); // 存储章节视频进度
+      try {
+        const videoProgressResponse = await videoSegmentAPI.getCourseProgressByVideoSegments(courseId!);
+        console.log('获取到的视频进度数据:', videoProgressResponse);
+        if (videoProgressResponse && videoProgressResponse.data) {
+          videoProgress = videoProgressResponse.data.overallProgress || 0;
+          
+          // 提取章节进度信息
+          if (videoProgressResponse.data.chapterProgresses && Array.isArray(videoProgressResponse.data.chapterProgresses)) {
+            videoProgressResponse.data.chapterProgresses.forEach((chapterProgress: any) => {
+              chapterVideoProgressMap.set(chapterProgress.chapterId, chapterProgress.progress || 0);
+            });
+          }
+        }
+      } catch (err) {
+        console.error('获取视频进度失败:', err);
+      }
+      
       // 处理课程数据
       const courseData = courseResponse.data || courseResponse;
       
@@ -131,6 +173,26 @@ const CourseLearning: React.FC = () => {
         } else if (Array.isArray(chaptersResponse.data)) {
           chaptersData = chaptersResponse.data;
         }
+      }
+      
+      // 获取章节学习进度
+      const chapterProgressMap = new Map();
+      try {
+        for (const chapter of chaptersData) {
+          try {
+            const progressResponse = await chapterProgressAPI.getChapterProgressById(chapter.id);
+            console.log(`获取章节 ${chapter.id} 的学习进度:`, progressResponse);
+            if (progressResponse && progressResponse.data) {
+              chapterProgressMap.set(chapter.id, progressResponse.data);
+            }
+          } catch (err) {
+            console.error(`获取章节 ${chapter.id} 的学习进度失败:`, err);
+            // 如果获取失败，使用默认进度0
+            chapterProgressMap.set(chapter.id, { progress: 0, currentTime: 0 });
+          }
+        }
+      } catch (err) {
+        console.error('获取章节学习进度失败:', err);
       }
       
       // 处理作业数据 - 优化数据提取逻辑
@@ -196,8 +258,20 @@ const CourseLearning: React.FC = () => {
         totalDuration: courseData.duration || 0,
         totalChapters: chaptersData.length,
         completedChapters: 0, // 需要从学习记录中获取
-        overallProgress: courseData.progress || 0,
+        overallProgress: videoProgress, // 使用基于视频片段计算的进度
         chapters: chaptersData.map((chapter: any, index: number) => {
+          // 获取章节学习进度，优先使用基于视频片段计算的进度
+          const chapterProgress = chapterProgressMap.get(chapter.id);
+          const videoChapterProgress = chapterVideoProgressMap.get(chapter.id) || 0;
+          
+          // 修复：确保进度值在0-100范围内
+          let progress = 0;
+          if (videoChapterProgress > 0) {
+            progress = Math.min(100, Math.max(0, videoChapterProgress));
+          } else if (chapterProgress && chapterProgress.progress !== undefined) {
+            progress = Math.min(100, Math.max(0, chapterProgress.progress));
+          }
+          
           // 处理章节标题，如果标题是数字则添加前缀
           let title = chapter.title || `第${chapter.order || index + 1}章`;
           if (/^\d+$/.test(title)) {
@@ -218,8 +292,8 @@ const CourseLearning: React.FC = () => {
             order: chapter.order || index + 1,
             type: 'video', // 默认类型
             contentUrl: '', // 需要根据实际内容设置
-            completed: false, // 需要从学习记录中获取
-            progress: chapter.progress || 0,
+            completed: progress >= 100, // 根据进度判断是否已完成
+            progress: progress, // 使用修正后的进度
             resources: [], // 需要从资料/课件中获取
           };
         }),
@@ -276,6 +350,24 @@ const CourseLearning: React.FC = () => {
       case 'project': return <Assignment />;
       case 'assignment': return <Assignment />; // 保持向后兼容
       default: return <Description />;
+    }
+  };
+
+  // 格式化视频时长（小时、分钟和秒）
+  const formatVideoDuration = (minutes: number): string => {
+    // 使用更精确的计算，避免浮点数精度问题
+    const totalSeconds = Math.round(minutes * 60);
+    const hours = Math.floor(totalSeconds / 3600);
+    const remainingSeconds = totalSeconds % 3600;
+    const mins = Math.floor(remainingSeconds / 60);
+    const secs = remainingSeconds % 60;
+    
+    if (hours > 0) {
+      return `${hours}小时${mins}分${secs}秒`;
+    } else if (mins > 0) {
+      return `${mins}分${secs}秒`;
+    } else {
+      return `${secs}秒`;
     }
   };
 
@@ -392,10 +484,10 @@ const CourseLearning: React.FC = () => {
               </Box>
               <Box>
                 <Typography variant="h6">
-                  {Math.floor(course.totalDuration / 60)}小时
+                  {studentStats ? Math.floor(studentStats.studyTime / 60) : 0}小时
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
-                  总时长
+                  学习时长
                 </Typography>
               </Box>
             </Box>
@@ -417,20 +509,20 @@ const CourseLearning: React.FC = () => {
                   <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
                     <Typography variant="body2">完成进度</Typography>
                     <Typography variant="body2" color="primary">
-                      {isNaN(Number(course.overallProgress)) ? 0 : Math.max(0, Math.min(100, course.overallProgress || 0))}%
+                      {isNaN(Number(course.overallProgress)) ? '0.0' : Math.max(0, Math.min(100, course.overallProgress || 0)).toFixed(1)}%
                     </Typography>
                   </Box>
                   <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
                     <Typography variant="body2">学习时长</Typography>
                     <Typography variant="body2">
-                      {Math.floor((course.totalDuration * course.overallProgress) / 100 / 60)}小时
+                      {studentStats ? Math.floor(studentStats.studyTime / 60) : 0}小时
                     </Typography>
                   </Box>
                   <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
                     <Typography variant="body2">平均得分</Typography>
                     <Typography variant="body2">
                       <Star sx={{ fontSize: 16, color: 'warning.main', verticalAlign: 'middle' }} />
-                      4.5/5.0
+                      {studentStats ? studentStats.averageScore.toFixed(1) : '0.0'}/100
                     </Typography>
                   </Box>
                 </Box>
@@ -478,7 +570,7 @@ const CourseLearning: React.FC = () => {
 
                   <Box sx={{ mb: 2 }}>
                     <Typography variant="body2" color="text.secondary">
-                      时长: {Math.floor(chapter.duration / 60)}小时{chapter.duration % 60}分钟
+                      时长: {formatVideoDuration(chapter.duration)}
                     </Typography>
                     <Typography variant="body2" color="text.secondary">
                       类型: {getTypeLabel(chapter.type)}
@@ -492,7 +584,7 @@ const CourseLearning: React.FC = () => {
                   />
                   
                   <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                    进度: {isNaN(Number(chapter.progress)) ? 0 : Math.max(0, Math.min(100, chapter.progress || 0))}%
+                    进度: {isNaN(Number(chapter.progress)) ? 0 : Math.max(0, Math.min(100, chapter.progress || 0)).toFixed(1)}%
                   </Typography>
 
                   <Button

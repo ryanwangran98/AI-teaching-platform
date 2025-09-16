@@ -28,6 +28,7 @@ model User {
   sentNotifications Notification[] @relation("NotificationSender")
   questions     Question[]
   submissions   Submission[]
+  chapterProgress ChapterProgress[]
 
   @@map("users")
 }
@@ -49,6 +50,7 @@ model Course {
   chapters    Chapter[]
   teacher     User         @relation(fields: [teacherId], references: [id])
   enrollments Enrollment[]
+  chapterProgress ChapterProgress[]
 
   @@map("courses")
 }
@@ -61,14 +63,52 @@ model Chapter {
   status          String           @default("draft")
   courseId        String
   videoUrl        String?
+  duration        Float?             // 视频时长（分钟，保留两位小数）
   createdAt       DateTime         @default(now())
   updatedAt       DateTime         @updatedAt
   course          Course           @relation(fields: [courseId], references: [id])
   courseware      Courseware[]
   knowledgePoints KnowledgePoint[]
   materials       Material[]
+  chapterProgress ChapterProgress[]
 
   @@map("chapters")
+}
+
+model ChapterProgress {
+  id           String   @id @default(cuid())
+  userId       String
+  chapterId    String
+  courseId     String
+  watchedTime  Int      @default(0)  // 已观看时间（秒）
+  progress     Float    @default(0)  // 学习进度百分比
+  isCompleted  Boolean  @default(false)
+  lastWatchedAt DateTime?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  user    User    @relation(fields: [userId], references: [id])
+  chapter Chapter @relation(fields: [chapterId], references: [id])
+  course  Course  @relation(fields: [courseId], references: [id])
+  videoSegments VideoSegment[]
+
+  @@unique([userId, chapterId])
+  @@map("chapter_progress")
+}
+
+model VideoSegment {
+  id               String   @id @default(cuid())
+  userId           String
+  chapterId        String
+  chapterProgressId String
+  startTime        Int      // 视频片段开始时间（秒）
+  endTime          Int      // 视频片段结束时间（秒）
+  duration         Int      // 视频片段时长（秒）
+  createdAt        DateTime @default(now())
+
+  chapterProgress ChapterProgress @relation(fields: [chapterProgressId], references: [id])
+
+  @@map("video_segments")
 }
 
 model KnowledgePoint {
