@@ -50,17 +50,9 @@ async function fullCleanup() {
   const deletedCourses = await prisma.course.deleteMany({});
   console.log(`删除了 ${deletedCourses.count} 个课程`);
   
-  // 12. 删除用户（除了可能的默认管理员）
-  // 注意：这里我们保留所有用户，因为在开发环境中重新创建用户更方便
-  // 如果需要删除所有用户，取消下面的注释
-  // const deletedUsers = await prisma.user.deleteMany({
-  //   where: {
-  //     role: {
-  //       not: 'ADMIN' // 保留管理员用户
-  //     }
-  //   }
-  // });
-  // console.log(`删除了 ${deletedUsers.count} 个用户`);
+  // 12. 删除用户（包括所有用户）
+  const deletedUsers = await prisma.user.deleteMany({});
+  console.log(`删除了 ${deletedUsers.count} 个用户`);
   
   console.log('\n数据库清理完成！');
 }
