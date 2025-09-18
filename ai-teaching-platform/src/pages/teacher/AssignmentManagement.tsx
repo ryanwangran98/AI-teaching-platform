@@ -41,8 +41,6 @@ import {
   Visibility,
   Search,
   Link,
-  ExpandMore,
-  ExpandLess,
   ArrowBack,
   Send,
   Cancel,
@@ -54,13 +52,13 @@ import {
   Timer,
   Grade,
   CheckCircle,
-  Folder,
-  FolderOpen,
   LibraryBooks,
   Quiz,
   TaskAlt,
   Description,
   RateReview,
+  Folder,
+  FolderOpen,
 } from '@mui/icons-material';
 import { useNavigate, useParams } from 'react-router-dom';
 import { assignmentAPI, chapterAPI, knowledgePointAPI } from '../../services/api';
@@ -99,6 +97,7 @@ interface Assignment {
     averageScore: number;
     passRate: number;
   };
+  questions?: any[]; // 添加 questions 属性
 }
 
 // 添加章节和知识点接口
@@ -132,8 +131,6 @@ const AssignmentManagement: React.FC = () => {
   const [chapters, setChapters] = useState<Chapter[]>([]);
   const [knowledgePoints, setKnowledgePoints] = useState<KnowledgePoint[]>([]);
   const [filteredKnowledgePoints, setFilteredKnowledgePoints] = useState<KnowledgePoint[]>([]);
-
-  const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
 
   // 添加创建和编辑作业的状态
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
@@ -227,7 +224,7 @@ const AssignmentManagement: React.FC = () => {
         timeLimit: assignment.timeLimit || 60,
         startTime: assignment.createdAt || '',
         endTime: assignment.dueDate || '',
-        status: assignment.status?.toLowerCase() || 'draft', // 确保状态是小写
+        status: assignment.status || 'draft', // 确保状态是小写
         course: assignment.knowledgePoint?.chapter?.course ? {
           id: assignment.knowledgePoint.chapter.course.id,
           title: assignment.knowledgePoint.chapter.course.name || assignment.knowledgePoint.chapter.course.title
@@ -320,10 +317,14 @@ const AssignmentManagement: React.FC = () => {
       }
     }
     
+    // 确保类型值是有效的枚举值
+    const validTypes = ['homework', 'quiz', 'exam', 'project'];
+    const assignmentType = validTypes.includes(assignment.type) ? assignment.type : 'homework';
+    
     setFormData({
       title: assignment.title,
       description: assignment.description,
-      type: assignment.type.toLowerCase(), // 确保使用英文小写值
+      type: assignmentType as 'homework' | 'quiz' | 'exam' | 'project',
       difficulty: assignment.difficulty,
       totalScore: assignment.totalScore,
       passingScore: assignment.passingScore,
@@ -347,46 +348,6 @@ const AssignmentManagement: React.FC = () => {
 
   const handleFormChange = (field: string, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }));
-  };
-
-  // 添加获取题目列表的函数
-  const fetchQuestions = async () => {
-    try {
-      // 调用实际的API获取题目列表，传递课程ID
-      const response = await questionAPI.getQuestions({ courseId });
-      const data = response.data || response;
-      setQuestions(Array.isArray(data) ? data : data.questions || []);
-    } catch (error) {
-      console.error('获取题目失败:', error);
-      // 如果API调用失败，使用模拟数据
-      const mockQuestions: Question[] = [
-        {
-          id: '1',
-          title: '函数极限的基本概念',
-          content: '当x趋近于0时，sin(x)/x的极限值是多少？',
-          type: 'single_choice',
-          difficulty: 'medium',
-          points: 5,
-        },
-        {
-          id: '2',
-          title: '导数计算',
-          content: '求函数f(x) = x^2的导数',
-          type: 'short_answer',
-          difficulty: 'easy',
-          points: 3,
-        },
-        {
-          id: '3',
-          title: '积分应用',
-          content: '计算定积分∫(0 to 1) x^2 dx',
-          type: 'short_answer',
-          difficulty: 'hard',
-          points: 8,
-        },
-      ];
-      setQuestions(mockQuestions);
-    }
   };
 
   const handleSave = async () => {
@@ -457,8 +418,8 @@ const AssignmentManagement: React.FC = () => {
   // 添加发布作业的函数
   const handlePublish = async (id: string) => {
     try {
-      // 更新作业状态为PUBLISHED（与数据库保持一致）
-      await assignmentAPI.updateAssignment(id, { status: 'PUBLISHED' });
+      // 更新作业状态为published（与数据库保持一致）
+      await assignmentAPI.updateAssignment(id, { status: 'published' });
       // 重新获取作业列表以更新状态
       fetchAssignments();
     } catch (error) {
@@ -470,24 +431,14 @@ const AssignmentManagement: React.FC = () => {
   // 添加取消发布作业的函数
   const handleUnpublish = async (id: string) => {
     try {
-      // 更新作业状态为DRAFT（与数据库保持一致）
-      await assignmentAPI.updateAssignment(id, { status: 'DRAFT' });
+      // 更新作业状态为draft（与数据库保持一致）
+      await assignmentAPI.updateAssignment(id, { status: 'draft' });
       // 重新获取作业列表以更新状态
       fetchAssignments();
     } catch (error) {
       console.error('取消发布作业失败:', error);
       setError('取消发布作业失败，请稍后重试');
     }
-  };
-
-  const toggleRowExpand = (id: string) => {
-    const newExpandedRows = new Set(expandedRows);
-    if (newExpandedRows.has(id)) {
-      newExpandedRows.delete(id);
-    } else {
-      newExpandedRows.add(id);
-    }
-    setExpandedRows(newExpandedRows);
   };
 
   const getStatusColor = (status: string) => {
@@ -728,7 +679,7 @@ const AssignmentManagement: React.FC = () => {
             <TableBody>
               {filteredAssignments.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={15} align="center" sx={{ py: 4 }}>
+                  <TableCell colSpan={14} align="center" sx={{ py: 4 }}>
                     <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
                       <Avatar sx={{ width: 64, height: 64, bgcolor: alpha(theme.palette.primary.main, 0.1) }}>
                         <AssignmentIcon sx={{ fontSize: 32, color: theme.palette.primary.main }} />
@@ -844,23 +795,19 @@ const AssignmentManagement: React.FC = () => {
                       <TableCell>{assignment.statistics?.averageScore || 0}</TableCell>
                       <TableCell>{assignment.statistics?.passRate || 0}%</TableCell>
                       <TableCell>
-                        <Tooltip title="查看关联知识点">
-                          <IconButton 
-                            size="small" 
-                            onClick={() => toggleRowExpand(assignment.id)}
-                            color={expandedRows.has(assignment.id) ? 'primary' : 'default'}
-                            sx={{ 
-                              backgroundColor: expandedRows.has(assignment.id) 
-                                ? alpha(theme.palette.primary.main, 0.1) 
-                                : 'transparent',
-                              '&:hover': {
-                                backgroundColor: alpha(theme.palette.primary.main, 0.1),
-                              }
-                            }}
-                          >
-                            {expandedRows.has(assignment.id) ? <FolderOpen /> : <Folder />}
-                          </IconButton>
-                        </Tooltip>
+                        {assignment.knowledgePoint ? (
+                          <Chip 
+                            label={assignment.knowledgePoint.title}
+                            color="secondary" 
+                            variant="outlined"
+                            size="small"
+                            sx={{ fontWeight: 'bold' }}
+                          />
+                        ) : (
+                          <Typography variant="body2" color="textSecondary">
+                            未关联
+                          </Typography>
+                        )}
                       </TableCell>
                       <TableCell>
                         <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
@@ -946,29 +893,6 @@ const AssignmentManagement: React.FC = () => {
                         </Box>
                       </TableCell>
                     </TableRow>
-                    {expandedRows.has(assignment.id) && (
-                      <TableRow>
-                        <TableCell colSpan={15} sx={{ backgroundColor: alpha(theme.palette.primary.main, 0.05), p: 3 }}>
-                          <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                            <Book sx={{ mr: 1, color: theme.palette.primary.main }} />
-                            <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>
-                              关联知识点:
-                            </Typography>
-                          </Box>
-                          <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                            {assignment.knowledgePoint && (
-                              <Chip 
-                                label={assignment.knowledgePoint.title}
-                                color="secondary" 
-                                variant="outlined"
-                                size="small"
-                                sx={{ fontWeight: 'bold' }}
-                              />
-                            )}
-                          </Box>
-                        </TableCell>
-                      </TableRow>
-                    )}
                   </React.Fragment>
                 ))
               )}

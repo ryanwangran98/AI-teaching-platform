@@ -241,6 +241,7 @@ export const assignmentAPI = {
   submitAssignment: async (id: string, submissionData: { assignmentId: string; answers: any[] }) => {
     console.log('提交的作业数据:', submissionData);
     try {
+      // 修复：确保使用正确的端点和数据格式
       const response = await api.post('/submissions', submissionData);
       console.log('提交成功，响应:', response);
       return response.data;

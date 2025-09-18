@@ -23,6 +23,33 @@ const AssignmentDetail: React.FC = () => {
   const [userSubmissionStatus, setUserSubmissionStatus] = useState<'pending' | 'submitted' | 'graded'>('pending');
   const [hasLocalSubmission, setHasLocalSubmission] = useState<boolean>(false);
 
+  // 题目类型中文映射
+  const questionTypeMap = {
+    'single_choice': '单选题',
+    'multiple_choice': '多选题',
+    'true_false': '判断题',
+    'short_answer': '简答题',
+    'essay': '论述题',
+    'fill_blank': '填空题'
+  };
+
+  // 难度中文映射
+  const difficultyMap = {
+    'easy': '简单',
+    'medium': '中等',
+    'hard': '困难'
+  };
+
+  // 获取中文题目类型
+  const getChineseQuestionType = (type: string) => {
+    return questionTypeMap[type as keyof typeof questionTypeMap] || type || '未知';
+  };
+
+  // 获取中文难度
+  const getChineseDifficulty = (difficulty: string) => {
+    return difficultyMap[difficulty as keyof typeof difficultyMap] || difficulty || '未知';
+  };
+
   useEffect(() => {
     if (assignmentId) {
       fetchAssignmentDetail();
@@ -117,10 +144,10 @@ const AssignmentDetail: React.FC = () => {
     
     // 初始化答案数组，但只在没有从本地存储恢复答案的情况下才执行
     if (assignmentData.questions && assignmentData.questions.length > 0 && answers.length === 0) {
-      const initialAnswers: Answer[] = assignmentData.questions.map(q => ({
-        questionId: q.id,
+      const initialAnswers: Answer[] = assignmentData.questions.map(questionAssignment => ({
+        questionId: questionAssignment.id, // 使用QuestionAssignment的ID
         // 根据题目类型初始化答案
-        answer: q.type === 'MULTIPLE_CHOICE' ? [] : null
+        answer: questionAssignment.question?.type === 'MULTIPLE_CHOICE' ? [] : null
       }));
       setAnswers(initialAnswers);
       console.log('初始化答案状态:', initialAnswers);
@@ -151,13 +178,62 @@ const AssignmentDetail: React.FC = () => {
         if (status === 'SUBMITTED' || status === 'GRADED') {
           setTimeout(() => {
             try {
-              const submittedAnswers = userSubmission.content 
-                ? JSON.parse(userSubmission.content) 
-                : answers;
-              console.log('加载已提交的答案:', submittedAnswers);
+              console.log('开始解析提交内容:', userSubmission.content);
+              let submittedAnswers = [];
+              
+              if (userSubmission.content) {
+                const parsedContent = JSON.parse(userSubmission.content);
+                console.log('解析后的内容:', parsedContent);
+                
+                // 如果解析结果是数组，直接使用；如果是对象，尝试提取answers字段
+                if (Array.isArray(parsedContent)) {
+                  submittedAnswers = parsedContent;
+                } else if (parsedContent && parsedContent.answers) {
+                  submittedAnswers = parsedContent.answers;
+                } else if (parsedContent && typeof parsedContent === 'object') {
+                  // 尝试将对象转换为答案数组格式
+                  submittedAnswers = Object.keys(parsedContent).map(key => ({
+                    questionId: key,
+                    answer: parsedContent[key]
+                  }));
+                }
+              } else {
+                console.warn('提交内容为空');
+              }
+              
+              console.log('处理后的提交答案:', submittedAnswers);
+              
+              // 如果没有有效的提交答案，尝试从其他字段获取
+              if (submittedAnswers.length === 0) {
+                console.warn('未找到有效的提交答案，尝试从其他字段获取');
+                
+                // 尝试从userSubmission的其他字段获取答案数据
+                if (userSubmission.answers && Array.isArray(userSubmission.answers)) {
+                  submittedAnswers = userSubmission.answers;
+                  console.log('从userSubmission.answers获取到答案:', submittedAnswers);
+                } else if (userSubmission.answerData) {
+                  try {
+                    const parsedAnswerData = JSON.parse(userSubmission.answerData);
+                    submittedAnswers = Array.isArray(parsedAnswerData) ? parsedAnswerData : [parsedAnswerData];
+                    console.log('从userSubmission.answerData获取到答案:', submittedAnswers);
+                  } catch (e) {
+                    console.error('解析answerData失败:', e);
+                  }
+                }
+              }
+              
+              // 如果仍然没有有效的提交答案，保持当前答案状态
+              if (submittedAnswers.length === 0) {
+                console.warn('仍未找到有效的提交答案，保持当前答案状态');
+                submittedAnswers = answers;
+              }
+              
+              console.log('最终加载的答案:', submittedAnswers);
               setAnswers(submittedAnswers);
             } catch (e) {
               console.error('解析提交的答案失败:', e);
+              console.log('提交内容:', userSubmission.content);
+              console.log('保持当前答案状态:', answers);
             }
           }, 0);
         }
@@ -273,12 +349,12 @@ const AssignmentDetail: React.FC = () => {
   };
 
   // 渲染题目
-  const renderQuestion = (question: any, index: number) => {
+  const renderQuestion = (questionAssignment: any, index: number) => {
   // 添加调试日志
-  console.log(`渲染题目 ${index}:`, question);
+  console.log(`渲染题目 ${index}:`, questionAssignment);
   
-  // 确保question对象存在
-  if (!question) {
+  // 确保questionAssignment对象存在
+  if (!questionAssignment) {
     console.error(`题目 ${index} 数据为空`);
     return (
       <Card key={index} sx={{ mb: 3, bgcolor: '#ffebee' }}>
@@ -291,25 +367,29 @@ const AssignmentDetail: React.FC = () => {
     );
   }
 
-  // 获取题目内容，优先使用question字段，然后是content、title等
-  let questionContent = '';
-  if (question.question && typeof question.question === 'object') {
-    // 如果question是对象，尝试从中提取内容
-    questionContent = question.question.content || question.question.title || question.question.question || `问题 ${index + 1}`;
-  } else if (question.question && typeof question.question === 'string') {
-    // 如果question是字符串，直接使用
-    questionContent = question.question;
-  } else {
-    // 尝试其他字段
-    questionContent = question.content || question.title || question.question || `问题 ${index + 1}`;
+  // 获取实际的题目对象
+  const question = questionAssignment.question;
+  if (!question) {
+    console.error(`题目 ${index} 的question对象为空`);
+    return (
+      <Card key={index} sx={{ mb: 3, bgcolor: '#ffebee' }}>
+        <CardContent>
+          <Typography color="error">
+            题目内容为空
+          </Typography>
+        </CardContent>
+      </Card>
+    );
   }
+
+  // 获取题目内容
+  const questionContent = question.content || question.title || `问题 ${index + 1}`;
   
   // 调试信息：检查禁用状态
   console.log('当前禁用状态:', {hasLocalSubmission, userSubmissionStatus, isDisabled: userSubmissionStatus !== 'pending' || hasLocalSubmission});
-  // 调试信息：检查答案状态
   console.log('当前问题ID:', question.id);
   console.log('所有答案:', answers);
-  const currentAnswer = answers.find(ans => ans.questionId === question.id);
+  const currentAnswer = answers.find(ans => ans.questionId === questionAssignment.id);
   console.log('找到的当前答案:', currentAnswer);
   // 确保答案值类型正确处理
   const answerValue = currentAnswer?.answer === null ? '' : currentAnswer?.answer || '';
@@ -317,34 +397,12 @@ const AssignmentDetail: React.FC = () => {
   // 判断是否禁用编辑功能（已提交作业时）
   const isDisabled = userSubmissionStatus !== 'pending' || hasLocalSubmission;
   
-  // 获取题目类型，优先从question对象中获取
-  let questionType = '';
-  if (question.question && typeof question.question === 'object' && question.question.type) {
-    questionType = question.question.type;
-  } else {
-    questionType = question.type || '';
-  }
+  // 获取题目类型
+  const questionType = question.type?.toLowerCase() || '';
   
-  // 将题目类型转换为小写，进行不区分大小写的比较
-  questionType = questionType.toLowerCase();
-  
-  // 获取题目选项，优先从question对象中获取
+  // 获取题目选项
   let questionOptions = [];
-  if (question.question && typeof question.question === 'object') {
-    if (Array.isArray(question.question.options)) {
-      questionOptions = question.question.options;
-    } else if (typeof question.question.options === 'string') {
-      try {
-        // 尝试解析JSON字符串
-        questionOptions = JSON.parse(question.question.options);
-      } catch (e) {
-        console.error('解析选项JSON失败:', e);
-        questionOptions = [];
-      }
-    }
-  } else if (Array.isArray(question.options)) {
-    questionOptions = question.options;
-  } else if (typeof question.options === 'string') {
+  if (typeof question.options === 'string') {
     try {
       // 尝试解析JSON字符串
       questionOptions = JSON.parse(question.options);
@@ -352,6 +410,8 @@ const AssignmentDetail: React.FC = () => {
       console.error('解析选项JSON失败:', e);
       questionOptions = [];
     }
+  } else if (Array.isArray(question.options)) {
+    questionOptions = question.options;
   }
   
   // 输出题目类型用于调试
@@ -360,13 +420,13 @@ const AssignmentDetail: React.FC = () => {
   console.log('题目选项:', questionOptions);
 
   return (
-    <Card key={question.id || index} sx={{ mb: 3 }}>
+    <Card key={questionAssignment.id || index} sx={{ mb: 3 }}>
       <CardContent>
         <Typography variant="h6" gutterBottom>
           {index + 1}. {questionContent}
         </Typography>
         <Typography variant="body2" color="textSecondary" gutterBottom>
-          分值: {question.points || 0}分 | 难度: {question.difficulty || '未知'} | 类型: {question.type || '未知'}
+          分值: {question.points || 0}分 | 难度: {getChineseDifficulty(question.difficulty)} | 类型: {getChineseQuestionType(question.type)}
         </Typography>
           
           {/* 单选题 */}
@@ -375,7 +435,7 @@ const AssignmentDetail: React.FC = () => {
               <FormLabel component="legend">选项</FormLabel>
               <RadioGroup
                 value={answerValue}
-                onChange={(e) => handleSingleChoiceChange(question.id, e.target.value)}
+                onChange={(e) => handleSingleChoiceChange(questionAssignment.id, e.target.value)}
                 disabled={isDisabled}
               >
                 {questionOptions.map((option: string, optIndex: number) => (
@@ -402,7 +462,7 @@ const AssignmentDetail: React.FC = () => {
                     control={
                       <Checkbox
                         checked={Array.isArray(answerValue) ? answerValue.includes(option) : false}
-                        onChange={(e) => handleMultipleChoiceChange(question.id, option, e.target.checked)}
+                        onChange={(e) => handleMultipleChoiceChange(questionAssignment.id, option, e.target.checked)}
                         disabled={isDisabled}
                       />
                     }
@@ -420,7 +480,7 @@ const AssignmentDetail: React.FC = () => {
               <FormLabel component="legend">判断</FormLabel>
               <RadioGroup
                 value={answerValue}
-                onChange={(e) => handleSingleChoiceChange(question.id, e.target.value)}
+                onChange={(e) => handleSingleChoiceChange(questionAssignment.id, e.target.value)}
                 disabled={isDisabled}
               >
                 <FormControlLabel
@@ -446,7 +506,7 @@ const AssignmentDetail: React.FC = () => {
               multiline
               rows={4}
               value={answerValue}
-              onChange={(e) => handleTextChange(question.id, e.target.value)}
+              onChange={(e) => handleTextChange(questionAssignment.id, e.target.value)}
               label="您的答案"
               variant="outlined"
               disabled={isDisabled}
@@ -460,7 +520,7 @@ const AssignmentDetail: React.FC = () => {
               minRows={4}
               placeholder="请在这里输入你的答案..."
               value={answerValue as string || ''}
-              onChange={(e) => handleTextChange(question.id, e.target.value)}
+              onChange={(e) => handleTextChange(questionAssignment.id, e.target.value)}
               style={{
                 width: '100%',
                 padding: '12px',
@@ -496,13 +556,13 @@ const AssignmentDetail: React.FC = () => {
       // 准备提交数据
       const submitData = {
         assignmentId: assignment.id,
-        answers: assignment.questions.map((q: any) => {
-          const questionId = q.id || q.questionId;
+        answers: assignment.questions.map((questionAssignment: any) => {
+          const questionId = questionAssignment.id; // 使用QuestionAssignment的ID
           const answerObj = answers.find(ans => ans.questionId === questionId);
           const answer = answerObj ? answerObj.answer : '';
           
           return {
-            questionId,
+            questionId, // 使用QuestionAssignment的ID
             answer: Array.isArray(answer) ? answer : answer
           };
         })
@@ -510,8 +570,8 @@ const AssignmentDetail: React.FC = () => {
 
       console.log('提交数据:', submitData);
 
-      // 调用提交API
-      const response = await submissionAPI.createSubmission(submitData);
+      // 调用提交API - 修复：使用正确的API方法
+      const response = await assignmentAPI.submitAssignment(assignment.id, submitData);
       console.log('提交响应:', response);
 
       if (response.success || response.data) {
@@ -662,6 +722,72 @@ const AssignmentDetail: React.FC = () => {
           <Alert severity="info" sx={{ mb: 3 }}>
             此作业尚未发布，暂时无法提交。请等待教师发布后再进行提交。
           </Alert>
+        )}
+        
+        {/* 提交结果显示区域 */}
+        {(userSubmissionStatus === 'submitted' || userSubmissionStatus === 'graded') && (
+          <Card sx={{ mb: 4, backgroundColor: '#f8f9fa' }}>
+            <CardContent>
+              <Typography variant="h6" gutterBottom sx={{ color: '#1976d2' }}>
+                <CheckCircle sx={{ mr: 1, verticalAlign: 'middle' }} />
+                提交结果
+              </Typography>
+              
+              {userSubmissionStatus === 'graded' ? (
+                <Alert severity="success" sx={{ mb: 2 }}>
+                  作业已批改完成！您的得分：{assignment?.score || 0}/{assignment?.totalPoints || 0}分
+                </Alert>
+              ) : (
+                <Alert severity="info" sx={{ mb: 2 }}>
+                  作业已提交，等待教师批改
+                </Alert>
+              )}
+              
+              <Divider sx={{ my: 2 }} />
+              
+              <Typography variant="subtitle1" gutterBottom>
+                您的答案：
+              </Typography>
+              
+              {assignment?.questions?.map((question: any, index: number) => {
+                const currentAnswer = answers.find(ans => ans.questionId === question.id);
+                const answerValue = currentAnswer?.answer;
+                const questionType = question.type?.toLowerCase() || '';
+                
+                return (
+                  <Box key={question.id} sx={{ mb: 3, p: 2, backgroundColor: 'white', borderRadius: 1 }}>
+                    <Typography variant="subtitle2" gutterBottom>
+                      {index + 1}. {question.content || question.title || `问题 ${index + 1}`}
+                    </Typography>
+                    
+                    {questionType === 'single_choice' && (
+                      <Typography variant="body2" color="textSecondary">
+                        答案：{answerValue || '未作答'}
+                      </Typography>
+                    )}
+                    
+                    {questionType === 'multiple_choice' && (
+                      <Typography variant="body2" color="textSecondary">
+                        答案：{Array.isArray(answerValue) ? answerValue.join(', ') || '未作答' : '未作答'}
+                      </Typography>
+                    )}
+                    
+                    {questionType === 'true_false' && (
+                      <Typography variant="body2" color="textSecondary">
+                        答案：{answerValue === 'true' ? '正确' : answerValue === 'false' ? '错误' : '未作答'}
+                      </Typography>
+                    )}
+                    
+                    {(questionType === 'short_answer' || questionType === 'essay') && (
+                      <Typography variant="body2" color="textSecondary">
+                        答案：{answerValue || '未作答'}
+                      </Typography>
+                    )}
+                  </Box>
+                );
+              })}
+            </CardContent>
+          </Card>
         )}
         
 

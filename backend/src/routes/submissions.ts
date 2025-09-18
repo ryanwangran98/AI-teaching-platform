@@ -146,16 +146,17 @@ router.get('/:id', authenticateToken, async (req: any, res) => {
 router.post('/', authenticateToken, authorizeRoles('STUDENT'), async (req: any, res) => {
   try {
     const { assignmentId, answers } = req.body;
+    
+    console.log('收到提交请求:', { assignmentId, answers, userId: req.user!.id });
 
     if (!assignmentId || !Array.isArray(answers)) {
       return res.status(400).json({ error: 'Please provide assignment ID and answers' });
     }
 
-    // 验证作业是否存在且已发布
+    // 验证作业是否存在且已发布（修复大小写不一致的问题）
     const assignment = await prisma.assignment.findUnique({
       where: { 
-        id: assignmentId,
-        status: 'PUBLISHED'
+        id: assignmentId
       },
       include: {
         knowledgePoint: {
@@ -169,8 +170,12 @@ router.post('/', authenticateToken, authorizeRoles('STUDENT'), async (req: any, 
         }
       }
     });
+    
+    console.log('作业查询结果:', assignment);
 
-    if (!assignment) {
+    // 统一使用小写状态检查，与前端保持一致
+    if (!assignment || assignment.status?.toLowerCase() !== 'published') {
+      console.log('作业未找到或未发布，ID:', assignmentId);
       return res.status(404).json({ error: 'Assignment not found or not published' });
     }
 
@@ -183,6 +188,8 @@ router.post('/', authenticateToken, authorizeRoles('STUDENT'), async (req: any, 
         question: true
       }
     });
+    
+    console.log('题目关联查询结果:', questionAssignments);
 
     // 检查是否已提交过
     const existingSubmission = await prisma.submission.findFirst({
@@ -202,25 +209,29 @@ router.post('/', authenticateToken, authorizeRoles('STUDENT'), async (req: any, 
 
     // 检查所有题目是否存在
     for (const answer of answers) {
+      console.log('处理答案:', answer);
+      
       // 通过QuestionAssignment的ID查找Question
       const questionAssignment = questionAssignments.find((qa: any) => qa.id === answer.questionId);
       if (!questionAssignment) {
+        console.log('未找到题目关联:', answer.questionId);
         throw new Error(`Question assignment ${answer.questionId} not found`);
       }
 
       // 检查题目是否存在
       const question = questionAssignment.question;
       if (!question) {
+        console.log('未找到题目:', answer.questionId);
         throw new Error(`Question not found for assignment ${answer.questionId}`);
       }
 
       // 验证题目类型
-      if (!['SINGLE_CHOICE', 'MULTIPLE_CHOICE', 'TRUE_FALSE', 'SHORT_ANSWER', 'ESSAY', 'FILL_BLANK'].includes(question.type)) {
+      if (!['single_choice', 'multiple_choice', 'true_false', 'short_answer', 'essay', 'fill_blank'].includes(question.type)) {
         throw new Error(`Invalid question type: ${question.type}`);
       }
 
       // 验证答案格式
-      if (question.type === 'MULTIPLE_CHOICE') {
+      if (question.type === 'multiple_choice') {
         if (!Array.isArray(answer.answer)) {
           throw new Error(`Invalid answer format for multiple choice question ${answer.questionId}`);
         }
@@ -230,9 +241,15 @@ router.post('/', authenticateToken, authorizeRoles('STUDENT'), async (req: any, 
 
       // 计算得分
       let isCorrect = false;
-      if (question.type === 'MULTIPLE_CHOICE') {
+      if (question.type === 'multiple_choice') {
         // 多选题答案比较
-        const correctAnswers = JSON.parse(question.correctAnswer || '[]');
+        let correctAnswers;
+        try {
+          correctAnswers = JSON.parse(question.correctAnswer || '[]');
+        } catch {
+          // 如果JSON解析失败，尝试将字符串转换为数组
+          correctAnswers = question.correctAnswer ? [question.correctAnswer] : [];
+        }
         isCorrect = JSON.stringify((answer.answer as string[]).sort()) === JSON.stringify(correctAnswers.sort());
       } else {
         // 其他题型答案比较
@@ -259,7 +276,12 @@ router.post('/', authenticateToken, authorizeRoles('STUDENT'), async (req: any, 
         userId: req.user!.id,
         score: totalScore,
         status: 'SUBMITTED',
-        submittedAt: new Date()
+        submittedAt: new Date(),
+        // 将答案数据序列化后存储到content字段，供前端加载使用
+        content: JSON.stringify(answers.map((a: any) => ({
+          questionId: a.questionId,
+          answer: a.answer
+        })))
       }
     });
 
