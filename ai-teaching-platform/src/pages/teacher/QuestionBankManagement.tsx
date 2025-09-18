@@ -41,6 +41,8 @@ import {
   Check,
   Close,
   Quiz,
+  Publish,
+  Cancel,
 } from '@mui/icons-material';
 import { useNavigate, useParams } from 'react-router-dom';
 import { questionAPI, chapterAPI, knowledgePointAPI, courseAPI } from '../../services/api';
@@ -504,6 +506,32 @@ const QuestionBankManagement: React.FC = () => {
     } catch (error) {
       console.error('更新题目状态失败:', error);
       setError('更新题目状态失败，请稍后重试');
+    }
+  }, []);
+
+  // 添加发布题目的函数
+  const handlePublish = useCallback(async (id: string) => {
+    try {
+      await questionAPI.updateQuestion(id, { status: 'published' });
+      setQuestions(prevQuestions => 
+        prevQuestions.map(q => q.id === id ? { ...q, status: 'published' } : q)
+      );
+    } catch (error) {
+      console.error('发布题目失败:', error);
+      setError('发布题目失败，请稍后重试');
+    }
+  }, []);
+
+  // 添加取消发布题目的函数
+  const handleUnpublish = useCallback(async (id: string) => {
+    try {
+      await questionAPI.updateQuestion(id, { status: 'draft' });
+      setQuestions(prevQuestions => 
+        prevQuestions.map(q => q.id === id ? { ...q, status: 'draft' } : q)
+      );
+    } catch (error) {
+      console.error('取消发布题目失败:', error);
+      setError('取消发布题目失败，请稍后重试');
     }
   }, []);
 
@@ -1017,6 +1045,43 @@ const QuestionBankManagement: React.FC = () => {
                       >
                         编辑
                       </Button>
+                      {question.status === 'draft' && (
+                        <Button
+                          size="small"
+                          variant="outlined"
+                          onClick={() => handlePublish(question.id)}
+                          startIcon={<Publish />}
+                          sx={{ 
+                            borderRadius: 1,
+                            minWidth: 'auto',
+                            px: 1,
+                            '&:hover': { 
+                              backgroundColor: 'rgba(0, 0, 0, 0.04)'
+                            }
+                          }}
+                        >
+                          发布
+                        </Button>
+                      )}
+                      {question.status === 'published' && (
+                        <Button
+                          size="small"
+                          variant="outlined"
+                          color="warning"
+                          onClick={() => handleUnpublish(question.id)}
+                          startIcon={<Cancel />}
+                          sx={{ 
+                            borderRadius: 1,
+                            minWidth: 'auto',
+                            px: 1,
+                            '&:hover': { 
+                              backgroundColor: 'rgba(255, 152, 0, 0.04)'
+                            }
+                          }}
+                        >
+                          取消发布
+                        </Button>
+                      )}
                       <Button
                         size="small"
                         variant="outlined"

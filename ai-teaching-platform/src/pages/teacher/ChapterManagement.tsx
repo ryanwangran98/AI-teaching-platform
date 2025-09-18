@@ -28,6 +28,8 @@ import {
   Grid,
   Card,
   CardContent,
+  CardHeader,
+  CardActions,
   Stack,
   Snackbar,
   alpha,
@@ -50,6 +52,10 @@ import {
   VideoFile,
   Cancel,
   Close,
+  Psychology,
+  Folder,
+  Slideshow,
+  Assignment,
 } from '@mui/icons-material';
 import { useNavigate, useParams } from 'react-router-dom'; // 修改这里，使用useParams而不是useSearchParams
 import { chapterAPI, courseAPI } from '../../services/api';
@@ -635,246 +641,279 @@ const ChapterManagement: React.FC = () => {
         </CardContent>
       </Card>
 
-      <TableContainer component={Paper} sx={{ 
-        borderRadius: 2, 
-        boxShadow: '0 4px 12px rgba(0, 0, 0, 0.05)',
-        overflow: 'hidden'
-      }}>
-        <Table sx={{ minWidth: 650 }}>
-          <TableHead sx={{ bgcolor: alpha(theme.palette.primary.main, 0.05) }}>
-              <TableRow>
-              <TableCell sx={{ fontWeight: 'bold', py: 2 }}>章节名称</TableCell>
-              <TableCell sx={{ fontWeight: 'bold', py: 2 }}>所属课程</TableCell>
-              <TableCell sx={{ fontWeight: 'bold', py: 2 }}>描述</TableCell>
-              <TableCell sx={{ fontWeight: 'bold', py: 2 }}>排序</TableCell>
-                  <TableCell sx={{ fontWeight: 'bold', py: 2 }}>状态</TableCell>
-                  <TableCell sx={{ fontWeight: 'bold', py: 2 }}>知识点</TableCell>
-                  <TableCell sx={{ fontWeight: 'bold', py: 2 }}>资料</TableCell>
-                  <TableCell sx={{ fontWeight: 'bold', py: 2 }}>课件</TableCell>
-                  <TableCell sx={{ fontWeight: 'bold', py: 2 }}>作业</TableCell>
-                  <TableCell sx={{ fontWeight: 'bold', py: 2 }}>学习视频</TableCell>
-                  <TableCell sx={{ fontWeight: 'bold', py: 2 }}>创建时间</TableCell>
-                  <TableCell sx={{ fontWeight: 'bold', py: 2 }}>更新时间</TableCell>
-                  <TableCell sx={{ fontWeight: 'bold', py: 2 }}>操作</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {filteredChapters.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={12} align="center" sx={{ py: 4 }}>
-                  <Typography variant="body2" color="text.secondary">
-                    暂无章节数据
-                  </Typography>
-                </TableCell>
-              </TableRow>
-            ) : (
-              filteredChapters.map((chapter) => (
-                <TableRow 
-                  key={chapter.id} 
-                  sx={{ 
-                    '&:hover': { 
-                      bgcolor: 'rgba(0, 0, 0, 0.02)' 
-                    },
-                    transition: 'background-color 0.2s'
+      {/* 章节卡片视图 */}
+      <Grid container spacing={3}>
+        {filteredChapters.length === 0 ? (
+          <Grid item xs={12}>
+            <Card sx={{ 
+              borderRadius: 2, 
+              boxShadow: '0 4px 12px rgba(0, 0, 0, 0.05)',
+              p: 4,
+              textAlign: 'center'
+            }}>
+              <Typography variant="body2" color="text.secondary">
+                暂无章节数据
+              </Typography>
+            </Card>
+          </Grid>
+        ) : (
+          filteredChapters.map((chapter) => (
+            <Grid item xs={12} sm={6} md={4} lg={3} key={chapter.id}>
+              <Card 
+                sx={{ 
+                  height: '100%',
+                  borderRadius: 2,
+                  boxShadow: '0 4px 12px rgba(0, 0, 0, 0.05)',
+                  transition: 'all 0.3s ease',
+                  '&:hover': {
+                    transform: 'translateY(-4px)',
+                    boxShadow: '0 8px 24px rgba(0, 0, 0, 0.1)',
+                  },
+                  display: 'flex',
+                  flexDirection: 'column'
+                }}
+              >
+                {/* 卡片头部 */}
+                <CardHeader
+                  sx={{
+                    background: `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.9)} 0%, ${alpha(theme.palette.primary.dark, 0.8)} 100%)`,
+                    color: 'white',
+                    pb: 2,
+                    '& .MuiCardHeader-title': {
+                      fontWeight: 'bold',
+                      fontSize: '1.1rem'
+                    }
                   }}
-                >
-                  <TableCell>
-                    <Box>
-                      <Typography variant="body1" sx={{ fontWeight: 'bold' }}>
+                  title={
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <Book />
+                      <Typography variant="h6" component="div" sx={{ fontWeight: 'bold' }}>
                         {chapter.title}
                       </Typography>
                     </Box>
-                  </TableCell>
-                  <TableCell>{chapter.courseName}</TableCell>
-                  <TableCell>
-                    <Typography variant="body2" color="textSecondary" sx={{ maxWidth: 200 }}>
+                  }
+                  subheader={
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 1 }}>
+                      <Chip
+                        label={getStatusLabel(chapter.status)}
+                        color={getStatusColor(chapter.status) as any}
+                        size="small"
+                        sx={{ 
+                          borderRadius: 1,
+                          bgcolor: 'rgba(255, 255, 255, 0.2)',
+                          color: 'white',
+                          '& .MuiChip-label': {
+                            fontWeight: 'bold'
+                          }
+                        }}
+                      />
+                      <Typography variant="body2" sx={{ opacity: 0.9 }}>
+                        排序: {chapter.order}
+                      </Typography>
+                    </Box>
+                  }
+                />
+                
+                {/* 卡片内容 */}
+                <CardContent sx={{ flexGrow: 1, p: 3 }}>
+                  {/* 描述信息 */}
+                  <Box sx={{ mb: 3 }}>
+                    <Typography variant="body2" color="textSecondary" sx={{ mb: 1, lineHeight: 1.5 }}>
                       {chapter.description}
                     </Typography>
-                  </TableCell>
-                  <TableCell>{chapter.order}</TableCell>
-                  <TableCell>
-                    <Chip
-                      label={getStatusLabel(chapter.status)}
-                      color={getStatusColor(chapter.status) as any}
-                      size="small"
-                      sx={{ borderRadius: 1 }}
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <Chip
-                      label={chapter.knowledgePointsCount}
-                      color="primary"
-                      size="small"
-                      variant="outlined"
-                      sx={{ borderRadius: 1 }}
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <Chip
-                      label={chapter.materialsCount}
-                      color="secondary"
-                      size="small"
-                      variant="outlined"
-                      sx={{ borderRadius: 1 }}
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <Chip
-                      label={chapter.coursewareCount}
-                      color="info"
-                      size="small"
-                      variant="outlined"
-                      sx={{ borderRadius: 1 }}
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <Chip
-                      label={chapter.assignmentsCount}
-                      color="warning"
-                      size="small"
-                      variant="outlined"
-                      sx={{ borderRadius: 1 }}
-                    />
-                  </TableCell>
-                  <TableCell>
-                    {chapter.videoUrl ? (
-                      <Chip 
-                        label="已上传" 
-                        color="success" 
-                        size="small"
-                        sx={{ borderRadius: 1 }}
-                      />
-                    ) : (
-                      <Chip 
-                        icon={<Upload />} 
-                        label="未上传" 
-                        color="default" 
-                        size="small"
-                        sx={{ borderRadius: 1 }}
-                      />
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    {new Date(chapter.createdAt).toLocaleDateString('zh-CN')}
-                  </TableCell>
-                  <TableCell>
-                    {new Date(chapter.updatedAt).toLocaleDateString('zh-CN')}
-                  </TableCell>
-                  <TableCell>
-                    <Box sx={{ display: 'flex', gap: 1 }}>
-                      <Button
-                        size="small"
-                        variant="outlined"
-                        onClick={() => handleView(chapter)}
-                        startIcon={<Visibility />}
-                        sx={{ 
-                          minWidth: 'auto',
-                          px: 1,
-                          py: 0.5,
-                          borderRadius: 1,
-                          '&:hover': { 
-                            bgcolor: 'rgba(0, 0, 0, 0.04)' 
-                          }
-                        }}
-                      >
-                        查看
-                      </Button>
-                      <Button
-                        size="small"
-                        variant="outlined"
-                        onClick={() => handleEdit(chapter)}
-                        startIcon={<Edit />}
-                        sx={{ 
-                          minWidth: 'auto',
-                          px: 1,
-                          py: 0.5,
-                          borderRadius: 1,
-                          '&:hover': { 
-                            bgcolor: 'rgba(0, 0, 0, 0.04)' 
-                          }
-                        }}
-                      >
-                        编辑
-                      </Button>
-                      {chapter.status === 'draft' ? (
-                        <Button
-                          size="small"
-                          variant="outlined"
-                          onClick={() => handlePublish(chapter)}
-                          startIcon={<Publish />}
-                          sx={{ 
-                            minWidth: 'auto',
-                            px: 1,
-                            py: 0.5,
-                            borderRadius: 1,
-                            '&:hover': { 
-                              bgcolor: 'rgba(0, 0, 0, 0.04)' 
-                            }
-                          }}
-                        >
-                          发布
-                        </Button>
-                      ) : (
-                        <Button
-                          size="small"
-                          variant="outlined"
-                          onClick={() => handleUnpublish(chapter)}
-                          startIcon={<Cancel />}
-                          sx={{ 
-                            minWidth: 'auto',
-                            px: 1,
-                            py: 0.5,
-                            borderRadius: 1,
-                            '&:hover': { 
-                              bgcolor: 'rgba(0, 0, 0, 0.04)' 
-                            }
-                          }}
-                        >
-                          取消发布
-                        </Button>
-                      )}
-                      <Button
-                        size="small"
-                        variant="outlined"
-                        onClick={() => handleVideoUploadOpen(chapter)}
-                        startIcon={chapter.videoUrl ? <VideoFile /> : <Upload />}
-                        sx={{ 
-                          minWidth: 'auto',
-                          px: 1,
-                          py: 0.5,
-                          borderRadius: 1,
-                          '&:hover': { 
-                            bgcolor: 'rgba(0, 0, 0, 0.04)' 
-                          }
-                        }}
-                      >
-                        视频
-                      </Button>
-                      <Button
-                        size="small"
-                        variant="outlined"
-                        onClick={() => handleDeleteClick(chapter)}
-                        startIcon={<Delete />}
-                        sx={{ 
-                          minWidth: 'auto',
-                          px: 1,
-                          py: 0.5,
-                          borderRadius: 1,
-                          '&:hover': { 
-                            bgcolor: 'rgba(0, 0, 0, 0.04)' 
-                          }
-                        }}
-                      >
-                        删除
-                      </Button>
+                    <Typography variant="caption" color="textSecondary" sx={{ display: 'block', mt: 1 }}>
+                      所属课程: {chapter.courseName}
+                    </Typography>
+                  </Box>
+                  
+                  {/* 统计信息 - 使用更宽松的布局 */}
+                  <Box sx={{ mb: 3 }}>
+                    <Grid container spacing={2}>
+                      <Grid item xs={12} sm={6} md={3}>
+                        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', p: 2, bgcolor: alpha(theme.palette.primary.main, 0.05), borderRadius: 1.5, border: '1px solid', borderColor: alpha(theme.palette.primary.main, 0.1) }}>
+                          <Psychology sx={{ fontSize: 28, color: 'primary.main', mb: 1 }} />
+                          <Typography variant="caption" color="textSecondary" sx={{ fontWeight: 500 }}>知识点</Typography>
+                          <Typography variant="h6" sx={{ fontWeight: 'bold', color: 'primary.main' }}>
+                            {chapter.knowledgePointsCount}
+                          </Typography>
+                        </Box>
+                      </Grid>
+                      
+                      <Grid item xs={12} sm={6} md={3}>
+                        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', p: 2, bgcolor: alpha(theme.palette.secondary.main, 0.05), borderRadius: 1.5, border: '1px solid', borderColor: alpha(theme.palette.secondary.main, 0.1) }}>
+                          <Folder sx={{ fontSize: 28, color: 'secondary.main', mb: 1 }} />
+                          <Typography variant="caption" color="textSecondary" sx={{ fontWeight: 500 }}>资料</Typography>
+                          <Typography variant="h6" sx={{ fontWeight: 'bold', color: 'secondary.main' }}>
+                            {chapter.materialsCount}
+                          </Typography>
+                        </Box>
+                      </Grid>
+                      
+                      <Grid item xs={12} sm={6} md={3}>
+                        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', p: 2, bgcolor: alpha(theme.palette.info.main, 0.05), borderRadius: 1.5, border: '1px solid', borderColor: alpha(theme.palette.info.main, 0.1) }}>
+                          <Slideshow sx={{ fontSize: 28, color: 'info.main', mb: 1 }} />
+                          <Typography variant="caption" color="textSecondary" sx={{ fontWeight: 500 }}>课件</Typography>
+                          <Typography variant="h6" sx={{ fontWeight: 'bold', color: 'info.main' }}>
+                            {chapter.coursewareCount}
+                          </Typography>
+                        </Box>
+                      </Grid>
+                      
+                      <Grid item xs={12} sm={6} md={3}>
+                        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', p: 2, bgcolor: alpha(theme.palette.warning.main, 0.05), borderRadius: 1.5, border: '1px solid', borderColor: alpha(theme.palette.warning.main, 0.1) }}>
+                          <Assignment sx={{ fontSize: 28, color: 'warning.main', mb: 1 }} />
+                          <Typography variant="caption" color="textSecondary" sx={{ fontWeight: 500 }}>作业</Typography>
+                          <Typography variant="h6" sx={{ fontWeight: 'bold', color: 'warning.main' }}>
+                            {chapter.assignmentsCount}
+                          </Typography>
+                        </Box>
+                      </Grid>
+                    </Grid>
+                  </Box>
+                  
+                  {/* 视频状态和时间信息 */}
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', pt: 1, borderTop: '1px solid', borderColor: 'divider' }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <VideoFile sx={{ fontSize: 18, color: chapter.videoUrl ? 'success.main' : 'text.disabled' }} />
+                      <Typography variant="caption" color={chapter.videoUrl ? 'success.main' : 'text.disabled'}>
+                        {chapter.videoUrl ? '视频已上传' : '视频未上传'}
+                      </Typography>
                     </Box>
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </TableContainer>
+                    <Box sx={{ display: 'flex', gap: 2 }}>
+                      <Typography variant="caption" color="textSecondary">
+                        创建: {new Date(chapter.createdAt).toLocaleDateString('zh-CN')}
+                      </Typography>
+                      <Typography variant="caption" color="textSecondary">
+                        更新: {new Date(chapter.updatedAt).toLocaleDateString('zh-CN')}
+                      </Typography>
+                    </Box>
+                  </Box>
+                </CardContent>
+                
+                {/* 卡片操作区域 */}
+                <CardActions sx={{ p: 2, pt: 0, flexDirection: 'column', gap: 1.5 }}>
+                  {/* 主要操作按钮 */}
+                  <Box sx={{ display: 'flex', gap: 1, width: '100%' }}>
+                    <Button
+                      size="small"
+                      variant="contained"
+                      onClick={() => handleView(chapter)}
+                      startIcon={<Visibility />}
+                      sx={{ 
+                        flex: 1,
+                        py: 0.8,
+                        borderRadius: 1.5,
+                        boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                        '&:hover': { 
+                          boxShadow: '0 4px 8px rgba(0,0,0,0.2)',
+                        }
+                      }}
+                    >
+                      查看
+                    </Button>
+                    <Button
+                      size="small"
+                      variant="contained"
+                      onClick={() => handleEdit(chapter)}
+                      startIcon={<Edit />}
+                      sx={{ 
+                        flex: 1,
+                        py: 0.8,
+                        borderRadius: 1.5,
+                        boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                        '&:hover': { 
+                          boxShadow: '0 4px 8px rgba(0,0,0,0.2)',
+                        }
+                      }}
+                    >
+                      编辑
+                    </Button>
+                  </Box>
+                  
+                  {/* 次要操作按钮 */}
+                  <Box sx={{ display: 'flex', gap: 1, width: '100%' }}>
+                    {chapter.status === 'draft' ? (
+                      <Button
+                        size="small"
+                        variant="outlined"
+                        onClick={() => handlePublish(chapter)}
+                        startIcon={<Publish />}
+                        sx={{ 
+                          flex: 1,
+                          py: 0.8,
+                          borderRadius: 1.5,
+                          borderColor: 'success.main',
+                          color: 'success.main',
+                          '&:hover': { 
+                            borderColor: 'success.dark',
+                            bgcolor: 'rgba(76, 175, 80, 0.04)',
+                          }
+                        }}
+                      >
+                        发布
+                      </Button>
+                    ) : (
+                      <Button
+                        size="small"
+                        variant="outlined"
+                        onClick={() => handleUnpublish(chapter)}
+                        startIcon={<Cancel />}
+                        sx={{ 
+                          flex: 1,
+                          py: 0.8,
+                          borderRadius: 1.5,
+                          '&:hover': { 
+                            bgcolor: 'rgba(0, 0, 0, 0.04)',
+                          }
+                        }}
+                      >
+                        取消发布
+                      </Button>
+                    )}
+                    
+                    <Button
+                      size="small"
+                      variant="outlined"
+                      onClick={() => handleVideoUploadOpen(chapter)}
+                      startIcon={chapter.videoUrl ? <VideoFile /> : <Upload />}
+                      sx={{ 
+                        flex: 1,
+                        py: 0.8,
+                        borderRadius: 1.5,
+                        '&:hover': { 
+                          bgcolor: 'rgba(0, 0, 0, 0.04)',
+                        }
+                      }}
+                    >
+                      {chapter.videoUrl ? '管理视频' : '上传视频'}
+                    </Button>
+                    
+                    <Button
+                      size="small"
+                      variant="outlined"
+                      onClick={() => handleDeleteClick(chapter)}
+                      startIcon={<Delete />}
+                      color="error"
+                      sx={{ 
+                        flex: 1,
+                        py: 0.8,
+                        borderRadius: 1.5,
+                        borderColor: 'error.main',
+                        '&:hover': { 
+                          borderColor: 'error.dark',
+                          bgcolor: 'rgba(211, 47, 47, 0.04)',
+                        }
+                      }}
+                    >
+                      删除
+                    </Button>
+                  </Box>
+                </CardActions>
+              </Card>
+            </Grid>
+          ))
+        )}
+      </Grid>
 
 
 

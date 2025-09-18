@@ -44,6 +44,7 @@ import {
   ArrowBack,
   Send,
   Cancel,
+  Publish,
   Assignment,
   Assignment as AssignmentIcon,
   School,
@@ -653,253 +654,347 @@ const AssignmentManagement: React.FC = () => {
         </CardContent>
       </Card>
 
-      {/* 作业列表 */}
-      <Card sx={{ boxShadow: 3, borderRadius: 2, overflow: 'hidden' }}>
-        <TableContainer>
-          <Table>
-            <TableHead sx={{ backgroundColor: alpha(theme.palette.primary.main, 0.1) }}>
-              <TableRow>
-                <TableCell sx={{ fontWeight: 'bold', py: 2 }}>作业名称</TableCell>
-                <TableCell sx={{ fontWeight: 'bold', py: 2 }}>所属课程</TableCell>
-                <TableCell sx={{ fontWeight: 'bold', py: 2 }}>类型</TableCell>
-                <TableCell sx={{ fontWeight: 'bold', py: 2 }}>难度</TableCell>
-                <TableCell sx={{ fontWeight: 'bold', py: 2 }}>总分</TableCell>
-                <TableCell sx={{ fontWeight: 'bold', py: 2 }}>及格分</TableCell>
-                <TableCell sx={{ fontWeight: 'bold', py: 2 }}>时间限制</TableCell>
-                <TableCell sx={{ fontWeight: 'bold', py: 2 }}>开始时间</TableCell>
-                <TableCell sx={{ fontWeight: 'bold', py: 2 }}>结束时间</TableCell>
-                <TableCell sx={{ fontWeight: 'bold', py: 2 }}>状态</TableCell>
-                <TableCell sx={{ fontWeight: 'bold', py: 2 }}>提交人数</TableCell>
-                <TableCell sx={{ fontWeight: 'bold', py: 2 }}>平均分数</TableCell>
-                <TableCell sx={{ fontWeight: 'bold', py: 2 }}>及格率</TableCell>
-                <TableCell sx={{ fontWeight: 'bold', py: 2 }}>关联知识点</TableCell>
-                <TableCell sx={{ fontWeight: 'bold', py: 2 }}>操作</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {filteredAssignments.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={14} align="center" sx={{ py: 4 }}>
-                    <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
-                      <Avatar sx={{ width: 64, height: 64, bgcolor: alpha(theme.palette.primary.main, 0.1) }}>
-                        <AssignmentIcon sx={{ fontSize: 32, color: theme.palette.primary.main }} />
-                      </Avatar>
-                      <Typography variant="h6" color="text.secondary">
-                        暂无作业数据
+      {/* 作业列表 - 卡片视图 */}
+      {filteredAssignments.length === 0 ? (
+        <Card sx={{ boxShadow: 3, borderRadius: 2, p: 4, textAlign: 'center' }}>
+          <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+            <Avatar sx={{ width: 64, height: 64, bgcolor: alpha(theme.palette.primary.main, 0.1) }}>
+              <AssignmentIcon sx={{ fontSize: 32, color: theme.palette.primary.main }} />
+            </Avatar>
+            <Typography variant="h6" color="text.secondary">
+              暂无作业数据
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              点击"创建作业"按钮创建新的作业
+            </Typography>
+            <Button
+              variant="contained"
+              startIcon={<Add />}
+              onClick={handleCreate}
+              sx={{ mt: 1 }}
+            >
+              创建作业
+            </Button>
+          </Box>
+        </Card>
+      ) : (
+        <Grid container spacing={3}>
+          {filteredAssignments.map((assignment) => (
+            <Grid size={{ xs: 12, sm: 6, md: 4, lg: 3 }} key={assignment.id}>
+              <Card 
+                sx={{ 
+                  height: '100%', 
+                  display: 'flex', 
+                  flexDirection: 'column',
+                  boxShadow: 3,
+                  borderRadius: 2,
+                  transition: 'all 0.3s ease',
+                  '&:hover': { 
+                    transform: 'translateY(-4px)',
+                    boxShadow: 6
+                  }
+                }}
+              >
+                {/* 卡片头部 */}
+                <Box sx={{ 
+                  p: 2, 
+                  background: `linear-gradient(135deg, ${alpha(getAssignmentTypeColor(assignment.type), 0.9)}, ${alpha(getAssignmentTypeColor(assignment.type), 0.7)})`,
+                  color: 'white'
+                }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                    <Avatar sx={{ 
+                      mr: 1.5, 
+                      bgcolor: 'rgba(255, 255, 255, 0.2)',
+                      width: 40,
+                      height: 40
+                    }}>
+                      {getAssignmentTypeIcon(assignment.type)}
+                    </Avatar>
+                    <Box sx={{ flex: 1 }}>
+                      <Typography variant="h6" sx={{ fontWeight: 'bold', fontSize: '1rem' }}>
+                        {assignment.title}
                       </Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        点击"创建作业"按钮创建新的作业
+                      <Typography variant="body2" sx={{ opacity: 0.9, fontSize: '0.8rem' }}>
+                        {assignment.description}
                       </Typography>
-                      <Button
-                        variant="contained"
-                        startIcon={<Add />}
-                        onClick={handleCreate}
-                        sx={{ mt: 1 }}
-                      >
-                        创建作业
-                      </Button>
                     </Box>
-                  </TableCell>
-                </TableRow>
-              ) : (
-                filteredAssignments.map((assignment) => (
-                  <React.Fragment key={assignment.id}>
-                    <TableRow 
-                      hover
+                  </Box>
+                  <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                    <Chip 
+                      label={getTypeLabel(assignment.type)}
+                      size="small"
                       sx={{ 
-                        '&:hover': { backgroundColor: alpha(theme.palette.primary.main, 0.05) },
-                        '&:last-child td': { borderBottom: 0 }
+                        bgcolor: 'rgba(255, 255, 255, 0.2)', 
+                        color: 'white',
+                        fontWeight: 'bold',
+                        fontSize: '0.7rem'
                       }}
-                    >
-                      <TableCell>
+                    />
+                    <Chip 
+                      label={getDifficultyLabel(assignment.difficulty)}
+                      size="small"
+                      sx={{ 
+                        bgcolor: 'rgba(255, 255, 255, 0.2)', 
+                        color: 'white',
+                        fontWeight: 'bold',
+                        fontSize: '0.7rem'
+                      }}
+                    />
+                    <Chip 
+                      label={getStatusLabel(assignment.status)}
+                      size="small"
+                      sx={{ 
+                        bgcolor: 'rgba(255, 255, 255, 0.2)', 
+                        color: 'white',
+                        fontWeight: 'bold',
+                        fontSize: '0.7rem'
+                      }}
+                    />
+                  </Box>
+                </Box>
+
+                {/* 卡片内容 */}
+                <CardContent sx={{ flex: 1, p: 2 }}>
+                  <Grid container spacing={1.5}>
+                    <Grid size={{ xs: 6 }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                        <Grade sx={{ mr: 1, color: theme.palette.success.main, fontSize: '1rem' }} />
+                        <Box>
+                          <Typography variant="caption" color="textSecondary">总分</Typography>
+                          <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
+                            {assignment.totalScore}
+                          </Typography>
+                        </Box>
+                      </Box>
+                    </Grid>
+                    <Grid size={{ xs: 6 }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                        <CheckCircle sx={{ mr: 1, color: theme.palette.warning.main, fontSize: '1rem' }} />
+                        <Box>
+                          <Typography variant="caption" color="textSecondary">及格分</Typography>
+                          <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
+                            {assignment.passingScore}
+                          </Typography>
+                        </Box>
+                      </Box>
+                    </Grid>
+                    <Grid size={{ xs: 6 }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                        <Timer sx={{ mr: 1, color: theme.palette.info.main, fontSize: '1rem' }} />
+                        <Box>
+                          <Typography variant="caption" color="textSecondary">时间限制</Typography>
+                          <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
+                            {formatDuration(assignment.timeLimit)}
+                          </Typography>
+                        </Box>
+                      </Box>
+                    </Grid>
+                    <Grid size={{ xs: 6 }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                        <School sx={{ mr: 1, color: theme.palette.primary.main, fontSize: '1rem' }} />
+                        <Box>
+                          <Typography variant="caption" color="textSecondary">课程</Typography>
+                          <Typography variant="body2" sx={{ fontWeight: 'bold' }} noWrap>
+                            {assignment.course?.title || '未知课程'}
+                          </Typography>
+                        </Box>
+                      </Box>
+                    </Grid>
+                    <Grid size={{ xs: 12 }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                        <Schedule sx={{ mr: 1, color: theme.palette.secondary.main, fontSize: '1rem' }} />
+                        <Box>
+                          <Typography variant="caption" color="textSecondary">开始时间</Typography>
+                          <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
+                            {formatDateTime(assignment.startTime)}
+                          </Typography>
+                        </Box>
+                      </Box>
+                    </Grid>
+                    <Grid size={{ xs: 12 }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                        <Schedule sx={{ mr: 1, color: theme.palette.error.main, fontSize: '1rem' }} />
+                        <Box>
+                          <Typography variant="caption" color="textSecondary">结束时间</Typography>
+                          <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
+                            {formatDateTime(assignment.endTime)}
+                          </Typography>
+                        </Box>
+                      </Box>
+                    </Grid>
+                    <Grid size={{ xs: 4 }}>
+                      <Box sx={{ textAlign: 'center' }}>
+                        <Typography variant="caption" color="textSecondary">提交人数</Typography>
+                        <Typography variant="body2" sx={{ fontWeight: 'bold', color: theme.palette.primary.main }}>
+                          {assignment.statistics?.totalSubmissions || 0}
+                        </Typography>
+                      </Box>
+                    </Grid>
+                    <Grid size={{ xs: 4 }}>
+                      <Box sx={{ textAlign: 'center' }}>
+                        <Typography variant="caption" color="textSecondary">平均分</Typography>
+                        <Typography variant="body2" sx={{ fontWeight: 'bold', color: theme.palette.success.main }}>
+                          {assignment.statistics?.averageScore || 0}
+                        </Typography>
+                      </Box>
+                    </Grid>
+                    <Grid size={{ xs: 4 }}>
+                      <Box sx={{ textAlign: 'center' }}>
+                        <Typography variant="caption" color="textSecondary">及格率</Typography>
+                        <Typography variant="body2" sx={{ fontWeight: 'bold', color: theme.palette.warning.main }}>
+                          {assignment.statistics?.passRate || 0}%
+                        </Typography>
+                      </Box>
+                    </Grid>
+                    {assignment.knowledgePoint && (
+                      <Grid size={{ xs: 12 }}>
                         <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                          <Avatar sx={{ 
-                            mr: 2, 
-                            bgcolor: getAssignmentTypeColor(assignment.type),
-                            width: 36,
-                            height: 36
-                          }}>
-                            {getAssignmentTypeIcon(assignment.type)}
-                          </Avatar>
+                          <Book sx={{ mr: 1, color: theme.palette.secondary.main, fontSize: '1rem' }} />
                           <Box>
-                            <Typography variant="body1" sx={{ fontWeight: 'bold' }}>
-                              {assignment.title}
-                            </Typography>
-                            <Typography variant="body2" color="textSecondary">
-                              {assignment.description}
+                            <Typography variant="caption" color="textSecondary">关联知识点</Typography>
+                            <Typography variant="body2" sx={{ fontWeight: 'bold' }} noWrap>
+                              {assignment.knowledgePoint.title}
                             </Typography>
                           </Box>
                         </Box>
-                      </TableCell>
-                      <TableCell>
-                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                          <School sx={{ mr: 1, color: theme.palette.primary.main }} fontSize="small" />
-                          {assignment.course?.title || '未知课程'}
-                        </Box>
-                      </TableCell>
-                      <TableCell>
-                        <Chip
-                          label={getTypeLabel(assignment.type)}
-                          color="primary"
-                          size="small"
-                          sx={{ fontWeight: 'bold' }}
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <Chip
-                          label={getDifficultyLabel(assignment.difficulty)}
-                          color={getDifficultyColor(assignment.difficulty) as any}
-                          size="small"
-                          sx={{ fontWeight: 'bold' }}
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                          <Grade sx={{ mr: 1, color: theme.palette.success.main }} fontSize="small" />
-                          {assignment.totalScore}
-                        </Box>
-                      </TableCell>
-                      <TableCell>
-                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                          <CheckCircle sx={{ mr: 1, color: theme.palette.warning.main }} fontSize="small" />
-                          {assignment.passingScore}
-                        </Box>
-                      </TableCell>
-                      <TableCell>
-                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                          <Timer sx={{ mr: 1, color: theme.palette.info.main }} fontSize="small" />
-                          {formatDuration(assignment.timeLimit)}
-                        </Box>
-                      </TableCell>
-                      <TableCell>
-                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                          <Schedule sx={{ mr: 1, color: theme.palette.secondary.main }} fontSize="small" />
-                          {formatDateTime(assignment.startTime)}
-                        </Box>
-                      </TableCell>
-                      <TableCell>
-                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                          <Schedule sx={{ mr: 1, color: theme.palette.error.main }} fontSize="small" />
-                          {formatDateTime(assignment.endTime)}
-                        </Box>
-                      </TableCell>
-                      <TableCell>
-                        <Chip
-                          label={getStatusLabel(assignment.status)}
-                          color={getStatusColor(assignment.status) as any}
-                          size="small"
-                          sx={{ fontWeight: 'bold' }}
-                        />
-                      </TableCell>
-                      <TableCell>{assignment.statistics?.totalSubmissions || 0}</TableCell>
-                      <TableCell>{assignment.statistics?.averageScore || 0}</TableCell>
-                      <TableCell>{assignment.statistics?.passRate || 0}%</TableCell>
-                      <TableCell>
-                        {assignment.knowledgePoint ? (
-                          <Chip 
-                            label={assignment.knowledgePoint.title}
-                            color="secondary" 
-                            variant="outlined"
-                            size="small"
-                            sx={{ fontWeight: 'bold' }}
-                          />
-                        ) : (
-                          <Typography variant="body2" color="textSecondary">
-                            未关联
-                          </Typography>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                          <Button 
-                            size="small"
-                            variant="outlined"
-                            startIcon={<Visibility />}
-                            sx={{ 
-                              borderRadius: 1,
-                              minWidth: 'auto',
-                              px: 1,
-                              '&:hover': { 
-                                backgroundColor: 'rgba(0, 0, 0, 0.04)' 
-                              } 
-                            }}
-                          >
-                            查看详情
-                          </Button>
-                          <Button 
-                            size="small"
-                            variant="outlined"
-                            onClick={() => handleEdit(assignment)}
-                            startIcon={<Edit />}
-                            sx={{ 
-                              borderRadius: 1,
-                              minWidth: 'auto',
-                              px: 1,
-                              '&:hover': { 
-                                backgroundColor: 'rgba(0, 0, 0, 0.04)' 
-                              } 
-                            }}
-                          >
-                            编辑
-                          </Button>
-                          <Button
-                            size="small"
-                            variant="outlined"
-                            onClick={() => navigate(`/teacher/courses/${courseId}/assignments/${assignment.id}/questions`)}
-                            startIcon={<Quiz />}
-                            sx={{ 
-                              borderRadius: 1,
-                              minWidth: 'auto',
-                              px: 1,
-                              '&:hover': { 
-                                backgroundColor: 'rgba(0, 0, 0, 0.04)' 
-                              } 
-                            }}
-                          >
-                            组卷
-                          </Button>
-                          <Button
-                            size="small"
-                            variant="outlined"
-                            onClick={() => navigate(`/teacher/courses/${courseId}/assignments/${assignment.id}/grading`)}
-                            startIcon={<RateReview />}
-                            sx={{ 
-                              borderRadius: 1,
-                              minWidth: 'auto',
-                              px: 1,
-                              '&:hover': { 
-                                backgroundColor: 'rgba(0, 0, 0, 0.04)' 
-                              } 
-                            }}
-                          >
-                            批改作业
-                          </Button>
-                          <Button
-                            size="small"
-                            variant="outlined"
-                            onClick={() => handleDelete(assignment.id)}
-                            startIcon={<Delete />}
-                            sx={{ 
-                              borderRadius: 1,
-                              minWidth: 'auto',
-                              px: 1,
-                              '&:hover': { 
-                                backgroundColor: 'rgba(0, 0, 0, 0.04)' 
-                              } 
-                            }}
-                          >
-                            删除
-                          </Button>
-                        </Box>
-                      </TableCell>
-                    </TableRow>
-                  </React.Fragment>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </TableContainer>
-      </Card>
+                      </Grid>
+                    )}
+                  </Grid>
+                </CardContent>
+
+                {/* 卡片操作按钮 */}
+                <Box sx={{ p: 2, pt: 0 }}>
+                  <Divider sx={{ mb: 2 }} />
+                  <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
+                    <Button 
+                      size="small"
+                      variant="outlined"
+                      startIcon={<Visibility />}
+                      sx={{ 
+                        borderRadius: 1,
+                        minWidth: 'auto',
+                        px: 1,
+                        fontSize: '0.75rem',
+                        '&:hover': { 
+                          backgroundColor: 'rgba(0, 0, 0, 0.04)' 
+                        } 
+                      }}
+                    >
+                      详情
+                    </Button>
+                    <Button 
+                      size="small"
+                      variant="outlined"
+                      onClick={() => handleEdit(assignment)}
+                      startIcon={<Edit />}
+                      sx={{ 
+                        borderRadius: 1,
+                        minWidth: 'auto',
+                        px: 1,
+                        fontSize: '0.75rem',
+                        '&:hover': { 
+                          backgroundColor: 'rgba(0, 0, 0, 0.04)' 
+                        } 
+                      }}
+                    >
+                      编辑
+                    </Button>
+                    <Button
+                      size="small"
+                      variant="outlined"
+                      onClick={() => navigate(`/teacher/courses/${courseId}/assignments/${assignment.id}/questions`)}
+                      startIcon={<Quiz />}
+                      sx={{ 
+                        borderRadius: 1,
+                        minWidth: 'auto',
+                        px: 1,
+                        fontSize: '0.75rem',
+                        '&:hover': { 
+                          backgroundColor: 'rgba(0, 0, 0, 0.04)' 
+                        } 
+                      }}
+                    >
+                      组卷
+                    </Button>
+                    <Button
+                      size="small"
+                      variant="outlined"
+                      onClick={() => navigate(`/teacher/courses/${courseId}/assignments/${assignment.id}/grading`)}
+                      startIcon={<RateReview />}
+                      sx={{ 
+                        borderRadius: 1,
+                        minWidth: 'auto',
+                        px: 1,
+                        fontSize: '0.75rem',
+                        '&:hover': { 
+                          backgroundColor: 'rgba(0, 0, 0, 0.04)' 
+                        } 
+                      }}
+                    >
+                      批改
+                    </Button>
+                    {assignment.status === 'draft' && (
+                      <Button
+                        size="small"
+                        variant="outlined"
+                        onClick={() => handlePublish(assignment.id)}
+                        startIcon={<Publish />}
+                        sx={{ 
+                          borderRadius: 1,
+                          minWidth: 'auto',
+                          px: 1,
+                          fontSize: '0.75rem',
+                          '&:hover': { 
+                            backgroundColor: 'rgba(0, 0, 0, 0.04)' 
+                          } 
+                        }}
+                      >
+                        发布
+                      </Button>
+                    )}
+                    {assignment.status === 'published' && (
+                      <Button
+                        size="small"
+                        variant="outlined"
+                        onClick={() => handleUnpublish(assignment.id)}
+                        startIcon={<Cancel />}
+                        sx={{ 
+                          borderRadius: 1,
+                          minWidth: 'auto',
+                          px: 1,
+                          fontSize: '0.75rem',
+                          '&:hover': { 
+                            backgroundColor: 'rgba(0, 0, 0, 0.04)' 
+                          } 
+                        }}
+                      >
+                        取消发布
+                      </Button>
+                    )}
+                    <Button
+                      size="small"
+                      variant="outlined"
+                      onClick={() => handleDelete(assignment.id)}
+                      startIcon={<Delete />}
+                      sx={{ 
+                        borderRadius: 1,
+                        minWidth: 'auto',
+                        px: 1,
+                        fontSize: '0.75rem',
+                        '&:hover': { 
+                          backgroundColor: 'rgba(0, 0, 0, 0.04)' 
+                        } 
+                      }}
+                    >
+                      删除
+                    </Button>
+                  </Box>
+                </Box>
+              </Card>
+            </Grid>
+          ))}
+        </Grid>
+      )}
 
 
 

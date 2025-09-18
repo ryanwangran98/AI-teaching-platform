@@ -26,6 +26,8 @@ import {
   Grid,
   Card,
   CardContent,
+  CardHeader,
+  CardActions,
   alpha,
   useTheme,
   Avatar,
@@ -538,225 +540,310 @@ const KnowledgePointManagement: React.FC = () => {
         </CardContent>
       </Card>
 
-      <TableContainer component={Paper} sx={{ 
-        borderRadius: 2, 
-        boxShadow: '0 4px 12px rgba(0, 0, 0, 0.05)',
-        overflow: 'hidden'
-      }}>
-        <Table sx={{ minWidth: 650 }}>
-          <TableHead sx={{ bgcolor: alpha(theme.palette.primary.main, 0.05) }}>
-            <TableRow>
-              <TableCell sx={{ fontWeight: 'bold', py: 2 }}>知识点名称</TableCell>
-              <TableCell sx={{ fontWeight: 'bold', py: 2 }}>所属章节</TableCell>
-              <TableCell sx={{ fontWeight: 'bold', py: 2 }}>描述</TableCell>
-              <TableCell sx={{ fontWeight: 'bold', py: 2 }}>难度</TableCell>
-              <TableCell sx={{ fontWeight: 'bold', py: 2 }}>重要性</TableCell>
-              <TableCell sx={{ fontWeight: 'bold', py: 2 }}>状态</TableCell>
-              <TableCell sx={{ fontWeight: 'bold', py: 2 }}>资料</TableCell>
-              <TableCell sx={{ fontWeight: 'bold', py: 2 }}>课件</TableCell>
-              <TableCell sx={{ fontWeight: 'bold', py: 2 }}>作业</TableCell>
-              <TableCell sx={{ fontWeight: 'bold', py: 2 }}>题目</TableCell>
-              <TableCell sx={{ fontWeight: 'bold', py: 2 }}>创建时间</TableCell>
-              <TableCell sx={{ fontWeight: 'bold', py: 2 }}>更新时间</TableCell>
-              <TableCell sx={{ fontWeight: 'bold', py: 2 }}>操作</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {filteredKnowledgePoints.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={13} align="center" sx={{ py: 4 }}>
-                  <Typography variant="body2" color="text.secondary">
-                    暂无知识点数据
-                  </Typography>
-                </TableCell>
-              </TableRow>
-            ) : (
-              filteredKnowledgePoints.map((kp) => (
-                <TableRow 
-                  key={kp.id} 
+      <Grid container spacing={3}>
+        {filteredKnowledgePoints.length === 0 ? (
+          <Grid item xs={12}>
+            <Card sx={{ 
+              borderRadius: 2, 
+              boxShadow: '0 4px 12px rgba(0, 0, 0, 0.05)',
+              p: 4,
+              textAlign: 'center'
+            }}>
+              <Typography variant="body2" color="text.secondary">
+                暂无知识点数据
+              </Typography>
+            </Card>
+          </Grid>
+        ) : (
+          filteredKnowledgePoints.map((kp) => (
+            <Grid item xs={12} sm={6} md={4} key={kp.id}>
+              <Card 
+                sx={{ 
+                  borderRadius: 2, 
+                  boxShadow: '0 4px 12px rgba(0, 0, 0, 0.05)',
+                  transition: 'transform 0.2s, box-shadow 0.2s',
+                  '&:hover': { 
+                    transform: 'translateY(-2px)',
+                    boxShadow: '0 8px 24px rgba(0, 0, 0, 0.1)'
+                  }
+                }}
+              >
+                {/* 卡片头部 - 带渐变背景 */}
+                <CardHeader 
                   sx={{ 
-                    '&:hover': { 
-                      bgcolor: 'rgba(0, 0, 0, 0.02)' 
-                    },
-                    transition: 'background-color 0.2s'
+                    background: `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.9)} 0%, ${alpha(theme.palette.primary.dark, 0.8)} 100%)`,
+                    color: 'white',
+                    pb: 2
                   }}
-                >
-                  <TableCell>
-                    <Box>
-                      <Typography variant="body1" sx={{ fontWeight: 'bold' }}>
+                  title={
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <Lightbulb sx={{ fontSize: 20 }} />
+                      <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
                         {kp.title}
                       </Typography>
                     </Box>
-                  </TableCell>
-                  <TableCell>{kp.chapterName}</TableCell>
-                  <TableCell>
-                    <Typography variant="body2" color="textSecondary" sx={{ maxWidth: 200 }}>
-                      {kp.description}
-                    </Typography>
-                  </TableCell>
-                  <TableCell>
-                    <Chip
-                      label={getDifficultyLabel(kp.difficulty)}
-                      color={getDifficultyColor(kp.difficulty) as any}
-                      size="small"
-                      sx={{ borderRadius: 1 }}
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <Chip
-                      label={getImportanceLabel(kp.importance)}
-                      color={getImportanceColor(kp.importance) as any}
-                      size="small"
-                      sx={{ borderRadius: 1 }}
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <Chip
-                      label={getStatusLabel(kp.status)}
-                      color={getStatusColor(kp.status) as any}
-                      size="small"
-                      sx={{ borderRadius: 1 }}
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <Chip
-                      label={kp.materialsCount}
-                      color="primary"
-                      size="small"
-                      variant="outlined"
-                      sx={{ borderRadius: 1 }}
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <Chip
-                      label={kp.coursewareCount}
-                      color="secondary"
-                      size="small"
-                      variant="outlined"
-                      sx={{ borderRadius: 1 }}
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <Chip
-                      label={kp.assignmentsCount}
-                      color="info"
-                      size="small"
-                      variant="outlined"
-                      sx={{ borderRadius: 1 }}
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <Chip
-                      label={kp.questionsCount}
-                      color="warning"
-                      size="small"
-                      variant="outlined"
-                      sx={{ borderRadius: 1 }}
-                    />
-                  </TableCell>
-                  <TableCell>
-                    {new Date(kp.createdAt).toLocaleDateString('zh-CN')}
-                  </TableCell>
-                  <TableCell>
-                    {new Date(kp.updatedAt).toLocaleDateString('zh-CN')}
-                  </TableCell>
-                  <TableCell>
-                    <Box sx={{ display: 'flex', gap: 1 }}>
-                      <Button
-                        size="small"
-                        variant="outlined"
-                        startIcon={<Visibility />}
+                  }
+                  subheader={
+                    <Box sx={{ display: 'flex', gap: 1, mt: 1 }}>
+                      <Chip 
+                        label={getDifficultyLabel(kp.difficulty)}
+                        color={getDifficultyColor(kp.difficulty) as any}
+                        size="small" 
                         sx={{ 
-                          minWidth: 'auto',
-                          px: 1,
-                          py: 0.5,
+                          bgcolor: 'rgba(255, 255, 255, 0.2)',
+                          color: 'white',
+                          fontWeight: 'bold',
                           borderRadius: 1,
-                          '&:hover': { 
-                            bgcolor: 'rgba(0, 0, 0, 0.04)' 
-                          }
+                          '& .MuiChip-label': { px: 1 }
                         }}
-                      >
-                        查看
-                      </Button>
-                      <Button
-                        size="small"
-                        variant="outlined"
-                        onClick={() => handleEdit(kp)}
-                        startIcon={<Edit />}
+                      />
+                      <Chip 
+                        label={getImportanceLabel(kp.importance)}
+                        color={getImportanceColor(kp.importance) as any}
+                        size="small" 
                         sx={{ 
-                          minWidth: 'auto',
-                          px: 1,
-                          py: 0.5,
+                          bgcolor: 'rgba(255, 255, 255, 0.2)',
+                          color: 'white',
+                          fontWeight: 'bold',
                           borderRadius: 1,
-                          '&:hover': { 
-                            bgcolor: 'rgba(0, 0, 0, 0.04)' 
-                          }
+                          '& .MuiChip-label': { px: 1 }
                         }}
-                      >
-                        编辑
-                      </Button>
-                      {kp.status === 'draft' ? (
-                        <Button
-                          size="small"
-                          variant="outlined"
-                          onClick={() => handlePublish(kp)}
-                          startIcon={<Publish />}
-                          sx={{ 
-                            minWidth: 'auto',
-                            px: 1,
-                            py: 0.5,
-                            borderRadius: 1,
-                            '&:hover': { 
-                              bgcolor: 'rgba(0, 0, 0, 0.04)' 
-                            }
-                          }}
-                        >
-                          发布
-                        </Button>
-                      ) : (
-                        <Button
-                          size="small"
-                          variant="outlined"
-                          onClick={() => handleUnpublish(kp)}
-                          startIcon={<Cancel />}
-                          sx={{ 
-                            minWidth: 'auto',
-                            px: 1,
-                            py: 0.5,
-                            borderRadius: 1,
-                            '&:hover': { 
-                              bgcolor: 'rgba(0, 0, 0, 0.04)' 
-                            }
-                          }}
-                        >
-                          取消发布
-                        </Button>
-                      )}
-                      <Button
-                        size="small"
-                        variant="outlined"
-                        onClick={() => handleDelete(kp.id)}
-                        startIcon={<Delete />}
+                      />
+                      <Chip 
+                        label={getStatusLabel(kp.status)}
+                        color={getStatusColor(kp.status) as any}
+                        size="small" 
                         sx={{ 
-                          minWidth: 'auto',
-                          px: 1,
-                          py: 0.5,
+                          bgcolor: 'rgba(255, 255, 255, 0.2)',
+                          color: 'white',
+                          fontWeight: 'bold',
                           borderRadius: 1,
-                          '&:hover': { 
-                            bgcolor: 'rgba(0, 0, 0, 0.04)' 
-                          }
+                          '& .MuiChip-label': { px: 1 }
                         }}
-                      >
-                        删除
-                      </Button>
+                      />
                     </Box>
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </TableContainer>
+                  }
+                />
+                
+                <CardContent sx={{ pt: 2, pb: 1 }}>
+                  {/* 描述信息区 */}
+                  <Box sx={{ mb: 2.5 }}>
+                    <Typography variant="body2" color="textSecondary" sx={{ mb: 0.8, fontWeight: 500 }}>
+                      描述
+                    </Typography>
+                    <Typography variant="body2" sx={{ lineHeight: 1.5, color: 'text.primary' }}>
+                      {kp.description || '暂无描述'}
+                    </Typography>
+                  </Box>
+                  
+                  {/* 所属章节区 */}
+                  <Box sx={{ mb: 2.5 }}>
+                    <Typography variant="body2" color="textSecondary" sx={{ mb: 0.8, fontWeight: 500 }}>
+                      所属章节
+                    </Typography>
+                    <Typography variant="body2" sx={{ fontWeight: 'bold', color: 'primary.main' }}>
+                      {kp.chapterName}
+                    </Typography>
+                  </Box>
+                  
+                  {/* 统计信息区 */}
+                  <Box sx={{ mb: 2.5 }}>
+                    <Typography variant="body2" color="textSecondary" sx={{ mb: 1, fontWeight: 500 }}>
+                      资源统计
+                    </Typography>
+                    <Grid container spacing={1.5}>
+                      <Grid item xs={6} sm={3}>
+                        <Box sx={{ 
+                          bgcolor: alpha(theme.palette.primary.main, 0.08),
+                          borderRadius: 1.5,
+                          p: 1.2,
+                          textAlign: 'center',
+                          border: '1px solid rgba(0, 0, 0, 0.08)'
+                        }}>
+                          <Typography variant="h6" sx={{ fontWeight: 'bold', color: 'primary.main', mb: 0.3 }}>
+                            {kp.materialsCount}
+                          </Typography>
+                          <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                            资料
+                          </Typography>
+                        </Box>
+                      </Grid>
+                      
+                      <Grid item xs={6} sm={3}>
+                        <Box sx={{ 
+                          bgcolor: alpha(theme.palette.secondary.main, 0.08),
+                          borderRadius: 1.5,
+                          p: 1.2,
+                          textAlign: 'center',
+                          border: '1px solid rgba(0, 0, 0, 0.08)'
+                        }}>
+                          <Typography variant="h6" sx={{ fontWeight: 'bold', color: 'secondary.main', mb: 0.3 }}>
+                            {kp.coursewareCount}
+                          </Typography>
+                          <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                            课件
+                          </Typography>
+                        </Box>
+                      </Grid>
+                      
+                      <Grid item xs={6} sm={3}>
+                        <Box sx={{ 
+                          bgcolor: alpha(theme.palette.info.main, 0.08),
+                          borderRadius: 1.5,
+                          p: 1.2,
+                          textAlign: 'center',
+                          border: '1px solid rgba(0, 0, 0, 0.08)'
+                        }}>
+                          <Typography variant="h6" sx={{ fontWeight: 'bold', color: 'info.main', mb: 0.3 }}>
+                            {kp.assignmentsCount}
+                          </Typography>
+                          <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                            作业
+                          </Typography>
+                        </Box>
+                      </Grid>
+                      
+                      <Grid item xs={6} sm={3}>
+                        <Box sx={{ 
+                          bgcolor: alpha(theme.palette.warning.main, 0.08),
+                          borderRadius: 1.5,
+                          p: 1.2,
+                          textAlign: 'center',
+                          border: '1px solid rgba(0, 0, 0, 0.08)'
+                        }}>
+                          <Typography variant="h6" sx={{ fontWeight: 'bold', color: 'warning.main', mb: 0.3 }}>
+                            {kp.questionsCount}
+                          </Typography>
+                          <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                            题目
+                          </Typography>
+                        </Box>
+                      </Grid>
+                    </Grid>
+                  </Box>
+                  
+                  {/* 时间信息区 */}
+                  <Box sx={{ 
+                    pt: 1.5, 
+                    borderTop: '1px dashed rgba(0, 0, 0, 0.1)',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center'
+                  }}>
+                    <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                      创建: {new Date(kp.createdAt).toLocaleDateString('zh-CN')}
+                    </Typography>
+                    <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                      更新: {new Date(kp.updatedAt).toLocaleDateString('zh-CN')}
+                    </Typography>
+                  </Box>
+                </CardContent>
+                
+                <CardActions sx={{ px: 2, pb: 2, pt: 1.5, flexDirection: 'column', gap: 1.5 }}>
+                  {/* 主要操作按钮 */}
+                  <Box sx={{ display: 'flex', gap: 1, width: '100%' }}>
+                    <Button
+                      size="small"
+                      variant="contained"
+                      startIcon={<Visibility />}
+                      sx={{ 
+                        flex: 1,
+                        py: 0.8,
+                        borderRadius: 1.5,
+                        boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                        '&:hover': { 
+                          boxShadow: '0 4px 8px rgba(0,0,0,0.2)',
+                        }
+                      }}
+                    >
+                      查看
+                    </Button>
+                    <Button
+                      size="small"
+                      variant="contained"
+                      onClick={() => handleEdit(kp)}
+                      startIcon={<Edit />}
+                      sx={{ 
+                        flex: 1,
+                        py: 0.8,
+                        borderRadius: 1.5,
+                        boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                        '&:hover': { 
+                          boxShadow: '0 4px 8px rgba(0,0,0,0.2)',
+                        }
+                      }}
+                    >
+                      编辑
+                    </Button>
+                  </Box>
+                  
+                  {/* 次要操作按钮 */}
+                  <Box sx={{ display: 'flex', gap: 1, width: '100%' }}>
+                    {kp.status === 'draft' ? (
+                      <Button
+                        size="small"
+                        variant="outlined"
+                        onClick={() => handlePublish(kp)}
+                        startIcon={<Publish />}
+                        sx={{ 
+                          flex: 1,
+                          py: 0.8,
+                          borderRadius: 1.5,
+                          borderColor: 'success.main',
+                          color: 'success.main',
+                          '&:hover': { 
+                            borderColor: 'success.dark',
+                            bgcolor: 'rgba(76, 175, 80, 0.04)',
+                          }
+                        }}
+                      >
+                        发布
+                      </Button>
+                    ) : (
+                      <Button
+                        size="small"
+                        variant="outlined"
+                        onClick={() => handleUnpublish(kp)}
+                        startIcon={<Cancel />}
+                        sx={{ 
+                          flex: 1,
+                          py: 0.8,
+                          borderRadius: 1.5,
+                          '&:hover': { 
+                            bgcolor: 'rgba(0, 0, 0, 0.04)',
+                          }
+                        }}
+                      >
+                        取消发布
+                      </Button>
+                    )}
+                    
+                    <Button
+                      size="small"
+                      variant="outlined"
+                      onClick={() => handleDelete(kp.id)}
+                      startIcon={<Delete />}
+                      color="error"
+                      sx={{ 
+                        flex: 1,
+                        py: 0.8,
+                        borderRadius: 1.5,
+                        borderColor: 'error.main',
+                        '&:hover': { 
+                          borderColor: 'error.dark',
+                          bgcolor: 'rgba(211, 47, 47, 0.04)',
+                        }
+                      }}
+                    >
+                      删除
+                    </Button>
+                  </Box>
+                </CardActions>
+              </Card>
+            </Grid>
+          ))
+        )}
+      </Grid>
 
 
 
