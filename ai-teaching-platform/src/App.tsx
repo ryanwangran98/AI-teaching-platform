@@ -109,7 +109,7 @@ function App() {
           </ProtectedRoute>
         }
       >
-        <Route index element={<div>课程信息</div>} />
+        <Route index element={<CoursewareManagement />} />
         <Route path="courseware" element={<CoursewareManagement />} />
         <Route path="materials" element={<MaterialManagement />} />
         <Route path="chapters" element={<ChapterManagement />} />

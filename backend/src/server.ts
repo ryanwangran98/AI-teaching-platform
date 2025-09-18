@@ -28,7 +28,7 @@ import { specs, swaggerUi } from './utils/swagger';
 dotenv.config();
 
 const app = express();
-const PORT = process.env.PORT || 3002;
+const PORT = process.env.PORT || 3001;
 
 // 中间件
 app.use(helmet());
@@ -74,7 +74,7 @@ if (process.env.NODE_ENV === 'development') {
 // 速率限制
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15分钟
-  max: 500, // 限制每个IP 15分钟内最多500个请求
+  max: 5000, // 限制每个IP 15分钟内最多5000个请求
   message: '请求过于频繁，请稍后再试',
 });
 app.use('/api/', limiter);

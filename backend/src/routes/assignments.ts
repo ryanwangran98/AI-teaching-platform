@@ -501,25 +501,35 @@ router.delete('/:id', authenticateToken, authorizeRoles('TEACHER', 'ADMIN'), asy
       return res.status(403).json({ error: 'Not authorized to delete this assignment' });
     }
 
-    // 删除与该作业关联的所有题目（确保只删除属于当前课程的题目）
-    await prisma.question.deleteMany({
-      where: {
-        assignments: {
-          some: {
+    // 使用事务确保删除操作的完整性
+    await prisma.$transaction(async (prisma) => {
+      // 1. 删除与作业关联的提交答案记录
+      await prisma.submissionAnswer.deleteMany({
+        where: {
+          submission: {
             assignmentId: id
           }
-        },
-        knowledgePoint: {
-          chapter: {
-            courseId: assignment.knowledgePoint.chapter.course.id
-          }
         }
-      }
-    });
+      });
 
-    // 然后删除作业本身
-    await prisma.assignment.delete({
-      where: { id }
+      // 2. 删除与作业关联的提交记录
+      await prisma.submission.deleteMany({
+        where: {
+          assignmentId: id
+        }
+      });
+
+      // 3. 删除与作业关联的题目关联记录（注意：不删除题目本身，因为题目可能被其他作业使用）
+      await prisma.questionAssignment.deleteMany({
+        where: {
+          assignmentId: id
+        }
+      });
+
+      // 4. 最后删除作业本身
+      await prisma.assignment.delete({
+        where: { id }
+      });
     });
 
     res.json({
@@ -527,6 +537,7 @@ router.delete('/:id', authenticateToken, authorizeRoles('TEACHER', 'ADMIN'), asy
       message: 'Assignment deleted successfully'
     });
   } catch (error) {
+    console.error('Delete assignment error:', error);
     res.status(500).json({ error: 'Server error' });
   }
 });

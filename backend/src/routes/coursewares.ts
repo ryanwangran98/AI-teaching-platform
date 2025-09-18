@@ -273,7 +273,7 @@ router.post('/', authenticateToken, authorizeRoles('TEACHER', 'ADMIN'), upload.s
 router.put('/:id', authenticateToken, authorizeRoles('TEACHER', 'ADMIN'), async (req: AuthRequest, res) => {
   try {
     const { id } = req.params;
-    const { title, description, type, chapterId } = req.body;
+    const { title, description, type, chapterId, status } = req.body;
 
     // 验证type字段是否有效
     if (type) {
@@ -330,6 +330,7 @@ router.put('/:id', authenticateToken, authorizeRoles('TEACHER', 'ADMIN'), async 
     if (description !== undefined) updateData.description = description;
     if (type !== undefined) updateData.type = type;
     if (chapterId !== undefined) updateData.chapterId = chapterId;
+    if (status !== undefined) updateData.status = status;
 
     const updatedCourseware = await prisma.courseware.update({
         where: { id },

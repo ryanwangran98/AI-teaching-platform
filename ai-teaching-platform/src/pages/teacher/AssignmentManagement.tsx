@@ -26,6 +26,13 @@ import {
   Switch,
   FormControlLabel,
   Grid,
+  Card,
+  CardContent,
+  useTheme,
+  Tooltip,
+  Avatar,
+  alpha,
+  Divider,
 } from '@mui/material';
 import {
   Add,
@@ -40,6 +47,20 @@ import {
   Send,
   Cancel,
   Assignment,
+  Assignment as AssignmentIcon,
+  School,
+  Book,
+  Schedule,
+  Timer,
+  Grade,
+  CheckCircle,
+  Folder,
+  FolderOpen,
+  LibraryBooks,
+  Quiz,
+  TaskAlt,
+  Description,
+  RateReview,
 } from '@mui/icons-material';
 import { useNavigate, useParams } from 'react-router-dom';
 import { assignmentAPI, chapterAPI, knowledgePointAPI } from '../../services/api';
@@ -100,6 +121,7 @@ const AssignmentManagement: React.FC = () => {
   const navigate = useNavigate();
   const params = useParams();
   const courseId = params.courseId as string;
+  const theme = useTheme();
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -170,16 +192,24 @@ const AssignmentManagement: React.FC = () => {
       
       // 处理后端返回的数据结构
       let assignmentsData = [];
-      if (response.success) {
+      if (response && response.success && response.data) {
         // 如果后端返回的是带success字段的对象
         assignmentsData = Array.isArray(response.data.assignments) 
           ? response.data.assignments 
-          : response.data;
+          : Array.isArray(response.data) 
+            ? response.data 
+            : [];
+      } else if (response && Array.isArray(response)) {
+        // 如果后端直接返回数组
+        assignmentsData = response;
+      } else if (response && response.assignments) {
+        // 如果后端返回的是带assignments字段的对象
+        assignmentsData = Array.isArray(response.assignments) 
+          ? response.assignments 
+          : [];
       } else {
-        // 如果后端直接返回数组或对象
-        assignmentsData = Array.isArray(response) 
-          ? response 
-          : response.assignments || [];
+        // 其他情况，确保是空数组
+        assignmentsData = [];
       }
       
       // 添加调试日志
@@ -418,9 +448,9 @@ const AssignmentManagement: React.FC = () => {
     try {
       await assignmentAPI.deleteAssignment(id);
       setAssignments(assignments.filter(a => a.id !== id));
-    } catch (error) {
+    } catch (error: any) {
       console.error('删除作业失败:', error);
-      setError('删除作业失败，请稍后重试');
+      setError(`删除作业失败: ${error.response?.data?.error || error.message || '请稍后重试'}`);
     }
   };
 
@@ -523,6 +553,28 @@ const AssignmentManagement: React.FC = () => {
     return new Date(dateString).toLocaleString('zh-CN');
   };
 
+  // 获取作业类型对应的图标
+  const getAssignmentTypeIcon = (type: string) => {
+    switch (type.toLowerCase()) {
+      case 'homework': return <Description />;
+      case 'quiz': return <Quiz />;
+      case 'exam': return <TaskAlt />;
+      case 'project': return <LibraryBooks />;
+      default: return <Description />;
+    }
+  };
+
+  // 获取作业类型对应的颜色
+  const getAssignmentTypeColor = (type: string) => {
+    switch (type.toLowerCase()) {
+      case 'homework': return theme.palette.primary.main;
+      case 'quiz': return theme.palette.secondary.main;
+      case 'exam': return theme.palette.error.main;
+      case 'project': return theme.palette.success.main;
+      default: return theme.palette.primary.main;
+    }
+  };
+
   const filteredAssignments = assignments.filter(a => {
     const matchesSearch = a.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
                            a.description.toLowerCase().includes(searchTerm.toLowerCase());
@@ -553,219 +605,444 @@ const AssignmentManagement: React.FC = () => {
 
   return (
     <Box sx={{ p: 3 }}>
-      <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
-        <IconButton 
-          onClick={() => navigate('/teacher/courses')} 
-          sx={{ mr: 2 }}
-          title="返回我的课程"
-        >
-          <ArrowBack />
-        </IconButton>
-        <Typography variant="h4" gutterBottom sx={{ mb: 0 }}>
-          作业管理
-        </Typography>
-      </Box>
-
-      <Box sx={{ display: 'flex', gap: 2, mb: 3 }}>
-        <TextField
-          placeholder="搜索作业..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          InputProps={{
-            startAdornment: <Search />,
-          }}
-          sx={{ flex: 1 }}
-        />
-        <FormControl sx={{ minWidth: 120 }}>
-          <InputLabel>类型</InputLabel>
-          <Select
-            value={selectedType}
-            onChange={(e) => setSelectedType(e.target.value)}
-            label="类型"
+      {/* 页面标题和返回按钮 */}
+      <Card sx={{ mb: 3, boxShadow: 3, borderRadius: 2 }}>
+        <CardContent sx={{ display: 'flex', alignItems: 'center', py: 2 }}>
+          <IconButton 
+            onClick={() => navigate('/teacher/courses')} 
+            sx={{ 
+              mr: 2,
+              backgroundColor: alpha(theme.palette.primary.main, 0.1),
+              '&:hover': {
+                backgroundColor: alpha(theme.palette.primary.main, 0.2),
+              }
+            }}
+            title="返回我的课程"
           >
-            <MenuItem value="">全部类型</MenuItem>
-            <MenuItem value="homework">作业</MenuItem>
-            <MenuItem value="quiz">测验</MenuItem>
-            <MenuItem value="exam">考试</MenuItem>
-            <MenuItem value="project">项目</MenuItem>
-          </Select>
-        </FormControl>
-        <Button
-          variant="contained"
-          startIcon={<Add />}
-          onClick={handleCreate}
-        >
-          创建作业
-        </Button>
+            <ArrowBack color="primary" />
+          </IconButton>
+          <Box sx={{ display: 'flex', alignItems: 'center', flexGrow: 1 }}>
+            <Avatar sx={{ 
+              mr: 2, 
+              bgcolor: theme.palette.primary.main,
+              width: 48,
+              height: 48
+            }}>
+              <AssignmentIcon />
+            </Avatar>
+            <Box>
+              <Typography variant="h4" gutterBottom sx={{ mb: 0, fontWeight: 'bold' }}>
+                作业管理
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                管理课程作业、测验和考试
+              </Typography>
+            </Box>
+          </Box>
+          <Chip 
+            label={`${filteredAssignments.length} 个作业`} 
+            color="primary" 
+            variant="outlined"
+            sx={{ fontWeight: 'bold' }}
+          />
+        </CardContent>
+      </Card>
 
-      </Box>
+      {/* 操作按钮和搜索筛选区域 */}
+      <Card sx={{ mb: 3, boxShadow: 2, borderRadius: 2 }}>
+        <CardContent sx={{ py: 2 }}>
+          <Grid container spacing={2} alignItems="center">
+            <Grid size={{ xs: 12, md: 6 }}>
+              <TextField
+                placeholder="搜索作业..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                InputProps={{
+                  startAdornment: <Search color="action" />,
+                  sx: { borderRadius: 2 }
+                }}
+                fullWidth
+                variant="outlined"
+                size="small"
+              />
+            </Grid>
+            <Grid size={{ xs: 12, md: 3 }}>
+              <FormControl fullWidth size="small">
+                <InputLabel>类型</InputLabel>
+                <Select
+                  value={selectedType}
+                  onChange={(e) => setSelectedType(e.target.value)}
+                  label="类型"
+                  sx={{ borderRadius: 2 }}
+                >
+                  <MenuItem value="">全部类型</MenuItem>
+                  <MenuItem value="homework">作业</MenuItem>
+                  <MenuItem value="quiz">测验</MenuItem>
+                  <MenuItem value="exam">考试</MenuItem>
+                  <MenuItem value="project">项目</MenuItem>
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid size={{ xs: 12, md: 3 }} sx={{ display: 'flex', justifyContent: 'flex-end' }}>
+              <Button
+                variant="contained"
+                startIcon={<Add />}
+                onClick={handleCreate}
+                sx={{ 
+                  borderRadius: 2,
+                  boxShadow: 2,
+                  fontWeight: 'bold',
+                  px: 3
+                }}
+              >
+                创建作业
+              </Button>
+            </Grid>
+          </Grid>
+        </CardContent>
+      </Card>
 
       {/* 作业列表 */}
-      <TableContainer component={Paper}>
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableCell>作业名称</TableCell>
-              <TableCell>所属课程</TableCell>
-              <TableCell>类型</TableCell>
-              <TableCell>难度</TableCell>
-              <TableCell>总分</TableCell>
-              <TableCell>及格分</TableCell>
-              <TableCell>时间限制</TableCell>
-              <TableCell>开始时间</TableCell>
-              <TableCell>结束时间</TableCell>
-              <TableCell>状态</TableCell>
-              <TableCell>提交人数</TableCell>
-              <TableCell>平均分数</TableCell>
-              <TableCell>及格率</TableCell>
-              <TableCell>关联知识点</TableCell>
-              <TableCell>操作</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {filteredAssignments.length === 0 ? (
+      <Card sx={{ boxShadow: 3, borderRadius: 2, overflow: 'hidden' }}>
+        <TableContainer>
+          <Table>
+            <TableHead sx={{ backgroundColor: alpha(theme.palette.primary.main, 0.1) }}>
               <TableRow>
-                <TableCell colSpan={15} align="center">
-                  <Typography variant="body2" color="text.secondary">
-                    暂无作业数据
-                  </Typography>
-                </TableCell>
+                <TableCell sx={{ fontWeight: 'bold', py: 2 }}>作业名称</TableCell>
+                <TableCell sx={{ fontWeight: 'bold', py: 2 }}>所属课程</TableCell>
+                <TableCell sx={{ fontWeight: 'bold', py: 2 }}>类型</TableCell>
+                <TableCell sx={{ fontWeight: 'bold', py: 2 }}>难度</TableCell>
+                <TableCell sx={{ fontWeight: 'bold', py: 2 }}>总分</TableCell>
+                <TableCell sx={{ fontWeight: 'bold', py: 2 }}>及格分</TableCell>
+                <TableCell sx={{ fontWeight: 'bold', py: 2 }}>时间限制</TableCell>
+                <TableCell sx={{ fontWeight: 'bold', py: 2 }}>开始时间</TableCell>
+                <TableCell sx={{ fontWeight: 'bold', py: 2 }}>结束时间</TableCell>
+                <TableCell sx={{ fontWeight: 'bold', py: 2 }}>状态</TableCell>
+                <TableCell sx={{ fontWeight: 'bold', py: 2 }}>提交人数</TableCell>
+                <TableCell sx={{ fontWeight: 'bold', py: 2 }}>平均分数</TableCell>
+                <TableCell sx={{ fontWeight: 'bold', py: 2 }}>及格率</TableCell>
+                <TableCell sx={{ fontWeight: 'bold', py: 2 }}>关联知识点</TableCell>
+                <TableCell sx={{ fontWeight: 'bold', py: 2 }}>操作</TableCell>
               </TableRow>
-            ) : (
-              filteredAssignments.map((assignment) => (
-                <React.Fragment key={assignment.id}>
-                  <TableRow>
-                    <TableCell>
-                      <Box>
-                        <Typography variant="body1" sx={{ fontWeight: 'bold' }}>
-                          {assignment.title}
-                        </Typography>
-                        <Typography variant="body2" color="textSecondary">
-                          {assignment.description}
-                        </Typography>
-                      </Box>
-                    </TableCell>
-                    <TableCell>{assignment.course?.title || '未知课程'}</TableCell>
-                    <TableCell>
-                      <Chip
-                        label={getTypeLabel(assignment.type)}
-                        color="primary"
-                        size="small"
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <Chip
-                        label={getDifficultyLabel(assignment.difficulty)}
-                        color={getDifficultyColor(assignment.difficulty) as any}
-                        size="small"
-                      />
-                    </TableCell>
-                    <TableCell>{assignment.totalScore}</TableCell>
-                    <TableCell>{assignment.passingScore}</TableCell>
-                    <TableCell>{formatDuration(assignment.timeLimit)}</TableCell>
-                    <TableCell>{formatDateTime(assignment.startTime)}</TableCell>
-                    <TableCell>{formatDateTime(assignment.endTime)}</TableCell>
-                    <TableCell>
-                      <Chip
-                        label={getStatusLabel(assignment.status)}
-                        color={getStatusColor(assignment.status) as any}
-                        size="small"
-                      />
-                    </TableCell>
-                    <TableCell>{assignment.statistics?.totalSubmissions || 0}</TableCell>
-                    <TableCell>{assignment.statistics?.averageScore || 0}</TableCell>
-                    <TableCell>{assignment.statistics?.passRate || 0}%</TableCell>
-                    <TableCell>
-                      <IconButton 
-                        size="small" 
-                        onClick={() => toggleRowExpand(assignment.id)}
-                        color={expandedRows.has(assignment.id) ? 'primary' : 'default'}
+            </TableHead>
+            <TableBody>
+              {filteredAssignments.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={15} align="center" sx={{ py: 4 }}>
+                    <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+                      <Avatar sx={{ width: 64, height: 64, bgcolor: alpha(theme.palette.primary.main, 0.1) }}>
+                        <AssignmentIcon sx={{ fontSize: 32, color: theme.palette.primary.main }} />
+                      </Avatar>
+                      <Typography variant="h6" color="text.secondary">
+                        暂无作业数据
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        点击"创建作业"按钮创建新的作业
+                      </Typography>
+                      <Button
+                        variant="contained"
+                        startIcon={<Add />}
+                        onClick={handleCreate}
+                        sx={{ mt: 1 }}
                       >
-                        {expandedRows.has(assignment.id) ? <ExpandLess /> : <ExpandMore />}
-                      </IconButton>
-                    </TableCell>
-                    <TableCell>
-                      <IconButton color="primary" size="small">
-                        <Visibility />
-                      </IconButton>
-                      <IconButton 
-                        color="primary" 
-                        size="small"
-                        onClick={() => handleEdit(assignment)}
-                      >
-                        <Edit />
-                      </IconButton>
-                      <IconButton
-                        color="secondary"
-                        size="small"
-                        onClick={() => navigate(`/teacher/courses/${courseId}/assignments/${assignment.id}/questions`)}
-                        title="组卷"
-                      >
-                        <Link />
-                      </IconButton>
-                      <IconButton
-                        color="success"
-                        size="small"
-                        onClick={() => navigate(`/teacher/courses/${courseId}/assignments/${assignment.id}/grading`)}
-                        title="批改作业"
-                      >
-                        <Assignment />
-                      </IconButton>
-                      <IconButton
-                        color="error"
-                        size="small"
-                        onClick={() => handleDelete(assignment.id)}
-                      >
-                        <Delete />
-                      </IconButton>
-                    </TableCell>
-                  </TableRow>
-                  {expandedRows.has(assignment.id) && (
-                    <TableRow>
-                      <TableCell colSpan={15} sx={{ backgroundColor: 'action.hover', p: 2 }}>
-                        <Typography variant="subtitle2" gutterBottom>
-                          关联知识点:
-                        </Typography>
+                        创建作业
+                      </Button>
+                    </Box>
+                  </TableCell>
+                </TableRow>
+              ) : (
+                filteredAssignments.map((assignment) => (
+                  <React.Fragment key={assignment.id}>
+                    <TableRow 
+                      hover
+                      sx={{ 
+                        '&:hover': { backgroundColor: alpha(theme.palette.primary.main, 0.05) },
+                        '&:last-child td': { borderBottom: 0 }
+                      }}
+                    >
+                      <TableCell>
+                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                          <Avatar sx={{ 
+                            mr: 2, 
+                            bgcolor: getAssignmentTypeColor(assignment.type),
+                            width: 36,
+                            height: 36
+                          }}>
+                            {getAssignmentTypeIcon(assignment.type)}
+                          </Avatar>
+                          <Box>
+                            <Typography variant="body1" sx={{ fontWeight: 'bold' }}>
+                              {assignment.title}
+                            </Typography>
+                            <Typography variant="body2" color="textSecondary">
+                              {assignment.description}
+                            </Typography>
+                          </Box>
+                        </Box>
+                      </TableCell>
+                      <TableCell>
+                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                          <School sx={{ mr: 1, color: theme.palette.primary.main }} fontSize="small" />
+                          {assignment.course?.title || '未知课程'}
+                        </Box>
+                      </TableCell>
+                      <TableCell>
+                        <Chip
+                          label={getTypeLabel(assignment.type)}
+                          color="primary"
+                          size="small"
+                          sx={{ fontWeight: 'bold' }}
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <Chip
+                          label={getDifficultyLabel(assignment.difficulty)}
+                          color={getDifficultyColor(assignment.difficulty) as any}
+                          size="small"
+                          sx={{ fontWeight: 'bold' }}
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                          <Grade sx={{ mr: 1, color: theme.palette.success.main }} fontSize="small" />
+                          {assignment.totalScore}
+                        </Box>
+                      </TableCell>
+                      <TableCell>
+                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                          <CheckCircle sx={{ mr: 1, color: theme.palette.warning.main }} fontSize="small" />
+                          {assignment.passingScore}
+                        </Box>
+                      </TableCell>
+                      <TableCell>
+                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                          <Timer sx={{ mr: 1, color: theme.palette.info.main }} fontSize="small" />
+                          {formatDuration(assignment.timeLimit)}
+                        </Box>
+                      </TableCell>
+                      <TableCell>
+                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                          <Schedule sx={{ mr: 1, color: theme.palette.secondary.main }} fontSize="small" />
+                          {formatDateTime(assignment.startTime)}
+                        </Box>
+                      </TableCell>
+                      <TableCell>
+                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                          <Schedule sx={{ mr: 1, color: theme.palette.error.main }} fontSize="small" />
+                          {formatDateTime(assignment.endTime)}
+                        </Box>
+                      </TableCell>
+                      <TableCell>
+                        <Chip
+                          label={getStatusLabel(assignment.status)}
+                          color={getStatusColor(assignment.status) as any}
+                          size="small"
+                          sx={{ fontWeight: 'bold' }}
+                        />
+                      </TableCell>
+                      <TableCell>{assignment.statistics?.totalSubmissions || 0}</TableCell>
+                      <TableCell>{assignment.statistics?.averageScore || 0}</TableCell>
+                      <TableCell>{assignment.statistics?.passRate || 0}%</TableCell>
+                      <TableCell>
+                        <Tooltip title="查看关联知识点">
+                          <IconButton 
+                            size="small" 
+                            onClick={() => toggleRowExpand(assignment.id)}
+                            color={expandedRows.has(assignment.id) ? 'primary' : 'default'}
+                            sx={{ 
+                              backgroundColor: expandedRows.has(assignment.id) 
+                                ? alpha(theme.palette.primary.main, 0.1) 
+                                : 'transparent',
+                              '&:hover': {
+                                backgroundColor: alpha(theme.palette.primary.main, 0.1),
+                              }
+                            }}
+                          >
+                            {expandedRows.has(assignment.id) ? <FolderOpen /> : <Folder />}
+                          </IconButton>
+                        </Tooltip>
+                      </TableCell>
+                      <TableCell>
                         <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                          {assignment.knowledgePoint && (
-                            <Chip 
-                              label={assignment.knowledgePoint.title}
-                              color="secondary" 
-                              variant="outlined"
-                              size="small"
-                            />
-                          )}
+                          <Button 
+                            size="small"
+                            variant="outlined"
+                            startIcon={<Visibility />}
+                            sx={{ 
+                              borderRadius: 1,
+                              minWidth: 'auto',
+                              px: 1,
+                              '&:hover': { 
+                                backgroundColor: 'rgba(0, 0, 0, 0.04)' 
+                              } 
+                            }}
+                          >
+                            查看详情
+                          </Button>
+                          <Button 
+                            size="small"
+                            variant="outlined"
+                            onClick={() => handleEdit(assignment)}
+                            startIcon={<Edit />}
+                            sx={{ 
+                              borderRadius: 1,
+                              minWidth: 'auto',
+                              px: 1,
+                              '&:hover': { 
+                                backgroundColor: 'rgba(0, 0, 0, 0.04)' 
+                              } 
+                            }}
+                          >
+                            编辑
+                          </Button>
+                          <Button
+                            size="small"
+                            variant="outlined"
+                            onClick={() => navigate(`/teacher/courses/${courseId}/assignments/${assignment.id}/questions`)}
+                            startIcon={<Quiz />}
+                            sx={{ 
+                              borderRadius: 1,
+                              minWidth: 'auto',
+                              px: 1,
+                              '&:hover': { 
+                                backgroundColor: 'rgba(0, 0, 0, 0.04)' 
+                              } 
+                            }}
+                          >
+                            组卷
+                          </Button>
+                          <Button
+                            size="small"
+                            variant="outlined"
+                            onClick={() => navigate(`/teacher/courses/${courseId}/assignments/${assignment.id}/grading`)}
+                            startIcon={<RateReview />}
+                            sx={{ 
+                              borderRadius: 1,
+                              minWidth: 'auto',
+                              px: 1,
+                              '&:hover': { 
+                                backgroundColor: 'rgba(0, 0, 0, 0.04)' 
+                              } 
+                            }}
+                          >
+                            批改作业
+                          </Button>
+                          <Button
+                            size="small"
+                            variant="outlined"
+                            onClick={() => handleDelete(assignment.id)}
+                            startIcon={<Delete />}
+                            sx={{ 
+                              borderRadius: 1,
+                              minWidth: 'auto',
+                              px: 1,
+                              '&:hover': { 
+                                backgroundColor: 'rgba(0, 0, 0, 0.04)' 
+                              } 
+                            }}
+                          >
+                            删除
+                          </Button>
                         </Box>
                       </TableCell>
                     </TableRow>
-                  )}
-                </React.Fragment>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </TableContainer>
+                    {expandedRows.has(assignment.id) && (
+                      <TableRow>
+                        <TableCell colSpan={15} sx={{ backgroundColor: alpha(theme.palette.primary.main, 0.05), p: 3 }}>
+                          <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                            <Book sx={{ mr: 1, color: theme.palette.primary.main }} />
+                            <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>
+                              关联知识点:
+                            </Typography>
+                          </Box>
+                          <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                            {assignment.knowledgePoint && (
+                              <Chip 
+                                label={assignment.knowledgePoint.title}
+                                color="secondary" 
+                                variant="outlined"
+                                size="small"
+                                sx={{ fontWeight: 'bold' }}
+                              />
+                            )}
+                          </Box>
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </React.Fragment>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      </Card>
 
 
 
       {/* 创建/编辑作业对话框 */}
-      <Dialog open={createDialogOpen} onClose={handleDialogClose} maxWidth="md" fullWidth>
-        <DialogTitle sx={{ pb: 2 }}>
-          {editingAssignment ? '编辑作业' : '创建作业'}
+      <Dialog 
+        open={createDialogOpen} 
+        onClose={handleDialogClose} 
+        maxWidth="md" 
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: 3,
+            boxShadow: theme.shadows[10],
+            overflow: 'hidden'
+          }
+        }}
+      >
+        <DialogTitle sx={{ 
+          pb: 2, 
+          pt: 3,
+          px: 3,
+          background: `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.9)}, ${alpha(theme.palette.primary.dark, 0.8)})`,
+          color: 'white',
+          display: 'flex',
+          alignItems: 'center'
+        }}>
+          <Avatar sx={{ 
+            mr: 2, 
+            bgcolor: 'rgba(255, 255, 255, 0.2)',
+            width: 48,
+            height: 48
+          }}>
+            <AssignmentIcon sx={{ color: 'white' }} />
+          </Avatar>
+          <Box>
+            <Typography variant="h5" sx={{ fontWeight: 'bold' }}>
+              {editingAssignment ? '编辑作业' : '创建作业'}
+            </Typography>
+            <Typography variant="body2" sx={{ opacity: 0.9 }}>
+              {editingAssignment ? '修改作业信息' : '填写作业基本信息'}
+            </Typography>
+          </Box>
         </DialogTitle>
-        <DialogContent>
+        <DialogContent sx={{ p: 3 }}>
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3, mt: 1 }}>
             {/* 基本信息部分 */}
-            <Box sx={{ 
+            <Card sx={{ 
               p: 2, 
               border: '1px solid', 
               borderColor: 'divider', 
-              borderRadius: 1,
-              backgroundColor: 'background.paper'
+              borderRadius: 2,
+              backgroundColor: alpha(theme.palette.primary.main, 0.02),
+              boxShadow: 'none'
             }}>
-              <Typography variant="h6" gutterBottom sx={{ mb: 2, color: 'primary.main' }}>
-                基本信息
-              </Typography>
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                <Avatar sx={{ 
+                  mr: 1.5, 
+                  bgcolor: theme.palette.primary.main,
+                  width: 32,
+                  height: 32
+                }}>
+                  <Description fontSize="small" />
+                </Avatar>
+                <Typography variant="h6" sx={{ fontWeight: 'bold', color: theme.palette.primary.main }}>
+                  基本信息
+                </Typography>
+              </Box>
               
               <TextField
                 label="作业名称"
@@ -774,6 +1051,10 @@ const AssignmentManagement: React.FC = () => {
                 fullWidth
                 required
                 sx={{ mb: 2 }}
+                variant="outlined"
+                InputProps={{
+                  sx: { borderRadius: 2 }
+                }}
               />
               
               <TextField
@@ -783,20 +1064,35 @@ const AssignmentManagement: React.FC = () => {
                 multiline
                 rows={3}
                 fullWidth
+                variant="outlined"
+                InputProps={{
+                  sx: { borderRadius: 2 }
+                }}
               />
-            </Box>
+            </Card>
             
             {/* 类型和难度设置 */}
-            <Box sx={{ 
+            <Card sx={{ 
               p: 2, 
               border: '1px solid', 
               borderColor: 'divider', 
-              borderRadius: 1,
-              backgroundColor: 'background.paper'
+              borderRadius: 2,
+              backgroundColor: alpha(theme.palette.secondary.main, 0.02),
+              boxShadow: 'none'
             }}>
-              <Typography variant="h6" gutterBottom sx={{ mb: 2, color: 'primary.main' }}>
-                类型和难度
-              </Typography>
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                <Avatar sx={{ 
+                  mr: 1.5, 
+                  bgcolor: theme.palette.secondary.main,
+                  width: 32,
+                  height: 32
+                }}>
+                  <Quiz fontSize="small" />
+                </Avatar>
+                <Typography variant="h6" sx={{ fontWeight: 'bold', color: theme.palette.secondary.main }}>
+                  类型和难度
+                </Typography>
+              </Box>
               
               <Grid container spacing={3}>
                 <Grid size={{ xs: 12, sm: 6 }}>
@@ -806,10 +1102,11 @@ const AssignmentManagement: React.FC = () => {
                       value={formData.type}
                       onChange={(e) => handleFormChange('type', e.target.value)}
                       label="作业类型"
-                      sx={{ minWidth: 120 }}
+                      sx={{ minWidth: 120, borderRadius: 2 }}
                     >
                       <MenuItem value="homework">
                         <Box sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
+                          <Description sx={{ mr: 1, color: theme.palette.primary.main }} />
                           <Typography sx={{
                             overflow: 'hidden',
                             textOverflow: 'ellipsis',
@@ -822,6 +1119,7 @@ const AssignmentManagement: React.FC = () => {
                       </MenuItem>
                       <MenuItem value="quiz">
                         <Box sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
+                          <Quiz sx={{ mr: 1, color: theme.palette.secondary.main }} />
                           <Typography sx={{
                             overflow: 'hidden',
                             textOverflow: 'ellipsis',
@@ -834,6 +1132,7 @@ const AssignmentManagement: React.FC = () => {
                       </MenuItem>
                       <MenuItem value="exam">
                         <Box sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
+                          <TaskAlt sx={{ mr: 1, color: theme.palette.error.main }} />
                           <Typography sx={{
                             overflow: 'hidden',
                             textOverflow: 'ellipsis',
@@ -846,6 +1145,7 @@ const AssignmentManagement: React.FC = () => {
                       </MenuItem>
                       <MenuItem value="project">
                         <Box sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
+                          <LibraryBooks sx={{ mr: 1, color: theme.palette.success.main }} />
                           <Typography sx={{
                             overflow: 'hidden',
                             textOverflow: 'ellipsis',
@@ -866,10 +1166,11 @@ const AssignmentManagement: React.FC = () => {
                       value={formData.difficulty}
                       onChange={(e) => handleFormChange('difficulty', e.target.value)}
                       label="难度"
-                      sx={{ minWidth: 120 }}
+                      sx={{ minWidth: 120, borderRadius: 2 }}
                     >
                       <MenuItem value="easy">
                         <Box sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
+                          <CheckCircle sx={{ mr: 1, color: theme.palette.success.main }} />
                           <Typography sx={{
                             overflow: 'hidden',
                             textOverflow: 'ellipsis',
@@ -882,6 +1183,7 @@ const AssignmentManagement: React.FC = () => {
                       </MenuItem>
                       <MenuItem value="medium">
                         <Box sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
+                          <Timer sx={{ mr: 1, color: theme.palette.warning.main }} />
                           <Typography sx={{
                             overflow: 'hidden',
                             textOverflow: 'ellipsis',
@@ -894,6 +1196,7 @@ const AssignmentManagement: React.FC = () => {
                       </MenuItem>
                       <MenuItem value="hard">
                         <Box sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
+                          <Cancel sx={{ mr: 1, color: theme.palette.error.main }} />
                           <Typography sx={{
                             overflow: 'hidden',
                             textOverflow: 'ellipsis',
@@ -908,19 +1211,30 @@ const AssignmentManagement: React.FC = () => {
                   </FormControl>
                 </Grid>
               </Grid>
-            </Box>
+            </Card>
             
             {/* 作业状态设置 */}
-            <Box sx={{
+            <Card sx={{
               p: 2,
               border: '1px solid',
               borderColor: 'divider',
-              borderRadius: 1,
-              backgroundColor: 'background.paper'
+              borderRadius: 2,
+              backgroundColor: alpha(theme.palette.info.main, 0.02),
+              boxShadow: 'none'
             }}>
-              <Typography variant="h6" gutterBottom sx={{ mb: 2, color: 'primary.main' }}>
-                作业状态
-              </Typography>
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                <Avatar sx={{ 
+                  mr: 1.5, 
+                  bgcolor: theme.palette.info.main,
+                  width: 32,
+                  height: 32
+                }}>
+                  <Schedule fontSize="small" />
+                </Avatar>
+                <Typography variant="h6" sx={{ fontWeight: 'bold', color: theme.palette.info.main }}>
+                  作业状态
+                </Typography>
+              </Box>
               
               <FormControl fullWidth>
                 <InputLabel>状态</InputLabel>
@@ -928,28 +1242,50 @@ const AssignmentManagement: React.FC = () => {
                   value={formData.status}
                   onChange={(e) => handleFormChange('status', e.target.value)}
                   label="状态"
+                  sx={{ borderRadius: 2 }}
                 >
-                  <MenuItem value="draft">草稿</MenuItem>
-                  <MenuItem value="published">已发布</MenuItem>
+                  <MenuItem value="draft">
+                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                      <Folder sx={{ mr: 1, color: theme.palette.text.secondary }} />
+                      草稿
+                    </Box>
+                  </MenuItem>
+                  <MenuItem value="published">
+                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                      <FolderOpen sx={{ mr: 1, color: theme.palette.success.main }} />
+                      已发布
+                    </Box>
+                  </MenuItem>
                 </Select>
               </FormControl>
               
               <Typography variant="body2" color="textSecondary" sx={{ mt: 1 }}>
                 选择"已发布"状态可立即发布作业给学生，选择"草稿"状态可保存为草稿
               </Typography>
-            </Box>
+            </Card>
             
             {/* 分数设置 */}
-            <Box sx={{ 
+            <Card sx={{ 
               p: 2, 
               border: '1px solid', 
               borderColor: 'divider', 
-              borderRadius: 1,
-              backgroundColor: 'background.paper'
+              borderRadius: 2,
+              backgroundColor: alpha(theme.palette.success.main, 0.02),
+              boxShadow: 'none'
             }}>
-              <Typography variant="h6" gutterBottom sx={{ mb: 2, color: 'primary.main' }}>
-                分数设置
-              </Typography>
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                <Avatar sx={{ 
+                  mr: 1.5, 
+                  bgcolor: theme.palette.success.main,
+                  width: 32,
+                  height: 32
+                }}>
+                  <Grade fontSize="small" />
+                </Avatar>
+                <Typography variant="h6" sx={{ fontWeight: 'bold', color: theme.palette.success.main }}>
+                  分数设置
+                </Typography>
+              </Box>
               
               <Grid container spacing={3}>
                 <Grid size={{ xs: 12, sm: 6 }}>
@@ -960,6 +1296,10 @@ const AssignmentManagement: React.FC = () => {
                     onChange={(e) => handleFormChange('totalScore', parseInt(e.target.value))}
                     fullWidth
                     required
+                    variant="outlined"
+                    InputProps={{
+                      sx: { borderRadius: 2 }
+                    }}
                   />
                 </Grid>
                 <Grid size={{ xs: 12, sm: 6 }}>
@@ -970,22 +1310,37 @@ const AssignmentManagement: React.FC = () => {
                     onChange={(e) => handleFormChange('passingScore', parseInt(e.target.value))}
                     fullWidth
                     required
+                    variant="outlined"
+                    InputProps={{
+                      sx: { borderRadius: 2 }
+                    }}
                   />
                 </Grid>
               </Grid>
-            </Box>
+            </Card>
             
             {/* 时间设置 */}
-            <Box sx={{ 
+            <Card sx={{ 
               p: 2, 
               border: '1px solid', 
               borderColor: 'divider', 
-              borderRadius: 1,
-              backgroundColor: 'background.paper'
+              borderRadius: 2,
+              backgroundColor: alpha(theme.palette.warning.main, 0.02),
+              boxShadow: 'none'
             }}>
-              <Typography variant="h6" gutterBottom sx={{ mb: 2, color: 'primary.main' }}>
-                时间设置
-              </Typography>
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                <Avatar sx={{ 
+                  mr: 1.5, 
+                  bgcolor: theme.palette.warning.main,
+                  width: 32,
+                  height: 32
+                }}>
+                  <Timer fontSize="small" />
+                </Avatar>
+                <Typography variant="h6" sx={{ fontWeight: 'bold', color: theme.palette.warning.main }}>
+                  时间设置
+                </Typography>
+              </Box>
               
               <Grid container spacing={3}>
                 <Grid size={{ xs: 12, sm: 6 }}>
@@ -996,6 +1351,10 @@ const AssignmentManagement: React.FC = () => {
                     onChange={(e) => handleFormChange('timeLimit', parseInt(e.target.value))}
                     fullWidth
                     required
+                    variant="outlined"
+                    InputProps={{
+                      sx: { borderRadius: 2 }
+                    }}
                   />
                 </Grid>
               </Grid>
@@ -1009,8 +1368,12 @@ const AssignmentManagement: React.FC = () => {
                     onChange={(e) => handleFormChange('startTime', e.target.value)}
                     fullWidth
                     required
+                    variant="outlined"
                     InputLabelProps={{
                       shrink: true,
+                    }}
+                    InputProps={{
+                      sx: { borderRadius: 2 }
                     }}
                     error={!formData.startTime}
                     helperText={!formData.startTime ? '开始时间为必填项' : ''}
@@ -1024,27 +1387,42 @@ const AssignmentManagement: React.FC = () => {
                     onChange={(e) => handleFormChange('endTime', e.target.value)}
                     fullWidth
                     required
+                    variant="outlined"
                     InputLabelProps={{
                       shrink: true,
+                    }}
+                    InputProps={{
+                      sx: { borderRadius: 2 }
                     }}
                     error={!formData.endTime}
                     helperText={!formData.endTime ? '结束时间为必填项' : ''}
                   />
                 </Grid>
               </Grid>
-            </Box>
+            </Card>
             
             {/* 关联设置 */}
-            <Box sx={{ 
+            <Card sx={{ 
               p: 2, 
               border: '1px solid', 
               borderColor: 'divider', 
-              borderRadius: 1,
-              backgroundColor: 'background.paper'
+              borderRadius: 2,
+              backgroundColor: alpha(theme.palette.error.main, 0.02),
+              boxShadow: 'none'
             }}>
-              <Typography variant="h6" gutterBottom sx={{ mb: 2, color: 'primary.main' }}>
-                关联设置
-              </Typography>
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                <Avatar sx={{ 
+                  mr: 1.5, 
+                  bgcolor: theme.palette.error.main,
+                  width: 32,
+                  height: 32
+                }}>
+                  <Book fontSize="small" />
+                </Avatar>
+                <Typography variant="h6" sx={{ fontWeight: 'bold', color: theme.palette.error.main }}>
+                  关联设置
+                </Typography>
+              </Box>
               
               <Grid container spacing={3}>
                 <Grid size={{ xs: 12, sm: 6 }}>
@@ -1055,6 +1433,7 @@ const AssignmentManagement: React.FC = () => {
                       onChange={(e) => handleFormChange('chapterId', e.target.value)}
                       label="章节 *"
                       error={!formData.chapterId}
+                      sx={{ borderRadius: 2 }}
                     >
                       <MenuItem value="">
                         <em>请选择章节</em>
@@ -1062,6 +1441,7 @@ const AssignmentManagement: React.FC = () => {
                       {chapters.map((chapter) => (
                         <MenuItem key={chapter.id} value={chapter.id}>
                           <Box sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
+                            <Folder sx={{ mr: 1, color: theme.palette.primary.main }} />
                             <Typography sx={{ 
                               overflow: 'hidden', 
                               textOverflow: 'ellipsis', 
@@ -1089,6 +1469,7 @@ const AssignmentManagement: React.FC = () => {
                       onChange={(e) => handleFormChange('knowledgePointId', e.target.value)}
                       label="知识点 *"
                       error={!formData.knowledgePointId}
+                      sx={{ borderRadius: 2 }}
                     >
                       <MenuItem value="">
                         <em>请选择知识点</em>
@@ -1096,6 +1477,7 @@ const AssignmentManagement: React.FC = () => {
                       {filteredKnowledgePoints.map((kp) => (
                         <MenuItem key={kp.id} value={kp.id}>
                           <Box sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
+                            <FolderOpen sx={{ mr: 1, color: theme.palette.secondary.main }} />
                             <Typography sx={{ 
                               overflow: 'hidden', 
                               textOverflow: 'ellipsis', 
@@ -1116,18 +1498,31 @@ const AssignmentManagement: React.FC = () => {
                   </FormControl>
                 </Grid>
               </Grid>
-            </Box>
+            </Card>
           </Box>
         </DialogContent>
-        <DialogActions sx={{ p: 2, backgroundColor: 'background.default' }}>
-          <Button onClick={handleDialogClose} variant="outlined">
+        <Divider />
+        <DialogActions sx={{ p: 3, backgroundColor: alpha(theme.palette.primary.main, 0.02) }}>
+          <Button 
+            onClick={handleDialogClose} 
+            variant="outlined"
+            sx={{ 
+              borderRadius: 2,
+              px: 3
+            }}
+          >
             取消
           </Button>
           <Button 
             onClick={handleSave} 
             variant="contained"
             disabled={!formData.title || !formData.type || !formData.startTime || !formData.endTime || !formData.chapterId || !formData.knowledgePointId}
-            sx={{ minWidth: 100 }}
+            sx={{ 
+              borderRadius: 2,
+              boxShadow: 2,
+              fontWeight: 'bold',
+              px: 3
+            }}
           >
             {editingAssignment ? '更新' : '创建'}
           </Button>

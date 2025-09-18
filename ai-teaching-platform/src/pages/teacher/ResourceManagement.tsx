@@ -15,6 +15,12 @@ import {
   CssBaseline,
   useTheme,
   useMediaQuery,
+  Card,
+  CardContent,
+  Avatar,
+  Chip,
+  Paper,
+  alpha,
 } from '@mui/material';
 import {
   MenuBook,      // 课件图标
@@ -26,10 +32,12 @@ import {
   ArrowBack,
   Menu as MenuIcon,
   Book,
+  School,
+  People,
+  AccessTime,
 } from '@mui/icons-material';
 import { useNavigate, useParams, Outlet, useLocation } from 'react-router-dom';
 import { courseAPI } from '../../services/api';
-import CourseInfoPage from './CourseInfoPage';
 
 interface Course {
   id: string;
@@ -97,7 +105,6 @@ const ResourceManagement: React.FC = () => {
   };
 
   const navigationItems = [
-    { text: '课程信息', icon: <Book />, path: `/teacher/courses/${courseId}` },
     { text: '课件管理', icon: <MenuBook />, path: `/teacher/courses/${courseId}/courseware` },
     { text: '资料管理', icon: <Description />, path: `/teacher/courses/${courseId}/materials` },
     { text: '章节管理', icon: <ViewModule />, path: `/teacher/courses/${courseId}/chapters` },
@@ -108,23 +115,73 @@ const ResourceManagement: React.FC = () => {
 
   const drawer = (
     <div>
-      <Toolbar>
-        <Typography variant="h6" noWrap component="div">
+      <Box sx={{ 
+        p: 2, 
+        display: 'flex', 
+        flexDirection: 'column', 
+        alignItems: 'center',
+        bgcolor: alpha(theme.palette.primary.main, 0.05),
+        borderBottom: `1px solid ${theme.palette.divider}`
+      }}>
+        <Avatar sx={{ 
+          width: 64, 
+          height: 64, 
+          mb: 1,
+          bgcolor: theme.palette.primary.main,
+          color: theme.palette.primary.contrastText
+        }}>
+          <School fontSize="large" />
+        </Avatar>
+        <Typography variant="h6" noWrap component="div" fontWeight="bold">
           资源管理
         </Typography>
-      </Toolbar>
+        <Typography variant="body2" color="textSecondary" noWrap>
+          {course?.name || '课程资源管理'}
+        </Typography>
+      </Box>
       <Divider />
-      <List>
+      <List sx={{ py: 1 }}>
         {navigationItems.map((item) => (
           <ListItemButton 
             key={item.text} 
             onClick={() => handleNavigation(item.path)}
             selected={location.pathname === item.path}
+            sx={{
+              borderRadius: 1,
+              mx: 1,
+              my: 0.5,
+              '&.Mui-selected': {
+                bgcolor: alpha(theme.palette.primary.main, 0.1),
+                '&:hover': {
+                  bgcolor: alpha(theme.palette.primary.main, 0.15),
+                },
+                '& .MuiListItemIcon-root': {
+                  color: theme.palette.primary.main,
+                },
+                '& .MuiListItemText-primary': {
+                  fontWeight: 'bold',
+                },
+              },
+              '&:hover': {
+                bgcolor: alpha(theme.palette.primary.main, 0.05),
+              },
+            }}
           >
-            <ListItemIcon>
+            <ListItemIcon 
+              sx={{ 
+                color: location.pathname === item.path ? theme.palette.primary.main : 'inherit',
+                minWidth: 40
+              }}
+            >
               {item.icon}
             </ListItemIcon>
-            <ListItemText primary={item.text} />
+            <ListItemText 
+              primary={item.text} 
+              primaryTypographyProps={{ 
+                fontSize: '0.9rem',
+                fontWeight: location.pathname === item.path ? 'bold' : 'normal'
+              }}
+            />
           </ListItemButton>
         ))}
       </List>
@@ -146,9 +203,14 @@ const ResourceManagement: React.FC = () => {
       {/* 顶部导航栏 */}
       <AppBar
         position="fixed"
+        elevation={0}
         sx={{
           width: { sm: `calc(100% - ${drawerWidth}px)` },
           ml: { sm: `${drawerWidth}px` },
+          bgcolor: theme.palette.background.paper,
+          color: theme.palette.text.primary,
+          borderBottom: `1px solid ${theme.palette.divider}`,
+          boxShadow: 'none',
         }}
       >
         <Toolbar>
@@ -164,13 +226,42 @@ const ResourceManagement: React.FC = () => {
           <IconButton
             color="inherit"
             onClick={() => navigate('/teacher/courses')}
-            sx={{ mr: 2 }}
+            sx={{ 
+              mr: 2,
+              '&:hover': {
+                bgcolor: alpha(theme.palette.primary.main, 0.05),
+              }
+            }}
           >
             <ArrowBack />
           </IconButton>
-          <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
-            {course?.name || '课程资源管理'}
-          </Typography>
+          <Box sx={{ display: 'flex', alignItems: 'center', flexGrow: 1 }}>
+            <Avatar 
+              sx={{ 
+                width: 32, 
+                height: 32, 
+                mr: 1.5,
+                bgcolor: theme.palette.primary.main,
+                color: theme.palette.primary.contrastText
+              }}
+            >
+              <School fontSize="small" />
+            </Avatar>
+            <Box>
+              <Typography variant="h6" noWrap component="div" fontWeight="bold">
+                {course?.name || '课程资源管理'}
+              </Typography>
+              <Typography variant="body2" color="textSecondary" noWrap>
+                {course?.code || '课程代码'}
+              </Typography>
+            </Box>
+          </Box>
+          <Chip 
+            label={course.status === 'PUBLISHED' || course.status === 'ACTIVE' ? '进行中' : course.status === 'DRAFT' ? '草稿' : '已结束'} 
+            size="small"
+            color={course.status === 'PUBLISHED' || course.status === 'ACTIVE' ? 'success' : course.status === 'DRAFT' ? 'warning' : 'default'}
+            variant="outlined"
+          />
         </Toolbar>
       </AppBar>
       
@@ -208,16 +299,12 @@ const ResourceManagement: React.FC = () => {
           width: { sm: `calc(100% - ${drawerWidth}px)` },
           mt: 8,
           minHeight: 'calc(100vh - 64px)',
+          bgcolor: theme.palette.background.default,
         }}
       >
-        {/* 如果当前路径是资源管理根路径，显示课程信息 */}
-        {location.pathname === `/teacher/courses/${courseId}` && course ? (
-          <CourseInfoPage course={course} />
-        ) : (
-          <Box sx={{ p: 3 }}>
-            <Outlet />
-          </Box>
-        )}
+        <Box sx={{ p: 3 }}>
+          <Outlet />
+        </Box>
       </Box>
     </Box>
   );

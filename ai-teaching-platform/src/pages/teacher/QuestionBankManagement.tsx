@@ -26,6 +26,9 @@ import {
   Grid,
   Card,
   CardContent,
+  alpha,
+  useTheme,
+  Avatar,
 } from '@mui/material';
 import {
   Add,
@@ -37,9 +40,10 @@ import {
   ArrowBack,
   Check,
   Close,
+  Quiz,
 } from '@mui/icons-material';
 import { useNavigate, useParams } from 'react-router-dom';
-import { questionAPI, chapterAPI, knowledgePointAPI } from '../../services/api';
+import { questionAPI, chapterAPI, knowledgePointAPI, courseAPI } from '../../services/api';
 
 
 interface Question {
@@ -79,6 +83,7 @@ interface Question {
 
 const QuestionBankManagement: React.FC = () => {
   const navigate = useNavigate();
+  const theme = useTheme();
   const params = useParams();
   const courseId = params.courseId as string;
   const assignmentId = params.assignmentId as string; // 获取作业ID
@@ -90,6 +95,7 @@ const QuestionBankManagement: React.FC = () => {
   const [selectedDifficulty, setSelectedDifficulty] = useState('');
   const [selectedChapter, setSelectedChapter] = useState('');
   const [selectedKnowledgePoint, setSelectedKnowledgePoint] = useState('');
+  const [selectedStatus, setSelectedStatus] = useState('');
 
   // 添加状态来跟踪正在编辑状态的题目ID
   const [editingStatusQuestionId, setEditingStatusQuestionId] = useState<string | null>(null);
@@ -100,6 +106,9 @@ const QuestionBankManagement: React.FC = () => {
   const [chapters, setChapters] = useState<Array<{id: string, title: string}>>([]);
   const [knowledgePoints, setKnowledgePoints] = useState<Array<{id: string, title: string, chapterId: string}>>([]);
   const [filteredKnowledgePoints, setFilteredKnowledgePoints] = useState<Array<{id: string, title: string, chapterId: string}>>([]);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [questionToDelete, setQuestionToDelete] = useState<Question | null>(null);
+  const [currentCourse, setCurrentCourse] = useState<{id: string, name: string} | null>(null);
 
   
   const [createForm, setCreateForm] = useState({
@@ -120,7 +129,9 @@ const QuestionBankManagement: React.FC = () => {
     fetchQuestions();
     fetchChapters();
     fetchKnowledgePoints();
-
+    if (courseId) {
+      fetchCurrentCourse();
+    }
   }, [courseId, assignmentId]); // 添加assignmentId到依赖数组
 
 
@@ -192,6 +203,24 @@ const QuestionBankManagement: React.FC = () => {
       setQuestions([]);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchCurrentCourse = async () => {
+    try {
+      const response = await courseAPI.getCourse(courseId);
+      const data = response.data || response;
+      setCurrentCourse({
+        id: data.id || courseId,
+        name: data.name || data.title || '未知课程'
+      });
+    } catch (error) {
+      console.error('获取课程信息失败:', error);
+      // 设置默认课程信息
+      setCurrentCourse({
+        id: courseId,
+        name: '测试课程'
+      });
     }
   };
 
@@ -436,13 +465,32 @@ const QuestionBankManagement: React.FC = () => {
   };
 
   const handleDelete = useCallback(async (id: string) => {
-    try {
-      await questionAPI.deleteQuestion(id);
-      setQuestions(prevQuestions => prevQuestions.filter(q => q.id !== id));
-    } catch (error) {
-      console.error('删除题目失败:', error);
-      setError('删除题目失败，请稍后重试');
+    const question = questions.find(q => q.id === id);
+    if (question) {
+      setQuestionToDelete(question);
+      setDeleteDialogOpen(true);
     }
+  }, [questions]);
+
+  const confirmDelete = useCallback(async () => {
+    if (questionToDelete) {
+      try {
+        await questionAPI.deleteQuestion(questionToDelete.id);
+        setQuestions(prevQuestions => prevQuestions.filter(q => q.id !== questionToDelete.id));
+        setDeleteDialogOpen(false);
+        setQuestionToDelete(null);
+      } catch (error) {
+        console.error('删除题目失败:', error);
+        setError('删除题目失败，请稍后重试');
+        setDeleteDialogOpen(false);
+        setQuestionToDelete(null);
+      }
+    }
+  }, [questionToDelete]);
+
+  const cancelDelete = useCallback(() => {
+    setDeleteDialogOpen(false);
+    setQuestionToDelete(null);
   }, []);
 
   // 添加更新题目状态的函数
@@ -556,137 +604,211 @@ const QuestionBankManagement: React.FC = () => {
 
   return (
     <Box sx={{ p: 3 }}>
-      <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
-        <IconButton 
-          onClick={() => navigate('/teacher/courses')} 
-          sx={{ mr: 2 }}
-          title="返回我的课程"
-        >
-          <ArrowBack />
-        </IconButton>
-        <Typography variant="h4" gutterBottom sx={{ mb: 0 }}>
-          题库管理
-        </Typography>
-      </Box>
-
-      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 3, mb: 3 }}>
-        <Box sx={{ flex: '1 1 calc(25% - 24px)', minWidth: '200px' }}>
-          <Card>
-            <CardContent>
-              <Typography color="textSecondary" gutterBottom>
-                总题数
-              </Typography>
-              <Typography variant="h4">
-                {questions.length}
-              </Typography>
-            </CardContent>
-          </Card>
-        </Box>
-        <Box sx={{ flex: '1 1 calc(25% - 24px)', minWidth: '200px' }}>
-          <Card>
-            <CardContent>
-              <Typography color="textSecondary" gutterBottom>
-                已发布
-              </Typography>
-              <Typography variant="h4">
-                {questions.filter(q => q.status === 'published').length}
-              </Typography>
-            </CardContent>
-          </Card>
-        </Box>
-        <Box sx={{ flex: '1 1 calc(25% - 24px)', minWidth: '200px' }}>
-          <Card>
-            <CardContent>
-              <Typography color="textSecondary" gutterBottom>
-                困难题
-              </Typography>
-              <Typography variant="h4">
-                {questions.filter(q => q.difficulty === 'hard').length}
-              </Typography>
-            </CardContent>
-          </Card>
-        </Box>
-        <Box sx={{ flex: '1 1 calc(25% - 24px)', minWidth: '200px' }}>
-          <Card>
-            <CardContent>
-              <Typography color="textSecondary" gutterBottom>
-                总使用次数
-              </Typography>
-              <Typography variant="h4">
-                {questions.reduce((sum, q) => sum + (q.usageCount || 0), 0)}
-              </Typography>
-            </CardContent>
-          </Card>
-        </Box>
-      </Box>
-
-      <Box sx={{ display: 'flex', gap: 2, mb: 3 }}>
-        <TextField
-          placeholder="搜索题目..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          InputProps={{
-            startAdornment: <Search />,
-          }}
-          sx={{ flex: 1 }}
-        />
-        <FormControl sx={{ minWidth: 120 }}>
-          <InputLabel>题型</InputLabel>
-          <Select
-            value={selectedType}
-            onChange={(e) => setSelectedType(e.target.value)}
-            label="题型"
+      {/* 页面标题和返回按钮 */}
+      <Card sx={{ mb: 3, borderRadius: 2, boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
+        <CardContent sx={{ display: 'flex', alignItems: 'center', py: 2 }}>
+          <Button
+            startIcon={<ArrowBack />}
+            onClick={() => navigate('/teacher/courses')}
+            sx={{ 
+              mr: 2,
+              '&:hover': {
+                bgcolor: alpha(theme.palette.primary.main, 0.05),
+              }
+            }}
           >
-            <MenuItem value="">全部题型</MenuItem>
-            <MenuItem value="single_choice">单选题</MenuItem>
-            <MenuItem value="multiple_choice">多选题</MenuItem>
-            <MenuItem value="true_false">判断题</MenuItem>
-            <MenuItem value="fill_blank">填空题</MenuItem>
-            <MenuItem value="short_answer">简答题</MenuItem>
-            <MenuItem value="essay">论述题</MenuItem>
-          </Select>
-        </FormControl>
-        <FormControl sx={{ minWidth: 120 }}>
-          <InputLabel>难度</InputLabel>
-          <Select
-            value={selectedDifficulty}
-            onChange={(e) => setSelectedDifficulty(e.target.value)}
-            label="难度"
+            返回课程列表
+          </Button>
+          <Avatar 
+            sx={{ 
+              width: 48, 
+              height: 48, 
+              mr: 2,
+              bgcolor: theme.palette.primary.main,
+              color: theme.palette.primary.contrastText
+            }}
           >
-            <MenuItem value="">全部难度</MenuItem>
-            <MenuItem value="easy">简单</MenuItem>
-            <MenuItem value="medium">中等</MenuItem>
-            <MenuItem value="hard">困难</MenuItem>
-          </Select>
-        </FormControl>
-        <FormControl sx={{ minWidth: 120 }}>
-          <InputLabel>章节</InputLabel>
-          <Select
-            value={selectedChapter}
-            onChange={(e) => setSelectedChapter(e.target.value)}
-            label="章节"
-          >
-            <MenuItem value="">全部章节</MenuItem>
-            <MenuItem value="1">第一章 函数与极限</MenuItem>
-            <MenuItem value="2">第二章 导数与微分</MenuItem>
-            <MenuItem value="3">第三章 积分学</MenuItem>
-          </Select>
-        </FormControl>
-        <Button
-          variant="contained"
-          startIcon={<Add />}
-          onClick={handleCreate}
-        >
-          创建题目
-        </Button>
+            <Quiz />
+          </Avatar>
+          <Box>
+            <Typography variant="h4" component="h1" fontWeight="bold">
+              题库管理
+            </Typography>
+            <Typography variant="body2" color="textSecondary">
+              {currentCourse?.name || '未知课程'}
+            </Typography>
+          </Box>
+        </CardContent>
+      </Card>
 
-      </Box>
+      {/* 操作按钮和搜索筛选 */}
+      <Card sx={{ mb: 3, borderRadius: 2, boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
+        <CardContent sx={{ py: 2 }}>
+          <Grid container spacing={2} alignItems="center">
+            <Grid item xs={12} sm={6} md={3}>
+              <Button
+                variant="contained"
+                startIcon={<Add />}
+                onClick={handleCreate}
+                fullWidth
+                sx={{ 
+                  py: 1.2,
+                  borderRadius: 1.5,
+                  boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                  '&:hover': {
+                    boxShadow: '0 4px 8px rgba(0,0,0,0.2)',
+                  }
+                }}
+              >
+                创建题目
+              </Button>
+            </Grid>
+            
+            {/* 搜索和筛选 */}
+            <Grid item xs={12} sm={6} md={3}>
+              <TextField
+                placeholder="搜索题目"
+                variant="outlined"
+                size="small"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                InputProps={{
+                  startAdornment: <Search sx={{ mr: 1, color: 'action.active' }} />,
+                }}
+                fullWidth
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    borderRadius: 1.5,
+                  }
+                }}
+              />
+            </Grid>
+            
+            <Grid item xs={12} sm={6} md={3}>
+              <FormControl size="small" fullWidth>
+                <InputLabel>题型</InputLabel>
+                <Select
+                  value={selectedType}
+                  onChange={(e) => setSelectedType(e.target.value)}
+                  label="题型"
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      borderRadius: 1.5,
+                    },
+                    minWidth: 120,
+                  }}
+                >
+                  <MenuItem value="">全部题型</MenuItem>
+                  <MenuItem value="single_choice">单选题</MenuItem>
+                  <MenuItem value="multiple_choice">多选题</MenuItem>
+                  <MenuItem value="true_false">判断题</MenuItem>
+                  <MenuItem value="fill_blank">填空题</MenuItem>
+                  <MenuItem value="short_answer">简答题</MenuItem>
+                  <MenuItem value="essay">论述题</MenuItem>
+                </Select>
+              </FormControl>
+            </Grid>
+            
+            <Grid item xs={12} sm={6} md={3}>
+              <Chip 
+                label={`${filteredQuestions.length} 个题目`}
+                color="primary"
+                variant="outlined"
+                sx={{ height: 36, width: '100%' }}
+              />
+            </Grid>
+          </Grid>
+        </CardContent>
+      </Card>
+
+      {/* 额外的筛选条件 */}
+      <Card sx={{ mb: 3, borderRadius: 2, boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
+        <CardContent sx={{ py: 2 }}>
+          <Grid container spacing={2} alignItems="center">
+            <Grid item xs={12} sm={6} md={4}>
+              <FormControl size="small" fullWidth>
+                <InputLabel>难度</InputLabel>
+                <Select
+                  value={selectedDifficulty}
+                  onChange={(e) => setSelectedDifficulty(e.target.value)}
+                  label="难度"
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      borderRadius: 1.5,
+                    },
+                    minWidth: 120,
+                  }}
+                >
+                  <MenuItem value="">全部难度</MenuItem>
+                  <MenuItem value="easy">简单</MenuItem>
+                  <MenuItem value="medium">中等</MenuItem>
+                  <MenuItem value="hard">困难</MenuItem>
+                </Select>
+              </FormControl>
+            </Grid>
+            
+            <Grid item xs={12} sm={6} md={4}>
+              <FormControl size="small" fullWidth>
+                <InputLabel>章节</InputLabel>
+                <Select
+                  value={selectedChapter}
+                  onChange={(e) => setSelectedChapter(e.target.value)}
+                  label="章节"
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      borderRadius: 1.5,
+                    },
+                    minWidth: 120,
+                  }}
+                >
+                  <MenuItem value="">全部章节</MenuItem>
+                  <MenuItem value="1">第一章 函数与极限</MenuItem>
+                  <MenuItem value="2">第二章 导数与微分</MenuItem>
+                  <MenuItem value="3">第三章 积分学</MenuItem>
+                </Select>
+              </FormControl>
+            </Grid>
+            
+            <Grid item xs={12} sm={6} md={4}>
+              <FormControl size="small" fullWidth>
+                <InputLabel>状态</InputLabel>
+                <Select
+                  value={selectedStatus}
+                  onChange={(e) => setSelectedStatus(e.target.value)}
+                  label="状态"
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      borderRadius: 1.5,
+                    },
+                    minWidth: 120,
+                  }}
+                >
+                  <MenuItem value="">全部状态</MenuItem>
+                  <MenuItem value="draft">草稿</MenuItem>
+                  <MenuItem value="published">已发布</MenuItem>
+                  <MenuItem value="archived">已归档</MenuItem>
+                </Select>
+              </FormControl>
+            </Grid>
+          </Grid>
+        </CardContent>
+      </Card>
 
       {/* 题目表格 */}
-      <TableContainer component={Paper}>
+      <TableContainer component={Paper} sx={{ 
+          borderRadius: 2, 
+          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.08)',
+          overflow: 'hidden'
+        }}>
         <Table>
           <TableHead>
-            <TableRow>
+            <TableRow sx={{ 
+              bgcolor: alpha(theme.palette.primary.main, 0.05),
+              '& th': {
+                fontWeight: 'bold',
+                py: 2
+              }
+            }}>
               <TableCell>题目标题</TableCell>
               <TableCell>题型</TableCell>
               <TableCell>难度</TableCell>
@@ -705,7 +827,7 @@ const QuestionBankManagement: React.FC = () => {
           <TableBody>
             {filteredQuestions.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={12} align="center">
+                <TableCell colSpan={12} align="center" sx={{ py: 4 }}>
                   <Typography variant="body2" color="text.secondary">
                     暂无题目数据
                   </Typography>
@@ -713,7 +835,15 @@ const QuestionBankManagement: React.FC = () => {
               </TableRow>
             ) : (
               filteredQuestions.map((question) => (
-                <TableRow key={question.id}>
+                <TableRow 
+                  key={question.id} 
+                  sx={{ 
+                    '&:hover': { 
+                      bgcolor: 'rgba(0, 0, 0, 0.04)',
+                      transition: 'background-color 0.2s'
+                    }
+                  }}
+                >
                   <TableCell>
                     <Box>
                       <Typography variant="body1" sx={{ fontWeight: 'bold' }}>
@@ -729,6 +859,13 @@ const QuestionBankManagement: React.FC = () => {
                       label={getTypeLabel(question.type)}
                       color={getTypeColor(question.type) as any}
                       size="small"
+                      sx={{ 
+                        borderRadius: 1,
+                        fontWeight: 'medium',
+                        '&:hover': {
+                          bgcolor: `${getTypeColor(question.type).main}20`,
+                        }
+                      }}
                     />
                   </TableCell>
                   <TableCell>
@@ -736,6 +873,13 @@ const QuestionBankManagement: React.FC = () => {
                       label={getDifficultyLabel(question.difficulty)}
                       color={getDifficultyColor(question.difficulty) as any}
                       size="small"
+                      sx={{ 
+                        borderRadius: 1,
+                        fontWeight: 'medium',
+                        '&:hover': {
+                          bgcolor: `${getDifficultyColor(question.difficulty).main}20`,
+                        }
+                      }}
                     />
                   </TableCell>
                   <TableCell>{question.knowledgePoint?.chapter?.title || '-'}</TableCell>
@@ -749,7 +893,12 @@ const QuestionBankManagement: React.FC = () => {
                           value={newStatus}
                           onChange={(e) => setNewStatus(e.target.value as 'draft' | 'published' | 'archived')}
                           size="small"
-                          sx={{ minWidth: 100 }}
+                          sx={{ 
+                            minWidth: 100,
+                            '& .MuiOutlinedInput-root': {
+                              borderRadius: 2,
+                            }
+                          }}
                         >
                           <MenuItem value="draft">草稿</MenuItem>
                           <MenuItem value="published">已发布</MenuItem>
@@ -759,6 +908,13 @@ const QuestionBankManagement: React.FC = () => {
                           color="primary" 
                           size="small"
                           onClick={() => handleUpdateStatus(question.id, newStatus)}
+                          sx={{ 
+                            borderRadius: 1,
+                            '&:hover': { 
+                              bgcolor: 'primary.main',
+                              color: 'white'
+                            }
+                          }}
                         >
                           <Check />
                         </IconButton>
@@ -766,6 +922,13 @@ const QuestionBankManagement: React.FC = () => {
                           color="secondary" 
                           size="small"
                           onClick={() => setEditingStatusQuestionId(null)}
+                          sx={{ 
+                            borderRadius: 1,
+                            '&:hover': { 
+                              bgcolor: 'secondary.main',
+                              color: 'white'
+                            }
+                          }}
                         >
                           <Close />
                         </IconButton>
@@ -779,7 +942,14 @@ const QuestionBankManagement: React.FC = () => {
                           setEditingStatusQuestionId(question.id);
                           setNewStatus(question.status);
                         }}
-                        sx={{ cursor: 'pointer' }}
+                        sx={{ 
+                          cursor: 'pointer',
+                          borderRadius: 1,
+                          fontWeight: 'medium',
+                          '&:hover': {
+                            bgcolor: `${getStatusColor(question.status).main}20`,
+                          }
+                        }}
                       />
                     )}
                   </TableCell>
@@ -793,6 +963,12 @@ const QuestionBankManagement: React.FC = () => {
                             label={assignmentItem.assignment.title}
                             size="small"
                             variant="outlined"
+                            sx={{ 
+                              borderRadius: 1,
+                              '&:hover': {
+                                bgcolor: 'rgba(0, 0, 0, 0.04)',
+                              }
+                            }}
                           />
                         ))}
                       </Box>
@@ -809,23 +985,55 @@ const QuestionBankManagement: React.FC = () => {
                     {new Date(question.updatedAt).toLocaleDateString('zh-CN')}
                   </TableCell>
                   <TableCell>
-                    <IconButton color="primary" size="small">
-                      <Visibility />
-                    </IconButton>
-                    <IconButton 
-                      color="primary" 
-                      size="small"
-                      onClick={() => handleEdit(question)}
-                    >
-                      <Edit />
-                    </IconButton>
-                    <IconButton
-                      color="error"
-                      size="small"
-                      onClick={() => handleDelete(question.id)}
-                    >
-                      <Delete />
-                    </IconButton>
+                    <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                      <Button 
+                        size="small"
+                        variant="outlined"
+                        startIcon={<Visibility />}
+                        sx={{ 
+                          borderRadius: 1,
+                          minWidth: 'auto',
+                          px: 1,
+                          '&:hover': { 
+                            backgroundColor: 'rgba(0, 0, 0, 0.04)'
+                          }
+                        }}
+                      >
+                        查看
+                      </Button>
+                      <Button 
+                        size="small"
+                        variant="outlined"
+                        onClick={() => handleEdit(question)}
+                        startIcon={<Edit />}
+                        sx={{ 
+                          borderRadius: 1,
+                          minWidth: 'auto',
+                          px: 1,
+                          '&:hover': { 
+                            backgroundColor: 'rgba(0, 0, 0, 0.04)'
+                          }
+                        }}
+                      >
+                        编辑
+                      </Button>
+                      <Button
+                        size="small"
+                        variant="outlined"
+                        onClick={() => handleDelete(question.id)}
+                        startIcon={<Delete />}
+                        sx={{ 
+                          borderRadius: 1,
+                          minWidth: 'auto',
+                          px: 1,
+                          '&:hover': { 
+                            backgroundColor: 'rgba(0, 0, 0, 0.04)'
+                          }
+                        }}
+                      >
+                        删除
+                      </Button>
+                    </Box>
                   </TableCell>
                 </TableRow>
               ))
@@ -843,7 +1051,8 @@ const QuestionBankManagement: React.FC = () => {
         PaperProps={{
           sx: {
             borderRadius: 2,
-            minHeight: '80vh'
+            minHeight: '80vh',
+            boxShadow: '0 8px 24px rgba(0, 0, 0, 0.12)'
           }
         }}
       >
@@ -854,11 +1063,26 @@ const QuestionBankManagement: React.FC = () => {
             fontWeight: 'bold',
             display: 'flex',
             alignItems: 'center',
-            gap: 1
+            justifyContent: 'space-between',
+            py: 2,
+            px: 3
           }}
         >
-          <Add sx={{ fontSize: 24 }} />
-          {editingQuestion ? '编辑题目' : '创建新题目'}
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Add sx={{ fontSize: 24 }} />
+            {editingQuestion ? '编辑题目' : '创建新题目'}
+          </Box>
+          <IconButton 
+            onClick={handleCreateDialogClose}
+            sx={{ 
+              color: 'white',
+              '&:hover': { 
+                bgcolor: 'rgba(255, 255, 255, 0.1)' 
+              }
+            }}
+          >
+            <Close />
+          </IconButton>
         </DialogTitle>
         <DialogContent sx={{ p: 3 }}>
           <Box sx={{ mt: 1 }}>
@@ -880,6 +1104,12 @@ const QuestionBankManagement: React.FC = () => {
                 mb: 2,
                 '& .MuiInputLabel-asterisk': {
                   color: 'error.main'
+                },
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: 2,
+                  '&:hover fieldset': {
+                    borderColor: 'primary.main',
+                  },
                 }
               }}
             />
@@ -899,6 +1129,12 @@ const QuestionBankManagement: React.FC = () => {
                 mb: 3,
                 '& .MuiInputLabel-asterisk': {
                   color: 'error.main'
+                },
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: 2,
+                  '&:hover fieldset': {
+                    borderColor: 'primary.main',
+                  },
                 }
               }}
             />
@@ -909,13 +1145,21 @@ const QuestionBankManagement: React.FC = () => {
             </Typography>
 
             <Box sx={{ display: 'flex', gap: 2, mb: 3 }}>
-              <FormControl sx={{ flex: 1 }}>
+              <FormControl sx={{ flex: 1 }} variant="outlined">
                 <InputLabel id="type-label">题型</InputLabel>
                 <Select
                   labelId="type-label"
                   value={createForm.type}
                   onChange={(e) => handleCreateFormChange('type', e.target.value)}
                   label="题型"
+                  sx={{ 
+                    '& .MuiOutlinedInput-root': {
+                      borderRadius: 2,
+                      '&:hover fieldset': {
+                        borderColor: 'primary.main',
+                      },
+                    }
+                  }}
                 >
                   <MenuItem value="single_choice">单选题</MenuItem>
                   <MenuItem value="multiple_choice">多选题</MenuItem>
@@ -926,13 +1170,21 @@ const QuestionBankManagement: React.FC = () => {
                 </Select>
               </FormControl>
               
-              <FormControl sx={{ flex: 1 }}>
+              <FormControl sx={{ flex: 1 }} variant="outlined">
                 <InputLabel id="difficulty-label">难度</InputLabel>
                 <Select
                   labelId="difficulty-label"
                   value={createForm.difficulty}
                   onChange={(e) => handleCreateFormChange('difficulty', e.target.value)}
                   label="难度"
+                  sx={{ 
+                    '& .MuiOutlinedInput-root': {
+                      borderRadius: 2,
+                      '&:hover fieldset': {
+                        borderColor: 'primary.main',
+                      },
+                    }
+                  }}
                 >
                   <MenuItem value="easy">简单</MenuItem>
                   <MenuItem value="medium">中等</MenuItem>
@@ -941,7 +1193,15 @@ const QuestionBankManagement: React.FC = () => {
               </FormControl>
               
               <TextField
-                sx={{ flex: 1 }}
+                sx={{ 
+                  flex: 1,
+                  '& .MuiOutlinedInput-root': {
+                    borderRadius: 2,
+                    '&:hover fieldset': {
+                      borderColor: 'primary.main',
+                    },
+                  }
+                }}
                 type="number"
                 label="分值"
                 value={createForm.points}
@@ -950,13 +1210,21 @@ const QuestionBankManagement: React.FC = () => {
                 helperText="建议分值范围：1-100分"
               />
               
-              <FormControl sx={{ flex: 1 }}>
+              <FormControl sx={{ flex: 1 }} variant="outlined">
                 <InputLabel id="status-label">状态</InputLabel>
                 <Select
                   labelId="status-label"
                   value={createForm.status}
                   onChange={(e) => handleCreateFormChange('status', e.target.value)}
                   label="状态"
+                  sx={{ 
+                    '& .MuiOutlinedInput-root': {
+                      borderRadius: 2,
+                      '&:hover fieldset': {
+                        borderColor: 'primary.main',
+                      },
+                    }
+                  }}
                 >
                   <MenuItem value="draft">草稿</MenuItem>
                   <MenuItem value="published">已发布</MenuItem>
@@ -970,13 +1238,21 @@ const QuestionBankManagement: React.FC = () => {
               关联信息
             </Typography>
             
-            <FormControl fullWidth sx={{ mb: 2 }}>
+            <FormControl fullWidth sx={{ mb: 2 }} variant="outlined">
               <InputLabel id="chapter-select-label">选择章节</InputLabel>
               <Select
                 labelId="chapter-select-label"
                 value={createForm.selectedChapterId}
                 onChange={(e) => handleCreateFormChange('selectedChapterId', e.target.value)}
                 label="选择章节"
+                sx={{ 
+                  '& .MuiOutlinedInput-root': {
+                    borderRadius: 2,
+                    '&:hover fieldset': {
+                      borderColor: 'primary.main',
+                    },
+                  }
+                }}
               >
                 <MenuItem value="">请先选择章节</MenuItem>
                 {chapters.map((chapter) => (
@@ -987,7 +1263,7 @@ const QuestionBankManagement: React.FC = () => {
               </Select>
             </FormControl>
             
-            <FormControl fullWidth sx={{ mb: 3 }}>
+            <FormControl fullWidth sx={{ mb: 3 }} variant="outlined">
               <InputLabel id="knowledge-point-label">关联知识点</InputLabel>
               <Select
                 labelId="knowledge-point-label"
@@ -997,6 +1273,14 @@ const QuestionBankManagement: React.FC = () => {
                 disabled={!createForm.selectedChapterId}
                 required
                 error={!createForm.knowledgePointId}
+                sx={{ 
+                  '& .MuiOutlinedInput-root': {
+                    borderRadius: 2,
+                    '&:hover fieldset': {
+                      borderColor: 'primary.main',
+                    },
+                  }
+                }}
               >
                 <MenuItem value="">请选择知识点</MenuItem>
                 {filteredKnowledgePoints.map((kp) => (
@@ -1039,7 +1323,15 @@ const QuestionBankManagement: React.FC = () => {
                       newOptions[index] = e.target.value;
                       handleCreateFormChange('options', newOptions);
                     }}
-                    sx={{ mb: 1.5 }}
+                    sx={{ 
+                      mb: 1.5,
+                      '& .MuiOutlinedInput-root': {
+                        borderRadius: 2,
+                        '&:hover fieldset': {
+                          borderColor: 'primary.main',
+                        },
+                      }
+                    }}
                     placeholder={`请输入选项${String.fromCharCode(65 + index)}的内容`}
                   />
                 ))}
@@ -1054,12 +1346,20 @@ const QuestionBankManagement: React.FC = () => {
               
               {/* 单选题答案输入 */}
               {createForm.type === 'single_choice' && (
-                <FormControl fullWidth sx={{ mb: 2 }}>
+                <FormControl fullWidth sx={{ mb: 2 }} variant="outlined">
                   <InputLabel>请选择正确选项</InputLabel>
                   <Select
                     value={createForm.correctAnswer}
                     onChange={(e) => handleCreateFormChange('correctAnswer', e.target.value)}
                     label="请选择正确选项"
+                    sx={{ 
+                      '& .MuiOutlinedInput-root': {
+                        borderRadius: 2,
+                        '&:hover fieldset': {
+                          borderColor: 'primary.main',
+                        },
+                      }
+                    }}
                   >
                     {Array.isArray(createForm.options) && createForm.options.map((option, index) => {
                       const optionLetter = String.fromCharCode(65 + index);
@@ -1104,7 +1404,13 @@ const QuestionBankManagement: React.FC = () => {
                           }}
                           color={isSelected ? "primary" : "default"}
                           variant={isSelected ? "filled" : "outlined"}
-                          sx={{ cursor: 'pointer' }}
+                          sx={{ 
+                            cursor: 'pointer',
+                            borderRadius: 2,
+                            '&:hover': {
+                              backgroundColor: isSelected ? 'primary.dark' : 'action.hover',
+                            }
+                          }}
                         />
                       );
                     })}
@@ -1117,12 +1423,20 @@ const QuestionBankManagement: React.FC = () => {
               
               {/* 判断题答案输入 */}
               {createForm.type === 'true_false' && (
-                <FormControl fullWidth sx={{ mb: 2 }}>
+                <FormControl fullWidth sx={{ mb: 2 }} variant="outlined">
                   <InputLabel>请选择答案</InputLabel>
                   <Select
                     value={createForm.correctAnswer}
                     onChange={(e) => handleCreateFormChange('correctAnswer', e.target.value)}
                     label="请选择答案"
+                    sx={{ 
+                      '& .MuiOutlinedInput-root': {
+                        borderRadius: 2,
+                        '&:hover fieldset': {
+                          borderColor: 'primary.main',
+                        },
+                      }
+                    }}
                   >
                     <MenuItem value="正确">正确</MenuItem>
                     <MenuItem value="错误">错误</MenuItem>
@@ -1150,6 +1464,12 @@ const QuestionBankManagement: React.FC = () => {
                     mb: 2,
                     '& .MuiInputLabel-asterisk': {
                       color: 'error.main'
+                    },
+                    '& .MuiOutlinedInput-root': {
+                      borderRadius: 2,
+                      '&:hover fieldset': {
+                        borderColor: 'primary.main',
+                      },
                     }
                   }}
                 />
@@ -1164,21 +1484,134 @@ const QuestionBankManagement: React.FC = () => {
               value={createForm.explanation}
               onChange={(e) => handleCreateFormChange('explanation', e.target.value)}
               helperText="提供详细的答案解析有助于学生理解"
-              sx={{ mb: 2 }}
+              sx={{ 
+                mb: 2,
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: 2,
+                  '&:hover fieldset': {
+                    borderColor: 'primary.main',
+                  },
+                }
+              }}
             />
           </Box>
         </DialogContent>
         <DialogActions sx={{ p: 3, bgcolor: 'grey.50' }}>
-          <Button onClick={handleCreateDialogClose} color="inherit">
+          <Button 
+            onClick={handleCreateDialogClose} 
+            color="inherit"
+            sx={{ 
+              borderRadius: 2,
+              '&:hover': {
+                backgroundColor: 'rgba(0, 0, 0, 0.04)',
+              }
+            }}
+          >
             取消
           </Button>
           <Button 
             onClick={handleCreateSubmit} 
             variant="contained" 
             disabled={!createForm.title || !createForm.content || !createForm.correctAnswer || !createForm.knowledgePointId}
-            sx={{ minWidth: 120 }}
+            sx={{ 
+              minWidth: 120,
+              borderRadius: 2,
+              boxShadow: '0 2px 4px rgba(0, 0, 0, 0.2)',
+              '&:hover': {
+                boxShadow: '0 4px 8px rgba(0, 0, 0, 0.3)',
+              }
+            }}
           >
             {editingQuestion ? '更新题目' : '创建题目'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* 删除确认对话框 */}
+      <Dialog 
+        open={deleteDialogOpen} 
+        onClose={cancelDelete}
+        PaperProps={{
+          sx: {
+            borderRadius: 2,
+            boxShadow: '0 8px 24px rgba(0, 0, 0, 0.12)'
+          }
+        }}
+      >
+        <DialogTitle 
+          sx={{ 
+            bgcolor: 'error.main', 
+            color: 'white', 
+            fontWeight: 'bold',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            py: 2,
+            px: 3
+          }}
+        >
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Delete sx={{ fontSize: 24 }} />
+            确认删除
+          </Box>
+          <IconButton 
+            onClick={cancelDelete}
+            sx={{ 
+              color: 'white',
+              '&:hover': { 
+                bgcolor: 'rgba(255, 255, 255, 0.1)' 
+              }
+            }}
+          >
+            <Close />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent sx={{ p: 3, bgcolor: 'grey.50' }}>
+          <Alert 
+            severity="error" 
+            sx={{ 
+              mb: 2, 
+              borderRadius: 2,
+              '& .MuiAlert-icon': {
+                fontSize: 24
+              }
+            }}
+          >
+            此操作不可撤销！
+          </Alert>
+          <Typography variant="body1">
+            您确定要删除题目 "<strong>{questionToDelete?.title}</strong>" 吗？
+          </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+            删除后，该题目将从所有关联的作业中移除，且无法恢复。
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={{ p: 3, bgcolor: 'grey.50' }}>
+          <Button 
+            onClick={cancelDelete}
+            color="inherit"
+            sx={{ 
+              borderRadius: 2,
+              '&:hover': {
+                backgroundColor: 'rgba(0, 0, 0, 0.04)',
+              }
+            }}
+          >
+            取消
+          </Button>
+          <Button 
+            onClick={confirmDelete}
+            color="error"
+            variant="contained"
+            sx={{ 
+              borderRadius: 2,
+              boxShadow: '0 2px 4px rgba(211, 47, 47, 0.2)',
+              '&:hover': {
+                boxShadow: '0 4px 8px rgba(211, 47, 47, 0.3)',
+              }
+            }}
+          >
+            确认删除
           </Button>
         </DialogActions>
       </Dialog>

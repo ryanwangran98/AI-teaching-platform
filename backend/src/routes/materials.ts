@@ -33,10 +33,43 @@ const upload = multer({
     fileSize: 50 * 1024 * 1024, // 50MB的大小限制
   },
   fileFilter: (req, file, cb) => {
-    // 允许的文件类型
-    const allowedTypes = /jpeg|jpg|png|pdf|doc|docx|ppt|pptx|xls|xlsx|mp4|mp3|zip|rar|txt/;
-    const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
-    const mimetype = allowedTypes.test(file.mimetype);
+    // 允许的文件扩展名
+    const allowedExtensions = /jpeg|jpg|png|pdf|doc|docx|ppt|pptx|xls|xlsx|mp4|mp3|zip|rar|txt/;
+    // 允许的MIME类型
+    const allowedMimeTypes = [
+      // 图片
+      'image/jpeg',
+      'image/jpg',
+      'image/png',
+      'image/gif',
+      'image/webp',
+      // 文档
+      'application/pdf',
+      'application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'application/vnd.ms-powerpoint',
+      'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+      'application/vnd.ms-excel',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'text/plain',
+      // 视频
+      'video/mp4',
+      'video/mpeg',
+      'video/quicktime',
+      // 音频
+      'audio/mpeg',
+      'audio/mp3',
+      'audio/wav',
+      'audio/mp4',
+      // 压缩文件
+      'application/zip',
+      'application/x-rar-compressed',
+      'application/x-zip-compressed',
+      'application/x-7z-compressed'
+    ];
+    
+    const extname = allowedExtensions.test(path.extname(file.originalname).toLowerCase());
+    const mimetype = allowedMimeTypes.includes(file.mimetype);
     
     if (mimetype && extname) {
       return cb(null, true);
@@ -189,7 +222,10 @@ router.post('/', authenticateToken, authorizeRoles('TEACHER', 'ADMIN'), upload.s
         type: upperCaseType,
         fileUrl,
         fileSize: fileSize || 0,
-        chapterId: chapterId || null,
+        chapterId: chapterId || (await prisma.chapter.findFirst({ 
+          where: { courseId: req.body.courseId }, 
+          orderBy: { order: 'asc' } 
+        }))?.id || '',
         uploadedById: req.user!.id
       },
       include: {

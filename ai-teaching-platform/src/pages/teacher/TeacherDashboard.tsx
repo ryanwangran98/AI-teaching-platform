@@ -30,8 +30,9 @@ import MenuBook from '@mui/icons-material/MenuBook';
 import Notifications from '@mui/icons-material/Notifications';
 import Edit from '@mui/icons-material/Edit';
 import Delete from '@mui/icons-material/Delete';
-import { useAuth } from '../../contexts/AuthContext';
 import { courseAPI, assignmentAPI, studentStatsAPI } from '../../services/api';
+import { useAuth } from '../../contexts/AuthContext';
+import StudentStatsCharts from '../../components/teacher/StudentStatsCharts';
 
 const TeacherDashboard: React.FC = () => {
   const [stats, setStats] = useState({
@@ -255,25 +256,68 @@ const TeacherDashboard: React.FC = () => {
   };
 
   return (
-    <Box>
-      <Box sx={{ display: 'flex', alignItems: 'center', mb: 4 }}>
-        <Typography variant="h4" gutterBottom>
-          欢迎，{(user?.firstName && user?.lastName) ? `${user.firstName}${user.lastName}` : user?.username || '教师'}!
-        </Typography>
+    <Box sx={{ 
+      background: 'linear-gradient(135deg, #f5f7fa 0%, #e4e8f0 100%)', 
+      minHeight: '100vh',
+      p: 3
+    }}>
+      <Box sx={{ 
+        display: 'flex', 
+        alignItems: 'center', 
+        justifyContent: 'space-between',
+        mb: 4,
+        p: 3,
+        borderRadius: 3,
+        background: 'linear-gradient(90deg, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0.7) 100%)',
+        backdropFilter: 'blur(10px)',
+        boxShadow: '0 8px 32px rgba(0, 0, 0, 0.05)',
+        border: '1px solid rgba(255, 255, 255, 0.18)'
+      }}>
+        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+          <Box sx={{ 
+            width: 8, 
+            height: 40, 
+            backgroundColor: '#4f46e5', 
+            borderRadius: 4, 
+            mr: 2 
+          }} />
+          <Typography variant="h4" sx={{ fontWeight: 'bold', color: '#1e293b' }}>
+            欢迎，{(user?.firstName && user?.lastName) ? `${user.firstName}${user.lastName}` : user?.username || '教师'}!
+          </Typography>
+        </Box>
         <Button
           onClick={handleLogout}
           color="error"
           size="large"
           startIcon={<ExitToApp />}
-          sx={{ ml: 2 }}
+          sx={{ 
+            ml: 2,
+            borderRadius: 2,
+            px: 3,
+            py: 1,
+            fontWeight: 'bold',
+            boxShadow: '0 4px 12px rgba(239, 68, 68, 0.15)',
+            '&:hover': {
+              boxShadow: '0 6px 16px rgba(239, 68, 68, 0.25)',
+            }
+          }}
         >
           退出登录
         </Button>
       </Box>
 
       {loading ? (
-        <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
-          <CircularProgress />
+        <Box sx={{ 
+          display: 'flex', 
+          justifyContent: 'center', 
+          alignItems: 'center', 
+          minHeight: '60vh',
+          flexDirection: 'column'
+        }}>
+          <CircularProgress size={60} thickness={4} sx={{ mb: 2, color: '#4f46e5' }} />
+          <Typography variant="h6" color="text.secondary">
+            正在加载数据...
+          </Typography>
         </Box>
       ) : (
         <>
@@ -281,18 +325,48 @@ const TeacherDashboard: React.FC = () => {
           <Grid container spacing={3} sx={{ mb: 4 }}>
             {statCards.map((stat, index) => (
               <Grid size={{ xs: 12, sm: 6, md: 3 }} key={index}>
-                <Card>
-                  <CardContent>
+                <Card 
+                  sx={{ 
+                    borderRadius: 3,
+                    boxShadow: '0 8px 24px rgba(0, 0, 0, 0.08)',
+                    transition: 'transform 0.3s ease, box-shadow 0.3s ease',
+                    '&:hover': {
+                      transform: 'translateY(-5px)',
+                      boxShadow: '0 12px 30px rgba(0, 0, 0, 0.12)',
+                    },
+                    overflow: 'hidden',
+                    position: 'relative'
+                  }}
+                >
+                  <Box sx={{ 
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    width: '100%',
+                    height: '5px',
+                    background: `linear-gradient(90deg, ${stat.color}.main, ${stat.color}.light)`
+                  }} />
+                  <CardContent sx={{ p: 3 }}>
                     <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                       <Box>
-                        <Typography color="textSecondary" gutterBottom>
+                        <Typography color="textSecondary" gutterBottom sx={{ fontWeight: 500, fontSize: '0.9rem' }}>
                           {stat.title}
                         </Typography>
-                        <Typography variant="h4" component="h2">
+                        <Typography variant="h4" component="h2" sx={{ fontWeight: 'bold', color: '#1e293b' }}>
                           {stat.value}
                         </Typography>
                       </Box>
-                      <Box sx={{ color: `${stat.color}.main`, fontSize: 40 }}>
+                      <Box sx={{ 
+                        backgroundColor: `${stat.color}.main` + '15',
+                        color: `${stat.color}.main`,
+                        width: 60,
+                        height: 60,
+                        borderRadius: '50%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: 28
+                      }}>
                         {stat.icon}
                       </Box>
                     </Box>
@@ -303,83 +377,66 @@ const TeacherDashboard: React.FC = () => {
           </Grid>
 
       <Grid container spacing={3}>
-        {/* Recent Courses */}
+        {/* Student Stats Charts */}
         <Grid size={{ xs: 12, md: 8 }}>
-          <Card>
-            <CardContent>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                <Typography variant="h6" gutterBottom>
-                  最近课程
-                </Typography>
-                <Button 
-                  size="small" 
-                  variant="outlined" 
-                  component={Link}
-                  to="/teacher/courses"
-                >
-                  查看全部
-                </Button>
-              </Box>
-              <Box sx={{ mt: 2 }}>
-                {recentCourses.map((course) => (
-                  <Box 
-                    key={course.id} 
-                    sx={{ 
-                      p: 2, 
-                      mb: 2, 
-                      border: 1, 
-                      borderColor: 'divider', 
-                      borderRadius: 1,
-                      '&:hover': { bgcolor: 'action.hover' }
-                    }}
-                  >
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-                      <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
-                        {course.name}
-                      </Typography>
-                      <Chip 
-                        label={course.status} 
-                        color={course.status === '进行中' ? 'success' : 'warning'}
-                        size="small"
-                      />
-                    </Box>
-                    <Typography variant="body2" color="textSecondary" gutterBottom>
-                      课程代码: {course.code} | 学生数: {course.students}人
-                    </Typography>
-                    <Box sx={{ mb: 1 }}>
-                      <Typography variant="body2" gutterBottom>
-                        课程进度: {isNaN(Number(course.progress)) ? '0.0' : Math.max(0, Math.min(100, course.progress || 0)).toFixed(1)}%
-                      </Typography>
-                      <LinearProgress 
-                        variant="determinate" 
-                        value={course.progress} 
-                        sx={{ height: 8, borderRadius: 5 }}
-                      />
-                    </Box>
-                    <Typography variant="body2" color="textSecondary">
-                      下次课程: {course.nextClass}
-                    </Typography>
-                  </Box>
-                ))}
-              </Box>
-            </CardContent>
-          </Card>
+          <Box sx={{ 
+            borderRadius: 3,
+            overflow: 'hidden',
+            boxShadow: '0 8px 24px rgba(0, 0, 0, 0.08)',
+            background: 'linear-gradient(90deg, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0.7) 100%)',
+            backdropFilter: 'blur(10px)',
+            border: '1px solid rgba(255, 255, 255, 0.18)'
+          }}>
+            <StudentStatsCharts />
+          </Box>
         </Grid>
 
         {/* Recent Activities */}
         <Grid size={{ xs: 12, md: 4 }}>
-          <Card>
-            <CardContent>
-              <Typography variant="h6" gutterBottom>
+          <Card sx={{ 
+            borderRadius: 3,
+            boxShadow: '0 8px 24px rgba(0, 0, 0, 0.08)',
+            overflow: 'hidden',
+            height: '100%',
+            display: 'flex',
+            flexDirection: 'column'
+          }}>
+            <Box sx={{ 
+              p: 3,
+              background: 'linear-gradient(90deg, #4f46e5, #7c3aed)',
+              color: 'white'
+            }}>
+              <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
                 最近活动
               </Typography>
-              <List>
+            </Box>
+            <CardContent sx={{ p: 0, flexGrow: 1, overflow: 'auto' }}>
+              <List sx={{ py: 0 }}>
                 {recentActivities.length > 0 ? (
                   recentActivities.map((activity) => (
                     <React.Fragment key={activity.id}>
-                      <ListItem>
+                      <ListItem sx={{ 
+                        py: 2,
+                        px: 3,
+                        borderBottom: '1px solid rgba(0, 0, 0, 0.06)',
+                        transition: 'background-color 0.2s',
+                        '&:hover': {
+                          backgroundColor: 'rgba(79, 70, 229, 0.05)'
+                        }
+                      }}>
                         <ListItemIcon>
-                          {getActivityIcon(activity.type)}
+                          <Box sx={{ 
+                            backgroundColor: getActivityColor(activity.type) + '15',
+                            color: getActivityColor(activity.type) + '.main',
+                            width: 40,
+                            height: 40,
+                            borderRadius: '50%',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center'
+                          }}>
+                            {getActivityIcon(activity.type)}
+                          </Box>
                         </ListItemIcon>
                         <ListItemText
                           primary={`${getActivityActionText(activity)}: ${activity.title}`}
@@ -389,18 +446,52 @@ const TeacherDashboard: React.FC = () => {
                             hour: '2-digit', 
                             minute: '2-digit' 
                           })}`}
-                          primaryTypographyProps={{ variant: 'body2' }}
-                          secondaryTypographyProps={{ variant: 'caption' }}
+                          primaryTypographyProps={{ 
+                            variant: 'body2',
+                            fontWeight: 500,
+                            color: '#1e293b'
+                          }}
+                          secondaryTypographyProps={{ 
+                            variant: 'caption',
+                            color: '#64748b'
+                          }}
                         />
                       </ListItem>
-                      <Divider variant="inset" component="li" />
                     </React.Fragment>
                   ))
                 ) : (
-                  <ListItem>
+                  <ListItem sx={{ 
+                    py: 4,
+                    px: 3,
+                    textAlign: 'center',
+                    flexDirection: 'column'
+                  }}>
+                    <Box sx={{ 
+                      backgroundColor: '#f1f5f9',
+                      width: 60,
+                      height: 60,
+                      borderRadius: '50%',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      mb: 2
+                    }}>
+                      <Notifications sx={{ color: '#94a3b8', fontSize: 30 }} />
+                    </Box>
                     <ListItemText
                       primary="暂无活动记录"
                       secondary="您最近没有发布通知、上传资源或编辑课程"
+                      primaryTypographyProps={{ 
+                        variant: 'body1',
+                        fontWeight: 500,
+                        color: '#1e293b',
+                        textAlign: 'center'
+                      }}
+                      secondaryTypographyProps={{ 
+                        variant: 'body2',
+                        color: '#64748b',
+                        textAlign: 'center'
+                      }}
                     />
                   </ListItem>
                 )}

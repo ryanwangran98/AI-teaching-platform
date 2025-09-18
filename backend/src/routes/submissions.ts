@@ -58,7 +58,13 @@ router.get('/', authenticateToken, async (req: any, res) => {
             }
           }
         },
-        user: true
+        user: true,
+        answers: {
+          include: {
+            question: true,
+            questionAssignment: true
+          }
+        }
       },
       orderBy: { submittedAt: 'desc' }
     });
@@ -103,7 +109,13 @@ router.get('/:id', authenticateToken, async (req: any, res) => {
             }
           }
         },
-        user: true
+        user: true,
+        answers: {
+          include: {
+            question: true,
+            questionAssignment: true
+          }
+        }
       }
     });
 
@@ -162,40 +174,14 @@ router.post('/', authenticateToken, authorizeRoles('STUDENT'), async (req: any, 
       return res.status(404).json({ error: 'Assignment not found or not published' });
     }
 
-    // 获取该作业的所有题目
-    const questions = await prisma.question.findMany({
+    // 获取该作业的所有题目关联
+    const questionAssignments = await prisma.questionAssignment.findMany({
       where: { 
-        assignments: {
-          some: {
-            assignmentId: assignmentId
-          }
-        }
+        assignmentId: assignmentId
+      },
+      include: {
+        question: true
       }
-    });
-
-    // 计算总分
-    let totalScore = 0;
-    const answerData = answers.map((answer: any) => {
-      const question = questions.find((q: any) => q.id === answer.questionId);
-      if (!question) {
-        throw new Error(`Question ${answer.questionId} not found`);
-      }
-
-      let score = 0;
-      if (question.type === 'MULTIPLE_CHOICE' || question.type === 'TRUE_FALSE') {
-        score = answer.answer === question.correctAnswer ? question.points : 0;
-      } else if (question.type === 'SHORT_ANSWER') {
-        score = answer.answer.toLowerCase().trim() === question.correctAnswer.toLowerCase().trim() ? question.points : 0;
-      }
-
-      totalScore += score;
-
-      return {
-        questionId: answer.questionId,
-        answer: answer.answer,
-        score,
-        feedback: score === question.points ? 'Correct' : 'Incorrect'
-      };
     });
 
     // 检查是否已提交过
@@ -210,6 +196,63 @@ router.post('/', authenticateToken, authorizeRoles('STUDENT'), async (req: any, 
       return res.status(400).json({ error: 'You have already submitted this assignment' });
     }
 
+    // 计算总分并准备答案详情
+    let totalScore = 0;
+    const answerDetails = [];
+
+    // 检查所有题目是否存在
+    for (const answer of answers) {
+      // 通过QuestionAssignment的ID查找Question
+      const questionAssignment = questionAssignments.find((qa: any) => qa.id === answer.questionId);
+      if (!questionAssignment) {
+        throw new Error(`Question assignment ${answer.questionId} not found`);
+      }
+
+      // 检查题目是否存在
+      const question = questionAssignment.question;
+      if (!question) {
+        throw new Error(`Question not found for assignment ${answer.questionId}`);
+      }
+
+      // 验证题目类型
+      if (!['SINGLE_CHOICE', 'MULTIPLE_CHOICE', 'TRUE_FALSE', 'SHORT_ANSWER', 'ESSAY', 'FILL_BLANK'].includes(question.type)) {
+        throw new Error(`Invalid question type: ${question.type}`);
+      }
+
+      // 验证答案格式
+      if (question.type === 'MULTIPLE_CHOICE') {
+        if (!Array.isArray(answer.answer)) {
+          throw new Error(`Invalid answer format for multiple choice question ${answer.questionId}`);
+        }
+      } else if (typeof answer.answer !== 'string') {
+        throw new Error(`Invalid answer format for question ${answer.questionId}`);
+      }
+
+      // 计算得分
+      let isCorrect = false;
+      if (question.type === 'MULTIPLE_CHOICE') {
+        // 多选题答案比较
+        const correctAnswers = JSON.parse(question.correctAnswer || '[]');
+        isCorrect = JSON.stringify((answer.answer as string[]).sort()) === JSON.stringify(correctAnswers.sort());
+      } else {
+        // 其他题型答案比较
+        isCorrect = answer.answer === question.correctAnswer;
+      }
+
+      const points = isCorrect ? question.points : 0;
+      totalScore += points;
+
+      // 保存答案详情，使用实际的Question ID
+      answerDetails.push({
+        questionId: question.id, // 使用Question表的ID
+        questionAssignmentId: answer.questionId, // 保存QuestionAssignment的ID
+        answer: Array.isArray(answer.answer) ? JSON.stringify(answer.answer) : answer.answer,
+        isCorrect,
+        points
+      });
+    }
+
+    // 创建提交记录
     const submission = await prisma.submission.create({
       data: {
         assignmentId,
@@ -217,7 +260,26 @@ router.post('/', authenticateToken, authorizeRoles('STUDENT'), async (req: any, 
         score: totalScore,
         status: 'SUBMITTED',
         submittedAt: new Date()
-      },
+      }
+    });
+
+    // 创建答案详情记录
+    for (const detail of answerDetails) {
+      await prisma.submissionAnswer.create({
+        data: {
+          submissionId: submission.id,
+          questionId: detail.questionId,
+          questionAssignmentId: detail.questionAssignmentId,
+          answer: detail.answer,
+          isCorrect: detail.isCorrect,
+          points: detail.points
+        }
+      });
+    }
+
+    // 获取完整的提交记录，包括关联数据
+    const completeSubmission = await prisma.submission.findUnique({
+      where: { id: submission.id },
       include: {
         assignment: {
           include: {
@@ -232,13 +294,19 @@ router.post('/', authenticateToken, authorizeRoles('STUDENT'), async (req: any, 
             }
           }
         },
-        user: true
+        user: true,
+        answers: {
+          include: {
+            question: true,
+            questionAssignment: true
+          }
+        }
       }
     });
 
     res.status(201).json({
       success: true,
-      data: submission
+      data: completeSubmission
     });
   } catch (error) {
     console.error('Error creating submission:', error);
@@ -303,7 +371,13 @@ router.put('/:id', authenticateToken, authorizeRoles('TEACHER', 'ADMIN'), async 
              }
            }
          },
-         user: true
+         user: true,
+         answers: {
+           include: {
+             question: true,
+             questionAssignment: true
+           }
+         }
        }
     });
 

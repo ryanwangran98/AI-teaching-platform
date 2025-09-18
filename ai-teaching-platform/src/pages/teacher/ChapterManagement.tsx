@@ -30,6 +30,9 @@ import {
   CardContent,
   Stack,
   Snackbar,
+  alpha,
+  useTheme,
+  Avatar,
 } from '@mui/material';
 import {
   Add,
@@ -45,6 +48,8 @@ import {
   FiberNew,
   Upload,
   VideoFile,
+  Cancel,
+  Close,
 } from '@mui/icons-material';
 import { useNavigate, useParams } from 'react-router-dom'; // 修改这里，使用useParams而不是useSearchParams
 import { chapterAPI, courseAPI } from '../../services/api';
@@ -91,6 +96,7 @@ interface ChapterFormData {
 
 const ChapterManagement: React.FC = () => {
   const navigate = useNavigate();
+  const theme = useTheme();
   const { courseId: currentCourseId } = useParams<{courseId: string}>(); // 修改这里，使用useParams获取路由参数
   const [chapters, setChapters] = useState<Chapter[]>([]);
   const [loading, setLoading] = useState(true);
@@ -390,6 +396,58 @@ const ChapterManagement: React.FC = () => {
     setChapterToDelete(null);
   };
 
+  const handlePublish = async (chapter: Chapter) => {
+    try {
+      const updatedChapter = await chapterAPI.updateChapter(chapter.id, {
+        ...chapter,
+        status: 'published'
+      });
+      
+      setChapters(chapters.map(c => 
+        c.id === chapter.id ? { ...c, status: 'published' } : c
+      ));
+      
+      setSnackbar({
+        open: true,
+        message: '章节已发布',
+        severity: 'success',
+      });
+    } catch (error: any) {
+      console.error('发布章节失败:', error);
+      setSnackbar({
+        open: true,
+        message: error.response?.data?.message || '发布章节失败',
+        severity: 'error',
+      });
+    }
+  };
+
+  const handleUnpublish = async (chapter: Chapter) => {
+    try {
+      const updatedChapter = await chapterAPI.updateChapter(chapter.id, {
+        ...chapter,
+        status: 'draft'
+      });
+      
+      setChapters(chapters.map(c => 
+        c.id === chapter.id ? { ...c, status: 'draft' } : c
+      ));
+      
+      setSnackbar({
+        open: true,
+        message: '章节已取消发布',
+        severity: 'success',
+      });
+    } catch (error: any) {
+      console.error('取消发布章节失败:', error);
+      setSnackbar({
+        open: true,
+        message: error.response?.data?.message || '取消发布章节失败',
+        severity: 'error',
+      });
+    }
+  };
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'draft': return 'default';
@@ -465,141 +523,145 @@ const ChapterManagement: React.FC = () => {
 
   return (
     <Box sx={{ p: 3 }}>
-      <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
-        <IconButton 
-          onClick={() => navigate('/teacher/courses')} 
-          sx={{ mr: 2 }}
-          title="返回我的课程"
-        >
-          <ArrowBack />
-        </IconButton>
-        <Typography variant="h4" gutterBottom sx={{ mb: 0 }}>
-          章节管理 {currentCourse && `- ${currentCourse.name}`}
-        </Typography>
-      </Box>
+      {/* 页面标题和返回按钮 */}
+      <Card sx={{ mb: 3, borderRadius: 2, boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
+        <CardContent sx={{ display: 'flex', alignItems: 'center', py: 2 }}>
+          <Button
+            startIcon={<ArrowBack />}
+            onClick={() => navigate('/teacher/courses')}
+            sx={{ 
+              mr: 2,
+              '&:hover': {
+                bgcolor: alpha(theme.palette.primary.main, 0.05),
+              }
+            }}
+          >
+            返回课程列表
+          </Button>
+          <Avatar 
+            sx={{ 
+              width: 48, 
+              height: 48, 
+              mr: 2,
+              bgcolor: theme.palette.primary.main,
+              color: theme.palette.primary.contrastText
+            }}
+          >
+            <Book />
+          </Avatar>
+          <Box>
+            <Typography variant="h4" component="h1" fontWeight="bold">
+              章节管理
+            </Typography>
+            <Typography variant="body2" color="textSecondary">
+              {currentCourse?.name || '未知课程'}
+            </Typography>
+          </Box>
+        </CardContent>
+      </Card>
 
-      <Grid container spacing={3} sx={{ mb: 3 }}>
-        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-          <Card>
-            <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <div>
-                  <Typography color="textSecondary" gutterBottom variant="overline">
-                    总章节数
-                  </Typography>
-                  <Typography variant="h4">
-                    {chapters.length}
-                  </Typography>
-                </div>
-                <Book sx={{ color: 'primary.main', fontSize: 40 }} />
+      {/* 操作按钮和搜索筛选 */}
+      <Card sx={{ mb: 3, borderRadius: 2, boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
+        <CardContent sx={{ py: 2 }}>
+          <Grid container spacing={2} alignItems="center">
+            <Grid item xs={12} sm={6} md={3}>
+              <Button
+                variant="contained"
+                startIcon={<Add />}
+                onClick={handleCreate}
+                fullWidth
+                sx={{ 
+                  py: 1.2,
+                  borderRadius: 1.5,
+                  boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                  '&:hover': {
+                    boxShadow: '0 4px 8px rgba(0,0,0,0.2)',
+                  }
+                }}
+              >
+                创建章节
+              </Button>
+            </Grid>
+            
+            {/* 搜索和筛选 */}
+            <Grid item xs={12} sm={8} md={7}>
+              <Box sx={{ display: 'flex', gap: 2 }}>
+                <TextField
+                  placeholder="搜索章节"
+                  variant="outlined"
+                  size="small"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  InputProps={{
+                    startAdornment: <Search sx={{ mr: 1, color: 'action.active' }} />,
+                  }}
+                  sx={{
+                    flexGrow: 1,
+                    '& .MuiOutlinedInput-root': {
+                      borderRadius: 1.5,
+                    }
+                  }}
+                />
+                <FormControl size="small" sx={{ minWidth: 150 }}>
+                  <InputLabel>状态</InputLabel>
+                  <Select
+                    value={statusFilter}
+                    onChange={(e) => setStatusFilter(e.target.value)}
+                    label="状态"
+                    sx={{
+                      '& .MuiOutlinedInput-root': {
+                        borderRadius: 1.5,
+                      }
+                    }}
+                  >
+                    <MenuItem value="">全部状态</MenuItem>
+                    <MenuItem value="draft">草稿</MenuItem>
+                    <MenuItem value="published">已发布</MenuItem>
+                    <MenuItem value="archived">已归档</MenuItem>
+                  </Select>
+                </FormControl>
               </Box>
-            </CardContent>
-          </Card>
-        </Grid>
-      
-        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-          <Card>
-            <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <div>
-                  <Typography color="textSecondary" gutterBottom variant="overline">
-                    已发布
-                  </Typography>
-                  <Typography variant="h4">
-                    {chapters.filter(c => c.status === 'published').length}
-                  </Typography>
-                </div>
-                <Publish sx={{ color: 'success.main', fontSize: 40 }} />
-              </Box>
-            </CardContent>
-          </Card>
-        </Grid>
-      
-        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-          <Card>
-            <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <div>
-                  <Typography color="textSecondary" gutterBottom variant="overline">
-                    草稿
-                  </Typography>
-                  <Typography variant="h4">
-                    {chapters.filter(c => c.status === 'draft').length}
-                  </Typography>
-                </div>
-                <Drafts sx={{ color: 'warning.main', fontSize: 40 }} />
-              </Box>
-            </CardContent>
-          </Card>
-        </Grid>
-      
-        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-          <Card>
-            <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <div>
-                  <Typography color="textSecondary" gutterBottom variant="overline">
-                    本周新增
-                  </Typography>
-                  <Typography variant="h4">
-                    {chapters.filter(c => {
-                      const createdAt = new Date(c.createdAt);
-                      const weekAgo = new Date();
-                      weekAgo.setDate(weekAgo.getDate() - 7);
-                      return createdAt >= weekAgo;
-                    }).length}
-                  </Typography>
-                </div>
-                <FiberNew sx={{ color: 'info.main', fontSize: 40 }} />
-              </Box>
-            </CardContent>
-          </Card>
-        </Grid>
-      </Grid>
-      
-      <Box sx={{ display: 'flex', gap: 2, mb: 3 }}>
-        <TextField
-          placeholder="搜索章节..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          InputProps={{
-            startAdornment: <Search />,
-          }}
-          sx={{ flex: 1 }}
-        />
-        <Button
-          variant="contained"
-          startIcon={<Add />}
-          onClick={handleCreate}
-        >
-          创建章节
-        </Button>
+            </Grid>
+            
+            <Grid item xs={12} sm={4} md={2}>
+              <Chip 
+                label={`${filteredChapters.length} 个章节`}
+                color="primary"
+                variant="outlined"
+                sx={{ height: 36, width: '100%' }}
+              />
+            </Grid>
+          </Grid>
+        </CardContent>
+      </Card>
 
-      </Box>
-
-      <TableContainer component={Paper}>
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableCell>章节名称</TableCell>
-              <TableCell>所属课程</TableCell>
-              <TableCell>描述</TableCell>
-              <TableCell>排序</TableCell>
-                  <TableCell>状态</TableCell>
-                  <TableCell>知识点</TableCell>
-                  <TableCell>资料</TableCell>
-                  <TableCell>课件</TableCell>
-                  <TableCell>作业</TableCell>
-                  <TableCell>学习视频</TableCell>
-                  <TableCell>创建时间</TableCell>
-                  <TableCell>更新时间</TableCell>
-                  <TableCell>操作</TableCell>
+      <TableContainer component={Paper} sx={{ 
+        borderRadius: 2, 
+        boxShadow: '0 4px 12px rgba(0, 0, 0, 0.05)',
+        overflow: 'hidden'
+      }}>
+        <Table sx={{ minWidth: 650 }}>
+          <TableHead sx={{ bgcolor: alpha(theme.palette.primary.main, 0.05) }}>
+              <TableRow>
+              <TableCell sx={{ fontWeight: 'bold', py: 2 }}>章节名称</TableCell>
+              <TableCell sx={{ fontWeight: 'bold', py: 2 }}>所属课程</TableCell>
+              <TableCell sx={{ fontWeight: 'bold', py: 2 }}>描述</TableCell>
+              <TableCell sx={{ fontWeight: 'bold', py: 2 }}>排序</TableCell>
+                  <TableCell sx={{ fontWeight: 'bold', py: 2 }}>状态</TableCell>
+                  <TableCell sx={{ fontWeight: 'bold', py: 2 }}>知识点</TableCell>
+                  <TableCell sx={{ fontWeight: 'bold', py: 2 }}>资料</TableCell>
+                  <TableCell sx={{ fontWeight: 'bold', py: 2 }}>课件</TableCell>
+                  <TableCell sx={{ fontWeight: 'bold', py: 2 }}>作业</TableCell>
+                  <TableCell sx={{ fontWeight: 'bold', py: 2 }}>学习视频</TableCell>
+                  <TableCell sx={{ fontWeight: 'bold', py: 2 }}>创建时间</TableCell>
+                  <TableCell sx={{ fontWeight: 'bold', py: 2 }}>更新时间</TableCell>
+                  <TableCell sx={{ fontWeight: 'bold', py: 2 }}>操作</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
             {filteredChapters.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={12} align="center">
+                <TableCell colSpan={12} align="center" sx={{ py: 4 }}>
                   <Typography variant="body2" color="text.secondary">
                     暂无章节数据
                   </Typography>
@@ -607,7 +669,15 @@ const ChapterManagement: React.FC = () => {
               </TableRow>
             ) : (
               filteredChapters.map((chapter) => (
-                <TableRow key={chapter.id}>
+                <TableRow 
+                  key={chapter.id} 
+                  sx={{ 
+                    '&:hover': { 
+                      bgcolor: 'rgba(0, 0, 0, 0.02)' 
+                    },
+                    transition: 'background-color 0.2s'
+                  }}
+                >
                   <TableCell>
                     <Box>
                       <Typography variant="body1" sx={{ fontWeight: 'bold' }}>
@@ -627,6 +697,7 @@ const ChapterManagement: React.FC = () => {
                       label={getStatusLabel(chapter.status)}
                       color={getStatusColor(chapter.status) as any}
                       size="small"
+                      sx={{ borderRadius: 1 }}
                     />
                   </TableCell>
                   <TableCell>
@@ -635,6 +706,7 @@ const ChapterManagement: React.FC = () => {
                       color="primary"
                       size="small"
                       variant="outlined"
+                      sx={{ borderRadius: 1 }}
                     />
                   </TableCell>
                   <TableCell>
@@ -643,6 +715,7 @@ const ChapterManagement: React.FC = () => {
                       color="secondary"
                       size="small"
                       variant="outlined"
+                      sx={{ borderRadius: 1 }}
                     />
                   </TableCell>
                   <TableCell>
@@ -651,6 +724,7 @@ const ChapterManagement: React.FC = () => {
                       color="info"
                       size="small"
                       variant="outlined"
+                      sx={{ borderRadius: 1 }}
                     />
                   </TableCell>
                   <TableCell>
@@ -659,15 +733,16 @@ const ChapterManagement: React.FC = () => {
                       color="warning"
                       size="small"
                       variant="outlined"
+                      sx={{ borderRadius: 1 }}
                     />
                   </TableCell>
                   <TableCell>
                     {chapter.videoUrl ? (
                       <Chip 
-                        icon={<VideoFile />} 
                         label="已上传" 
                         color="success" 
                         size="small"
+                        sx={{ borderRadius: 1 }}
                       />
                     ) : (
                       <Chip 
@@ -675,6 +750,7 @@ const ChapterManagement: React.FC = () => {
                         label="未上传" 
                         color="default" 
                         size="small"
+                        sx={{ borderRadius: 1 }}
                       />
                     )}
                   </TableCell>
@@ -686,38 +762,111 @@ const ChapterManagement: React.FC = () => {
                   </TableCell>
                   <TableCell>
                     <Box sx={{ display: 'flex', gap: 1 }}>
-                      <IconButton
+                      <Button
                         size="small"
-                        color="primary"
+                        variant="outlined"
                         onClick={() => handleView(chapter)}
-                        title="查看详情"
+                        startIcon={<Visibility />}
+                        sx={{ 
+                          minWidth: 'auto',
+                          px: 1,
+                          py: 0.5,
+                          borderRadius: 1,
+                          '&:hover': { 
+                            bgcolor: 'rgba(0, 0, 0, 0.04)' 
+                          }
+                        }}
                       >
-                        <Visibility />
-                      </IconButton>
-                      <IconButton
+                        查看
+                      </Button>
+                      <Button
                         size="small"
-                        color="secondary"
+                        variant="outlined"
                         onClick={() => handleEdit(chapter)}
-                        title="编辑"
+                        startIcon={<Edit />}
+                        sx={{ 
+                          minWidth: 'auto',
+                          px: 1,
+                          py: 0.5,
+                          borderRadius: 1,
+                          '&:hover': { 
+                            bgcolor: 'rgba(0, 0, 0, 0.04)' 
+                          }
+                        }}
                       >
-                        <Edit />
-                      </IconButton>
-                      <IconButton
+                        编辑
+                      </Button>
+                      {chapter.status === 'draft' ? (
+                        <Button
+                          size="small"
+                          variant="outlined"
+                          onClick={() => handlePublish(chapter)}
+                          startIcon={<Publish />}
+                          sx={{ 
+                            minWidth: 'auto',
+                            px: 1,
+                            py: 0.5,
+                            borderRadius: 1,
+                            '&:hover': { 
+                              bgcolor: 'rgba(0, 0, 0, 0.04)' 
+                            }
+                          }}
+                        >
+                          发布
+                        </Button>
+                      ) : (
+                        <Button
+                          size="small"
+                          variant="outlined"
+                          onClick={() => handleUnpublish(chapter)}
+                          startIcon={<Cancel />}
+                          sx={{ 
+                            minWidth: 'auto',
+                            px: 1,
+                            py: 0.5,
+                            borderRadius: 1,
+                            '&:hover': { 
+                              bgcolor: 'rgba(0, 0, 0, 0.04)' 
+                            }
+                          }}
+                        >
+                          取消发布
+                        </Button>
+                      )}
+                      <Button
                         size="small"
-                        color="info"
+                        variant="outlined"
                         onClick={() => handleVideoUploadOpen(chapter)}
-                        title="上传学习视频"
+                        startIcon={chapter.videoUrl ? <VideoFile /> : <Upload />}
+                        sx={{ 
+                          minWidth: 'auto',
+                          px: 1,
+                          py: 0.5,
+                          borderRadius: 1,
+                          '&:hover': { 
+                            bgcolor: 'rgba(0, 0, 0, 0.04)' 
+                          }
+                        }}
                       >
-                        {chapter.videoUrl ? <VideoFile color="success" /> : <Upload />}
-                      </IconButton>
-                      <IconButton
+                        视频
+                      </Button>
+                      <Button
                         size="small"
-                        color="error"
+                        variant="outlined"
                         onClick={() => handleDeleteClick(chapter)}
-                        title="删除"
+                        startIcon={<Delete />}
+                        sx={{ 
+                          minWidth: 'auto',
+                          px: 1,
+                          py: 0.5,
+                          borderRadius: 1,
+                          '&:hover': { 
+                            bgcolor: 'rgba(0, 0, 0, 0.04)' 
+                          }
+                        }}
                       >
-                        <Delete />
-                      </IconButton>
+                        删除
+                      </Button>
                     </Box>
                   </TableCell>
                 </TableRow>
@@ -731,11 +880,32 @@ const ChapterManagement: React.FC = () => {
 
       {/* 创建/编辑章节对话框 */}
       <Dialog open={open} onClose={handleClose} maxWidth="md" fullWidth>
-        <DialogTitle>
-          {editingChapter ? '编辑章节' : '创建章节'}
+        <DialogTitle sx={{ 
+          bgcolor: 'primary.main', 
+          color: 'white',
+          py: 2,
+          px: 3,
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center'
+        }}>
+          <Typography variant="h6">
+            {editingChapter ? '编辑章节' : '创建章节'}
+          </Typography>
+          <IconButton 
+            onClick={handleClose} 
+            sx={{ 
+              color: 'white',
+              '&:hover': { 
+                bgcolor: 'rgba(255, 255, 255, 0.1)' 
+              }
+            }}
+          >
+            <Close />
+          </IconButton>
         </DialogTitle>
-        <DialogContent>
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
+        <DialogContent sx={{ pt: 3, px: 3, pb: 2 }}>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
             <TextField
               label="章节名称 *"
               name="title"
@@ -744,6 +914,15 @@ const ChapterManagement: React.FC = () => {
               fullWidth
               required
               helperText="请输入章节的完整标题，如：第一章 导论"
+              variant="outlined"
+              sx={{ 
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: 2,
+                  '&:hover fieldset': {
+                    borderColor: 'primary.main',
+                  },
+                }
+              }}
             />
             <TextField
               label="章节描述 *"
@@ -755,6 +934,15 @@ const ChapterManagement: React.FC = () => {
               fullWidth
               required
               helperText="请输入章节的详细描述，包括学习目标和主要内容"
+              variant="outlined"
+              sx={{ 
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: 2,
+                  '&:hover fieldset': {
+                    borderColor: 'primary.main',
+                  },
+                }
+              }}
             />
             <TextField
               label="排序"
@@ -765,8 +953,24 @@ const ChapterManagement: React.FC = () => {
               fullWidth
               required
               helperText="数字越小排序越靠前"
+              variant="outlined"
+              sx={{ 
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: 2,
+                  '&:hover fieldset': {
+                    borderColor: 'primary.main',
+                  },
+                }
+              }}
             />
-            <FormControl fullWidth required>
+            <FormControl fullWidth required variant="outlined" sx={{ 
+              '& .MuiOutlinedInput-root': {
+                borderRadius: 2,
+                '&:hover fieldset': {
+                  borderColor: 'primary.main',
+                },
+              }
+            }}>
               <InputLabel>状态</InputLabel>
               <Select
                 name="status"
@@ -791,12 +995,32 @@ const ChapterManagement: React.FC = () => {
             )}
           </Box>
         </DialogContent>
-        <DialogActions>
-          <Button onClick={handleClose}>取消</Button>
+        <DialogActions sx={{ px: 3, py: 2, bgcolor: 'rgba(0, 0, 0, 0.02)' }}>
+          <Button 
+            onClick={handleClose} 
+            variant="outlined"
+            sx={{ 
+              borderRadius: 2,
+              borderWidth: 2,
+              '&:hover': {
+                borderWidth: 2,
+              }
+            }}
+          >
+            取消
+          </Button>
           <Button 
             onClick={handleSave} 
             variant="contained"
+            color="primary"
             disabled={submitting || !formData.title.trim() || !formData.description.trim()}
+            sx={{ 
+              borderRadius: 2,
+              boxShadow: '0 4px 8px rgba(0, 0, 0, 0.1)',
+              '&:hover': {
+                boxShadow: '0 6px 12px rgba(0, 0, 0, 0.15)',
+              }
+            }}
           >
             {submitting ? <CircularProgress size={24} /> : (editingChapter ? '更新' : '创建')}
           </Button>
@@ -810,12 +1034,35 @@ const ChapterManagement: React.FC = () => {
         maxWidth="sm"
         fullWidth
       >
-        <DialogTitle>确认删除章节</DialogTitle>
-        <DialogContent>
+        <DialogTitle sx={{ 
+          bgcolor: 'error.main', 
+          color: 'white',
+          py: 2,
+          px: 3,
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center'
+        }}>
+          <Typography variant="h6">
+            确认删除章节
+          </Typography>
+          <IconButton 
+            onClick={handleDeleteCancel} 
+            sx={{ 
+              color: 'white',
+              '&:hover': { 
+                bgcolor: 'rgba(255, 255, 255, 0.1)' 
+              }
+            }}
+          >
+            <Cancel />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent sx={{ pt: 3, px: 3, pb: 2 }}>
           <Typography variant="body1" sx={{ mb: 2 }}>
             您确定要删除章节「{chapterToDelete?.title}」吗？
           </Typography>
-          <Alert severity="warning" sx={{ mb: 2 }}>
+          <Alert severity="warning" sx={{ mb: 2, borderRadius: 2 }}>
             删除章节将同时删除以下相关数据：
             <ul>
               <li>章节下的所有知识点</li>
@@ -826,8 +1073,19 @@ const ChapterManagement: React.FC = () => {
             此操作不可撤销，请谨慎操作。
           </Alert>
         </DialogContent>
-        <DialogActions>
-          <Button onClick={handleDeleteCancel} disabled={deleting}>
+        <DialogActions sx={{ px: 3, py: 2, bgcolor: 'rgba(0, 0, 0, 0.02)' }}>
+          <Button 
+            onClick={handleDeleteCancel} 
+            disabled={deleting}
+            variant="outlined"
+            sx={{ 
+              borderRadius: 2,
+              borderWidth: 2,
+              '&:hover': {
+                borderWidth: 2,
+              }
+            }}
+          >
             取消
           </Button>
           <Button 
@@ -835,6 +1093,13 @@ const ChapterManagement: React.FC = () => {
             color="error" 
             variant="contained"
             disabled={deleting}
+            sx={{ 
+              borderRadius: 2,
+              boxShadow: '0 4px 8px rgba(211, 47, 47, 0.2)',
+              '&:hover': {
+                boxShadow: '0 6px 12px rgba(211, 47, 47, 0.3)',
+              }
+            }}
           >
             {deleting ? (
               <>
@@ -852,46 +1117,123 @@ const ChapterManagement: React.FC = () => {
       <Dialog
         open={videoUploadOpen}
         onClose={handleVideoUploadClose}
-        maxWidth="sm"
+        maxWidth="md"
         fullWidth
       >
-        <DialogTitle>
-          上传章节学习视频 - {uploadingChapter?.title}
+        <DialogTitle sx={{ 
+          bgcolor: 'info.main', 
+          color: 'white',
+          py: 2,
+          px: 3,
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center'
+        }}>
+          <Typography variant="h6">
+            上传章节学习视频 - {uploadingChapter?.title}
+          </Typography>
+          <IconButton 
+            onClick={handleVideoUploadClose} 
+            sx={{ 
+              color: 'white',
+              '&:hover': { 
+                bgcolor: 'rgba(255, 255, 255, 0.1)' 
+              }
+            }}
+          >
+            <Close />
+          </IconButton>
         </DialogTitle>
-        <DialogContent>
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
-            <Typography variant="body2" color="textSecondary">
-              请选择一个视频文件作为本章节的学习视频。支持常见的视频格式（MP4、AVI、MOV等）。
+        <DialogContent sx={{ pt: 3, px: 3, pb: 2 }}>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+            <Typography variant="body1">
+              请选择一个视频文件作为本章节的学习视频
             </Typography>
-            <Button
-              variant="outlined"
-              component="label"
-              startIcon={<Upload />}
-              fullWidth
-            >
-              {videoFile ? videoFile.name : '选择视频文件'}
-              <input
-                type="file"
-                hidden
-                accept="video/*"
-                onChange={handleVideoFileChange}
-              />
-            </Button>
+            
             {uploadingChapter?.videoUrl && (
-              <Alert severity="info" sx={{ mt: 1 }}>
+              <Alert severity="info" sx={{ borderRadius: 2 }}>
                 当前已存在学习视频，上传新视频将替换现有视频。
               </Alert>
             )}
+            
+            <Box
+              sx={{
+                border: '2px dashed',
+                borderColor: 'info.main',
+                borderRadius: 2,
+                p: 4,
+                textAlign: 'center',
+                cursor: 'pointer',
+                bgcolor: 'rgba(33, 150, 243, 0.05)',
+                transition: 'all 0.3s',
+                '&:hover': {
+                  borderColor: 'info.dark',
+                  bgcolor: 'rgba(33, 150, 243, 0.1)',
+                }
+              }}
+              onClick={() => document.getElementById('video-upload-input')?.click()}
+            >
+              <input
+                id="video-upload-input"
+                type="file"
+                accept="video/*"
+                onChange={handleVideoFileChange}
+                style={{ display: 'none' }}
+              />
+              <VideoFile sx={{ fontSize: 48, color: 'info.main', mb: 2 }} />
+              <Typography variant="h6" color="info.main" sx={{ mb: 1 }}>
+                点击选择视频文件
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                支持格式：MP4, WebM, AVI, MOV
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                最大文件大小：500MB
+              </Typography>
+            </Box>
+            
+            {videoFile && (
+              <Box sx={{ mt: 2, p: 2, bgcolor: 'rgba(33, 150, 243, 0.05)', borderRadius: 2 }}>
+                <Typography variant="body1" sx={{ fontWeight: 'bold', mb: 1 }}>
+                  已选择文件：
+                </Typography>
+                <Typography variant="body2">
+                  {videoFile.name}
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  文件大小：{(videoFile.size / (1024 * 1024)).toFixed(2)} MB
+                </Typography>
+              </Box>
+            )}
           </Box>
         </DialogContent>
-        <DialogActions>
-          <Button onClick={handleVideoUploadClose} disabled={videoUploading}>
+        <DialogActions sx={{ px: 3, py: 2, bgcolor: 'rgba(0, 0, 0, 0.02)' }}>
+          <Button 
+            onClick={handleVideoUploadClose} 
+            disabled={videoUploading}
+            variant="outlined"
+            sx={{ 
+              borderRadius: 2,
+              borderWidth: 2,
+              '&:hover': {
+                borderWidth: 2,
+              }
+            }}
+          >
             取消
           </Button>
           <Button 
             onClick={handleVideoUpload} 
             variant="contained"
+            color="info"
             disabled={!videoFile || videoUploading}
+            sx={{ 
+              borderRadius: 2,
+              boxShadow: '0 4px 8px rgba(33, 150, 243, 0.2)',
+              '&:hover': {
+                boxShadow: '0 6px 12px rgba(33, 150, 243, 0.3)',
+              }
+            }}
           >
             {videoUploading ? (
               <>
@@ -899,7 +1241,7 @@ const ChapterManagement: React.FC = () => {
                 上传中...
               </>
             ) : (
-              '上传'
+              '上传视频'
             )}
           </Button>
         </DialogActions>
@@ -910,12 +1252,20 @@ const ChapterManagement: React.FC = () => {
         open={snackbar.open}
         autoHideDuration={6000}
         onClose={handleSnackbarClose}
-        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
       >
         <Alert 
           onClose={handleSnackbarClose} 
           severity={snackbar.severity}
-          sx={{ width: '100%' }}
+          variant="filled"
+          sx={{ 
+            width: '100%',
+            borderRadius: 2,
+            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+            '& .MuiAlert-icon': {
+              fontSize: 24,
+            }
+          }}
         >
           {snackbar.message}
         </Alert>

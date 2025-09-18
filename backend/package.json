@@ -24,9 +24,6 @@
     "docker:build": "docker build -t ai-teaching-backend .",
     "docker:run": "docker run -p 3001:3001 --env-file .env ai-teaching-backend"
   },
-  "prisma": {
-    "seed": "ts-node prisma/complete-seed.ts"
-  },
   "keywords": [
     "education",
     "ai",

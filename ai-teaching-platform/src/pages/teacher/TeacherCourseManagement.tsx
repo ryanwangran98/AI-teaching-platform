@@ -5,6 +5,7 @@ import {
   Grid,
   Card,
   CardContent,
+  CardActions,
   Button,
   Chip,
   Dialog,
@@ -108,11 +109,11 @@ const TeacherCourseManagement: React.FC = () => {
 
   const CourseCard = styled(Card)(({ theme }) => ({
     borderRadius: 16,
-    boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
-    transition: 'transform 0.3s, box-shadow 0.3s',
+    boxShadow: '0 4px 20px rgba(0, 0, 0, 0.08)',
+    transition: 'all 0.3s ease',
     '&:hover': {
-      transform: 'translateY(-5px)',
-      boxShadow: '0 8px 30px rgba(0,0,0,0.12)',
+      transform: 'translateY(-4px)',
+      boxShadow: '0 8px 30px rgba(0, 0, 0, 0.12)'
     },
     height: '100%',
     display: 'flex',
@@ -137,7 +138,7 @@ const TeacherCourseManagement: React.FC = () => {
     status: 'draft' as 'active' | 'inactive' | 'draft'
   });
   
-  const [viewMode, setViewMode] = useState<'table' | 'card'>('table');
+  const [viewMode, setViewMode] = useState<'table' | 'card'>('card');
   const [showFilters, setShowFilters] = useState(false);
 
   const departments = ['数学学院', '计算机学院', '外国语学院', '物理学院', '化学学院'];
@@ -511,25 +512,6 @@ const TeacherCourseManagement: React.FC = () => {
             <Typography variant="h6" component="div" sx={{ fontWeight: 'bold' }}>
               课程列表
             </Typography>
-            <Box sx={{ display: 'flex', gap: 1 }}>
-              <ToggleButtonGroup
-                value={viewMode}
-                exclusive
-                onChange={(event, newViewMode) => {
-                  if (newViewMode !== null) {
-                    setViewMode(newViewMode);
-                  }
-                }}
-                size="small"
-              >
-                <ToggleButton value="table" aria-label="table view">
-                  <ViewList />
-                </ToggleButton>
-                <ToggleButton value="card" aria-label="card view">
-                  <ViewModule />
-                </ToggleButton>
-              </ToggleButtonGroup>
-            </Box>
           </Box>
           
           <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
@@ -583,156 +565,96 @@ const TeacherCourseManagement: React.FC = () => {
       </StyledCard>
 
       {/* 课程列表 */}
-      {viewMode === 'table' ? (
-        <TableContainer component={Paper} sx={{ borderRadius: 2, overflow: 'hidden' }}>
-          <Table>
-            <TableHead sx={{ bgcolor: alpha(theme.palette.primary.main, 0.05) }}>
-              <TableRow>
-                <TableCell sx={{ fontWeight: 'bold' }}>课程信息</TableCell>
-                <TableCell sx={{ fontWeight: 'bold' }}>学院</TableCell>
-                <TableCell sx={{ fontWeight: 'bold' }}>学生数</TableCell>
-                <TableCell sx={{ fontWeight: 'bold' }}>进度</TableCell>
-                <TableCell sx={{ fontWeight: 'bold' }}>状态</TableCell>
-                <TableCell sx={{ fontWeight: 'bold' }}>操作</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {filteredCourses.map((course) => (
-                <TableRow key={course.id} hover>
-                  <TableCell>
-                    <Box>
-                      <Typography variant="body1" sx={{ fontWeight: 'bold' }}>
-                        {course.name}
-                      </Typography>
-                      <Typography variant="body2" color="textSecondary">
-                        {course.code}
-                      </Typography>
-                      <Typography variant="body2" color="textSecondary">
-                        {course.description.substring(0, 50)}...
-                      </Typography>
-                    </Box>
-                  </TableCell>
-                  <TableCell>
-                    <Chip label={course.department} size="small" />
-                  </TableCell>
-                  <TableCell>
-                    <Typography variant="body2">
-                      {course.studentCount}人
+      <Grid container spacing={3}>
+        {filteredCourses.map((course) => (
+          <Grid size={{ xs: 12, sm: 6, md: 4 }} key={course.id}>
+            <CourseCard>
+              <CardContent sx={{ flexGrow: 1, pt: 3 }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
+                  <Box sx={{ position: 'relative', flex: 1 }}>
+                    <Typography variant="h6" component="h2" noWrap sx={{ fontWeight: 600, fontSize: '1.1rem' }}>
+                      {course.name}
                     </Typography>
-                  </TableCell>
-                  <TableCell>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <LinearProgress 
-                        variant="determinate" 
-                        value={course.status === 'active' ? 60 : course.status === 'draft' ? 30 : 100} 
-                        sx={{ flex: 1, height: 6, borderRadius: 3 }}
+                    <Typography variant="body2" color="textSecondary" sx={{ mt: 0.5 }}>
+                      {course.code}
+                    </Typography>
+                    <Box sx={{ display: 'flex', gap: 1, mt: 0.5 }}>
+                      <Chip 
+                        label={getStatusText(course.status)} 
+                        size="small" 
+                        color={getStatusColor(course.status) as any}
+                        sx={{ 
+                          fontWeight: 500,
+                          '& .MuiChip-label': {
+                            fontSize: '0.75rem'
+                          }
+                        }}
                       />
-                      <Typography variant="body2" color="textSecondary">
-                        {course.status === 'active' ? '进行中' : course.status === 'draft' ? '草稿' : '已结束'}
-                      </Typography>
                     </Box>
-                  </TableCell>
-                  <TableCell>
-                    <Chip 
-                      label={getStatusText(course.status)} 
-                      color={getStatusColor(course.status) as any}
-                      size="small"
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <Box sx={{ display: 'flex', gap: 1 }}>
-                      <Button
-                        variant="outlined"
-                        size="small"
-                        startIcon={<Edit />}
-                        onClick={() => handleEditCourse(course)}
-                      >
-                        编辑
-                      </Button>
-                      <Button
-                        variant="outlined"
-                        size="small"
-                        startIcon={<MenuBook />}
-                        onClick={() => handleOpenResourceDialog(course)}
-                        color="primary"
-                      >
-                        资源
-                      </Button>
-                      <Button
-                        variant="outlined"
-                        size="small"
-                        startIcon={<Delete />}
-                        onClick={() => handleDeleteCourse(course.id)}
-                        color="error"
-                      >
-                        删除
-                      </Button>
-                    </Box>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </TableContainer>
-      ) : (
-        <Grid container spacing={3}>
-          {filteredCourses.map((course) => (
-            <Grid size={{ xs: 12, sm: 6, md: 4 }} key={course.id}>
-              <CourseCard>
-                <CardContent sx={{ flexGrow: 1 }}>
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
-                    <Box>
-                      <Typography variant="h6" component="div" sx={{ fontWeight: 'bold' }}>
-                        {course.name}
-                      </Typography>
-                      <Typography variant="body2" color="textSecondary">
-                        {course.code}
-                      </Typography>
-                    </Box>
-                    <Chip 
-                      label={getStatusText(course.status)} 
-                      color={getStatusColor(course.status) as any}
-                      size="small"
-                    />
                   </Box>
-                  
-                  <Typography variant="body2" color="textSecondary" sx={{ mb: 2 }}>
-                    {course.description.substring(0, 80)}...
+                </Box>
+                
+                <Typography variant="body2" color="textSecondary" sx={{ mb: 2, lineHeight: 1.6 }}>
+                  {course.description.substring(0, 80)}...
+                </Typography>
+
+                <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                  <Chip label={course.department} size="small" />
+                </Box>
+                
+                <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                  <Group fontSize="small" sx={{ mr: 1, color: 'text.secondary' }} />
+                  <Typography variant="body2">
+                    {course.studentCount}人
                   </Typography>
-                  
-                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                    <Chip label={course.department} size="small" />
-                  </Box>
-                  
-                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                    <Group fontSize="small" sx={{ mr: 1, color: 'text.secondary' }} />
-                    <Typography variant="body2">
-                      {course.studentCount}人
+                </Box>
+                
+                <Box sx={{ mb: 2 }}>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
+                    <Typography variant="body2" color="textSecondary" sx={{ fontSize: '0.875rem' }}>
+                      课程进度
+                    </Typography>
+                    <Typography variant="body2" color="textSecondary">
+                      {course.status === 'active' ? '进行中' : course.status === 'draft' ? '草稿' : '已结束'}
                     </Typography>
                   </Box>
-                  
-                  <Box sx={{ mb: 2 }}>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
-                      <Typography variant="body2">课程进度</Typography>
-                      <Typography variant="body2">
-                        {course.status === 'active' ? '进行中' : course.status === 'draft' ? '草稿' : '已结束'}
-                      </Typography>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Box sx={{ flex: 1, bgcolor: '#F5F5F5', borderRadius: 4, height: 8, overflow: 'hidden' }}>
+                      <Box 
+                        sx={{ 
+                          width: `${course.status === 'active' ? 60 : course.status === 'draft' ? 30 : 100}%`, 
+                          background: 'linear-gradient(90deg, #2196F3 0%, #21CBF3 100%)', 
+                          height: 8, 
+                          borderRadius: 4,
+                          transition: 'width 0.3s ease'
+                        }} 
+                      />
                     </Box>
-                    <LinearProgress 
-                      variant="determinate" 
-                      value={course.status === 'active' ? 60 : course.status === 'draft' ? 30 : 100} 
-                      sx={{ height: 6, borderRadius: 3 }}
-                    />
+                    <Typography variant="body2" color="textSecondary" sx={{ fontWeight: 500, minWidth: 35 }}>
+                      {course.status === 'active' ? '60.0' : course.status === 'draft' ? '30.0' : '100.0'}%
+                    </Typography>
                   </Box>
-                </CardContent>
-                
-                <Box sx={{ px: 2, pb: 2, display: 'flex', gap: 1 }}>
+                </Box>
+              </CardContent>
+              
+              <CardActions sx={{ justifyContent: 'space-between', px: 2.5, pb: 2.5, pt: 1 }}>
+                <Typography variant="body2" color="textSecondary" sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                  <AccessTime sx={{ fontSize: 16 }} />
+                  {course.totalHours}小时
+                </Typography>
+                <Box sx={{ display: 'flex', gap: 1 }}>
                   <Button
                     variant="outlined"
                     size="small"
                     startIcon={<Edit />}
                     onClick={() => handleEditCourse(course)}
-                    sx={{ flex: 1 }}
+                    sx={{
+                      borderRadius: 2,
+                      textTransform: 'none',
+                      fontWeight: 500,
+                      px: 2,
+                      py: 0.5,
+                    }}
                   >
                     编辑
                   </Button>
@@ -742,7 +664,13 @@ const TeacherCourseManagement: React.FC = () => {
                     startIcon={<MenuBook />}
                     onClick={() => handleOpenResourceDialog(course)}
                     color="primary"
-                    sx={{ flex: 1 }}
+                    sx={{
+                      borderRadius: 2,
+                      textTransform: 'none',
+                      fontWeight: 500,
+                      px: 2,
+                      py: 0.5,
+                    }}
                   >
                     资源
                   </Button>
@@ -752,15 +680,22 @@ const TeacherCourseManagement: React.FC = () => {
                     startIcon={<Delete />}
                     onClick={() => handleDeleteCourse(course.id)}
                     color="error"
+                    sx={{
+                      borderRadius: 2,
+                      textTransform: 'none',
+                      fontWeight: 500,
+                      px: 2,
+                      py: 0.5,
+                    }}
                   >
                     删除
                   </Button>
                 </Box>
-              </CourseCard>
-            </Grid>
-          ))}
-        </Grid>
-      )}
+              </CardActions>
+            </CourseCard>
+          </Grid>
+        ))}
+      </Grid>
 
       {/* 编辑对话框 */}
       <Dialog open={open} onClose={handleClose} maxWidth="md" fullWidth PaperProps={{ sx: { borderRadius: 3 } }}>

@@ -179,6 +179,7 @@ model Submission {
   gradedAt     DateTime?
   assignment   Assignment @relation(fields: [assignmentId], references: [id])
   user         User       @relation(fields: [userId], references: [id])
+  answers      SubmissionAnswer[]
 
   @@unique([userId, assignmentId])
   @@map("submissions")
@@ -202,6 +203,7 @@ model Question {
   assignments      QuestionAssignment[]
   teacher          User                 @relation(fields: [teacherId], references: [id])
   knowledgePoint   KnowledgePoint       @relation(fields: [knowledgePointId], references: [id])
+  submissionAnswers SubmissionAnswer[]
 
   @@map("questions")
 }
@@ -213,6 +215,7 @@ model Material {
   type         String   @default("PDF")
   fileUrl      String
   fileSize     Int      @default(0)
+  status       String   @default("draft")
   chapterId    String
   uploadedById String
   createdAt    DateTime @default(now())
@@ -230,6 +233,7 @@ model Courseware {
   type         String   @default("SLIDES")
   fileUrl      String
   fileSize     Int      @default(0)
+  status       String   @default("draft")
   chapterId    String?
   uploadedById String
   createdAt    DateTime @default(now())
@@ -271,7 +275,26 @@ model QuestionAssignment {
   updatedAt    DateTime   @updatedAt
   assignment   Assignment @relation(fields: [assignmentId], references: [id])
   question     Question   @relation(fields: [questionId], references: [id])
+  answers      SubmissionAnswer[]
 
   @@unique([questionId, assignmentId])
   @@map("question_assignments")
+}
+
+model SubmissionAnswer {
+  id                  String            @id @default(cuid())
+  submissionId        String
+  questionId          String
+  questionAssignmentId String
+  answer              String
+  isCorrect           Boolean           @default(false)
+  points              Int               @default(0)
+  feedback            String?
+  createdAt           DateTime          @default(now())
+  updatedAt           DateTime          @updatedAt
+  submission          Submission        @relation(fields: [submissionId], references: [id])
+  question            Question          @relation(fields: [questionId], references: [id])
+  questionAssignment  QuestionAssignment @relation(fields: [questionAssignmentId], references: [id])
+
+  @@map("submission_answers")
 }

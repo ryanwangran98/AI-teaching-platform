@@ -23,6 +23,14 @@ import {
   Paper,
   CircularProgress,
   Alert,
+  Card,
+  CardContent,
+  Avatar,
+  Grid,
+  Divider,
+  alpha,
+  useTheme,
+  Tooltip,
 } from '@mui/material';
 import {
   Upload,
@@ -36,6 +44,14 @@ import {
   ExpandMore,
   ExpandLess,
   ArrowBack,
+  Publish,
+  Cancel,
+  Slideshow,
+  PictureAsPdf,
+  VideoLibrary,
+  Apps,
+  Folder,
+  Info,
 } from '@mui/icons-material';
 import { useNavigate, useParams } from 'react-router-dom';
 import { coursewareAPI, chapterAPI, courseAPI } from '../../services/api';
@@ -51,7 +67,7 @@ interface Courseware {
   fileUrl: string;
   createdAt: string;
   updatedAt: string;
-  status: 'active' | 'inactive';
+  status: 'draft' | 'published' | 'archived';
   downloads: number;
   description: string;
   chapter?: {
@@ -80,6 +96,7 @@ interface CoursewareFormData {
 const CoursewareManagement: React.FC = () => {
   const navigate = useNavigate();
   const { courseId } = useParams<{ courseId: string }>(); // 从路径参数获取当前课程ID
+  const theme = useTheme();
   const [coursewares, setCoursewares] = useState<Courseware[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -294,6 +311,26 @@ const CoursewareManagement: React.FC = () => {
     }
   };
 
+  const handlePublish = async (coursewareId: string) => {
+    try {
+      await coursewareAPI.updateCourseware(coursewareId, { status: 'published' });
+      await fetchCoursewares(); // 重新获取课件列表
+    } catch (error: any) {
+      console.error('发布课件失败:', error);
+      alert(`发布课件失败: ${error.response?.data?.error || error.message}`);
+    }
+  };
+
+  const handleUnpublish = async (coursewareId: string) => {
+    try {
+      await coursewareAPI.updateCourseware(coursewareId, { status: 'draft' });
+      await fetchCoursewares(); // 重新获取课件列表
+    } catch (error: any) {
+      console.error('取消发布课件失败:', error);
+      alert(`取消发布课件失败: ${error.response?.data?.error || error.message}`);
+    }
+  };
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -352,7 +389,9 @@ const CoursewareManagement: React.FC = () => {
   const getTypeColor = (type: string) => {
     const colorMap: Record<string, 'primary' | 'secondary' | 'success' | 'error' | 'warning' | 'info'> = {
       'SLIDES': 'primary',
-      'DOCUMENT': 'info'
+      'DOCUMENT': 'info',
+      'VIDEO': 'warning',
+      'INTERACTIVE': 'success'
     };
     return colorMap[type] || 'default';
   };
@@ -360,9 +399,29 @@ const CoursewareManagement: React.FC = () => {
   const getTypeText = (type: string) => {
     const textMap: Record<string, string> = {
       'SLIDES': '幻灯片',
-      'DOCUMENT': '文档'
+      'DOCUMENT': '文档',
+      'VIDEO': '视频',
+      'INTERACTIVE': '互动内容'
     };
     return textMap[type] || type;
+  };
+
+  const getStatusLabel = (status: string) => {
+    const statusMap: Record<string, string> = {
+      'draft': '草稿',
+      'published': '已发布',
+      'archived': '已归档'
+    };
+    return statusMap[status] || status;
+  };
+
+  const getStatusColor = (status: string) => {
+    const colorMap: Record<string, 'primary' | 'secondary' | 'success' | 'error' | 'warning' | 'info' | 'default'> = {
+      'draft': 'warning',
+      'published': 'success',
+      'archived': 'default'
+    };
+    return colorMap[status] || 'default';
   };
 
   const formatFileSize = (bytes: number) => {
@@ -409,160 +468,364 @@ const CoursewareManagement: React.FC = () => {
   return (
     <Box sx={{ p: 3 }}>
       {/* 页面标题和返回按钮 */}
-      <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-        <Button
-          startIcon={<ArrowBack />}
-          onClick={() => navigate('/teacher/courses')}
-          sx={{ mr: 2 }}
-        >
-          返回课程列表
-        </Button>
-        <Typography variant="h4" component="h1">
-          课件管理 - {currentCourse?.name || '未知课程'}
-        </Typography>
-      </Box>
-
-      {/* 操作按钮 */}
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-        <Box>
+      <Card sx={{ mb: 3, borderRadius: 2, boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
+        <CardContent sx={{ display: 'flex', alignItems: 'center', py: 2 }}>
           <Button
-            variant="contained"
-            startIcon={<Add />}
-            onClick={handleCreate}
-          >
-            上传课件
-          </Button>
-        </Box>
-        
-        {/* 搜索和筛选 */}
-        <Box sx={{ display: 'flex', gap: 2 }}>
-          <TextField
-            placeholder="搜索课件"
-            variant="outlined"
-            size="small"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            InputProps={{
-              startAdornment: <Search sx={{ mr: 1, color: 'action.active' }} />,
+            startIcon={<ArrowBack />}
+            onClick={() => navigate('/teacher/courses')}
+            sx={{ 
+              mr: 2,
+              '&:hover': {
+                bgcolor: alpha(theme.palette.primary.main, 0.05),
+              }
             }}
-            sx={{ width: 250 }}
-          />
-          <FormControl size="small" sx={{ minWidth: 120 }}>
-            <InputLabel>类型</InputLabel>
-            <Select
-              value={selectedType}
-              onChange={(e) => setSelectedType(e.target.value)}
-              label="类型"
-            >
-              <MenuItem value="">全部类型</MenuItem>
-              <MenuItem value="SLIDES">幻灯片</MenuItem>
-              <MenuItem value="DOCUMENT">文档</MenuItem>
-            </Select>
-          </FormControl>
-        </Box>
-      </Box>
+          >
+            返回课程列表
+          </Button>
+          <Avatar 
+            sx={{ 
+              width: 48, 
+              height: 48, 
+              mr: 2,
+              bgcolor: theme.palette.primary.main,
+              color: theme.palette.primary.contrastText
+            }}
+          >
+            <Slideshow />
+          </Avatar>
+          <Box>
+            <Typography variant="h4" component="h1" fontWeight="bold">
+              课件管理
+            </Typography>
+            <Typography variant="body2" color="textSecondary">
+              {currentCourse?.name || '未知课程'}
+            </Typography>
+          </Box>
+        </CardContent>
+      </Card>
+
+      {/* 操作按钮和搜索筛选 */}
+      <Card sx={{ mb: 3, borderRadius: 2, boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
+        <CardContent sx={{ py: 2 }}>
+          <Grid container spacing={2} alignItems="center">
+            <Grid item xs={12} sm={6} md={3}>
+              <Button
+                variant="contained"
+                startIcon={<Add />}
+                onClick={handleCreate}
+                fullWidth
+                sx={{ 
+                  py: 1.2,
+                  borderRadius: 1.5,
+                  boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                  '&:hover': {
+                    boxShadow: '0 4px 8px rgba(0,0,0,0.2)',
+                  }
+                }}
+              >
+                上传课件
+              </Button>
+            </Grid>
+            
+            {/* 搜索和筛选 */}
+            <Grid item xs={12} sm={6} md={4}>
+              <TextField
+                placeholder="搜索课件"
+                variant="outlined"
+                size="small"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                InputProps={{
+                  startAdornment: <Search sx={{ mr: 1, color: 'action.active' }} />,
+                }}
+                fullWidth
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    borderRadius: 1.5,
+                  }
+                }}
+              />
+            </Grid>
+            
+            <Grid item xs={12} sm={6} md={5}>
+              <FormControl size="small" fullWidth>
+                <InputLabel>类型</InputLabel>
+                <Select
+                  value={selectedType}
+                  onChange={(e) => setSelectedType(e.target.value)}
+                  label="类型"
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      borderRadius: 1.5,
+                    },
+                    minWidth: 120,
+                  }}
+                >
+                  <MenuItem value="">全部类型</MenuItem>
+                  <MenuItem value="SLIDES">幻灯片</MenuItem>
+                  <MenuItem value="DOCUMENT">文档</MenuItem>
+                  <MenuItem value="VIDEO">视频</MenuItem>
+                  <MenuItem value="INTERACTIVE">互动内容</MenuItem>
+                </Select>
+              </FormControl>
+            </Grid>
+            
+            <Grid item xs={12} sm={6} md={3}>
+              <Chip 
+                label={`${filteredCoursewares.length} 个课件`}
+                color="primary"
+                variant="outlined"
+                sx={{ height: 36, width: '100%' }}
+              />
+            </Grid>
+          </Grid>
+        </CardContent>
+      </Card>
 
       {/* 课件列表 */}
-      <TableContainer component={Paper}>
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableCell>课件信息</TableCell>
-              <TableCell>类型</TableCell>
-              <TableCell>大小</TableCell>
-              <TableCell>上传时间</TableCell>
-              <TableCell>下载次数</TableCell>
-              <TableCell>操作</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {filteredCoursewares.map((courseware) => (
-              <React.Fragment key={courseware.id}>
-                <TableRow>
-                  <TableCell>
-                    <Box>
-                      <Typography variant="body1" sx={{ fontWeight: 'bold' }}>
-                        {courseware.title}
+      <Card sx={{ borderRadius: 2, boxShadow: '0 2px 8px rgba(0,0,0,0.1)', overflow: 'hidden' }}>
+        <TableContainer>
+          <Table>
+            <TableHead sx={{ bgcolor: alpha(theme.palette.primary.main, 0.05) }}>
+              <TableRow>
+                <TableCell sx={{ fontWeight: 'bold', py: 2 }}>课件信息</TableCell>
+                <TableCell sx={{ fontWeight: 'bold', py: 2 }}>类型</TableCell>
+                <TableCell sx={{ fontWeight: 'bold', py: 2 }}>状态</TableCell>
+                <TableCell sx={{ fontWeight: 'bold', py: 2 }}>大小</TableCell>
+                <TableCell sx={{ fontWeight: 'bold', py: 2 }}>上传时间</TableCell>
+                <TableCell sx={{ fontWeight: 'bold', py: 2 }}>下载次数</TableCell>
+                <TableCell sx={{ fontWeight: 'bold', py: 2 }}>操作</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {filteredCoursewares.map((courseware) => (
+                <React.Fragment key={courseware.id}>
+                  <TableRow 
+                    hover
+                    sx={{ 
+                      '&:hover': {
+                        bgcolor: alpha(theme.palette.primary.main, 0.02),
+                      }
+                    }}
+                  >
+                    <TableCell>
+                      <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                        <Avatar 
+                          sx={{ 
+                            width: 40, 
+                            height: 40, 
+                            mr: 2,
+                            bgcolor: courseware.type === 'SLIDES' ? 
+                              theme.palette.primary.main : 
+                              courseware.type === 'DOCUMENT' ?
+                              theme.palette.info.main :
+                              courseware.type === 'VIDEO' ?
+                              theme.palette.warning.main :
+                              theme.palette.success.main
+                          }}
+                        >
+                          {courseware.type === 'SLIDES' ? <Slideshow /> : 
+                           courseware.type === 'DOCUMENT' ? <PictureAsPdf /> :
+                           courseware.type === 'VIDEO' ? <VideoLibrary /> :
+                           <Apps />}
+                        </Avatar>
+                        <Box>
+                          <Typography variant="body1" sx={{ fontWeight: 'bold' }}>
+                            {courseware.title}
+                          </Typography>
+                          <Typography variant="body2" color="textSecondary">
+                            {courseware.description}
+                          </Typography>
+                          {courseware.chapter && (
+                            <Box sx={{ display: 'flex', alignItems: 'center', mt: 0.5 }}>
+                              <Folder fontSize="small" sx={{ mr: 0.5, color: 'text.secondary' }} />
+                              <Typography variant="body2" color="textSecondary">
+                                {courseware.chapter.title}
+                              </Typography>
+                            </Box>
+                          )}
+                        </Box>
+                      </Box>
+                    </TableCell>
+                    <TableCell>
+                      <Chip 
+                        label={getTypeText(courseware.type)} 
+                        color={getTypeColor(courseware.type)}
+                        size="small"
+                        sx={{ fontWeight: 'bold' }}
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <Chip 
+                        label={getStatusLabel(courseware.status)} 
+                        color={getStatusColor(courseware.status)}
+                        size="small"
+                        sx={{ fontWeight: 'bold' }}
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <Typography variant="body2" fontWeight="medium">
+                        {formatFileSize(courseware.fileSize)}
                       </Typography>
-                      <Typography variant="body2" color="textSecondary">
-                        {courseware.description}
+                    </TableCell>
+                    <TableCell>
+                      <Typography variant="body2" fontWeight="medium">
+                        {new Date(courseware.createdAt).toLocaleDateString()}
                       </Typography>
-                      {courseware.chapter && (
-                        <Typography variant="body2" color="textSecondary">
-                          章节: {courseware.chapter.title}
-                        </Typography>
-                      )}
-                    </Box>
-                  </TableCell>
-                  <TableCell>
-                    <Chip 
-                      label={getTypeText(courseware.type)} 
-                      color={getTypeColor(courseware.type)}
-                      size="small"
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <Typography variant="body2">
-                      {formatFileSize(courseware.fileSize)}
-                    </Typography>
-                  </TableCell>
-                  <TableCell>
-                    <Typography variant="body2">
-                      {new Date(courseware.createdAt).toLocaleDateString()}
-                    </Typography>
-                  </TableCell>
-                  <TableCell>
-                    <Typography variant="body2">
-                      {courseware.downloads}
-                    </Typography>
-                  </TableCell>
-                  <TableCell>
-                    <Box sx={{ display: 'flex', gap: 1 }}>
-                      <IconButton 
+                    </TableCell>
+                    <TableCell>
+                      <Typography variant="body2" fontWeight="medium">
+                        {courseware.downloads}
+                      </Typography>
+                    </TableCell>
+                    <TableCell>
+                    <Box sx={{ display: 'flex', flexDirection: 'row', flexWrap: 'wrap', gap: 0.5 }}>
+                      <Button 
                         size="small" 
                         onClick={() => handlePreview(courseware.fileUrl)}
-                        title="预览"
+                        variant="outlined"
+                        startIcon={<Visibility />}
+                        sx={{ 
+                          minWidth: 'auto',
+                          px: 1,
+                          py: 0.5,
+                          '&:hover': {
+                            bgcolor: 'rgba(0, 0, 0, 0.04)',
+                          }
+                        }}
                       >
-                        <Visibility />
-                      </IconButton>
-                      <IconButton 
+                        预览
+                      </Button>
+                      <Button 
                         size="small" 
                         onClick={() => handleDownload(courseware.fileUrl, courseware.title)}
-                        title="下载"
+                        variant="outlined"
+                        startIcon={<Download />}
+                        sx={{ 
+                          minWidth: 'auto',
+                          px: 1,
+                          py: 0.5,
+                          '&:hover': {
+                            bgcolor: 'rgba(0, 0, 0, 0.04)',
+                          }
+                        }}
                       >
-                        <Download />
-                      </IconButton>
-                      <IconButton 
+                        下载
+                      </Button>
+                      {courseware.status === 'draft' ? (
+                        <Button 
+                          size="small" 
+                          onClick={() => handlePublish(courseware.id)}
+                          variant="outlined"
+                          startIcon={<Publish />}
+                          sx={{ 
+                            minWidth: 'auto',
+                            px: 1,
+                            py: 0.5,
+                            '&:hover': {
+                              bgcolor: 'rgba(0, 0, 0, 0.04)',
+                            }
+                          }}
+                        >
+                          发布
+                        </Button>
+                      ) : (
+                        <Button 
+                          size="small" 
+                          onClick={() => handleUnpublish(courseware.id)}
+                          variant="outlined"
+                          startIcon={<Cancel />}
+                          sx={{ 
+                            minWidth: 'auto',
+                            px: 1,
+                            py: 0.5,
+                            '&:hover': {
+                              bgcolor: 'rgba(0, 0, 0, 0.04)',
+                            }
+                          }}
+                        >
+                          取消发布
+                        </Button>
+                      )}
+                      <Button 
                         size="small" 
                         onClick={() => handleEdit(courseware)}
-                        title="编辑"
+                        variant="outlined"
+                        startIcon={<Edit />}
+                        sx={{ 
+                          minWidth: 'auto',
+                          px: 1,
+                          py: 0.5,
+                          '&:hover': {
+                            bgcolor: 'rgba(0, 0, 0, 0.04)',
+                          }
+                        }}
                       >
-                        <Edit />
-                      </IconButton>
-                      <IconButton 
+                        编辑
+                      </Button>
+                      <Button 
                         size="small" 
                         onClick={() => handleDelete(courseware.id)}
-                        title="删除"
-                        color="error"
+                        variant="outlined"
+                        startIcon={<Delete />}
+                        sx={{ 
+                          minWidth: 'auto',
+                          px: 1,
+                          py: 0.5,
+                          '&:hover': {
+                            bgcolor: 'rgba(0, 0, 0, 0.04)',
+                          }
+                        }}
                       >
-                        <Delete />
-                      </IconButton>
+                        删除
+                      </Button>
                     </Box>
                   </TableCell>
-                </TableRow>
-              </React.Fragment>
-            ))}
-          </TableBody>
-        </Table>
-      </TableContainer>
+                  </TableRow>
+                </React.Fragment>
+              ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      </Card>
 
       {/* 上传/编辑对话框 */}
-      <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
-        <DialogTitle>
-          {editingCourseware ? '编辑课件' : '上传课件'}
+      <Dialog 
+        open={open} 
+        onClose={handleClose} 
+        maxWidth="sm" 
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: 2,
+            boxShadow: '0 8px 24px rgba(0,0,0,0.15)',
+          }
+        }}
+      >
+        <DialogTitle sx={{ 
+          bgcolor: alpha(theme.palette.primary.main, 0.05),
+          py: 2,
+          borderBottom: `1px solid ${theme.palette.divider}`
+        }}>
+          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+            <Avatar 
+              sx={{ 
+                width: 36, 
+                height: 36, 
+                mr: 2,
+                bgcolor: theme.palette.primary.main,
+                color: theme.palette.primary.contrastText
+              }}
+            >
+              {editingCourseware ? <Edit /> : <Upload />}
+            </Avatar>
+            <Typography variant="h6" fontWeight="bold">
+              {editingCourseware ? '编辑课件' : '上传课件'}
+            </Typography>
+          </Box>
         </DialogTitle>
-        <DialogContent>
-          <Box sx={{ pt: 2 }}>
+        <DialogContent sx={{ p: 3 }}>
+          <Box sx={{ pt: 1 }}>
             <input
               ref={fileInputRef}
               type="file"
@@ -573,13 +836,23 @@ const CoursewareManagement: React.FC = () => {
             />
             
             {!editingCourseware && (
-              <Box sx={{ mb: 2 }}>
+              <Box sx={{ mb: 3, textAlign: 'center' }}>
                 <Button
                   variant="outlined"
                   component="label"
                   htmlFor={fileInputId}
                   startIcon={<Upload />}
                   disabled={uploading}
+                  sx={{ 
+                    py: 1.5,
+                    px: 3,
+                    borderRadius: 1.5,
+                    border: `2px dashed ${theme.palette.primary.main}`,
+                    '&:hover': {
+                      border: `2px dashed ${theme.palette.primary.main}`,
+                      bgcolor: alpha(theme.palette.primary.main, 0.05),
+                    }
+                  }}
                 >
                   {uploading ? '上传中...' : (formData.file ? formData.file.name : '选择文件')}
                 </Button>
@@ -595,7 +868,12 @@ const CoursewareManagement: React.FC = () => {
               variant="outlined"
               value={formData.title}
               onChange={(e) => handleFormChange('title', e.target.value)}
-              sx={{ mb: 2 }}
+              sx={{ 
+                mb: 2,
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: 1.5,
+                }
+              }}
             />
             
             <TextField
@@ -606,7 +884,12 @@ const CoursewareManagement: React.FC = () => {
               variant="outlined"
               value={formData.description}
               onChange={(e) => handleFormChange('description', e.target.value)}
-              sx={{ mb: 2 }}
+              sx={{ 
+                mb: 2,
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: 1.5,
+                }
+              }}
             />
             
             <FormControl fullWidth sx={{ mb: 2 }}>
@@ -615,9 +898,16 @@ const CoursewareManagement: React.FC = () => {
                 value={formData.type}
                 onChange={(e) => handleFormChange('type', e.target.value)}
                 label="课件类型"
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    borderRadius: 1.5,
+                  }
+                }}
               >
                 <MenuItem value="SLIDES">幻灯片</MenuItem>
                 <MenuItem value="DOCUMENT">文档</MenuItem>
+                <MenuItem value="VIDEO">视频</MenuItem>
+                <MenuItem value="INTERACTIVE">互动内容</MenuItem>
               </Select>
             </FormControl>
             
@@ -627,6 +917,11 @@ const CoursewareManagement: React.FC = () => {
                 value={formData.chapterId || ''}
                 onChange={(e) => handleFormChange('chapterId', e.target.value)}
                 label="关联章节"
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    borderRadius: 1.5,
+                  }
+                }}
               >
                 <MenuItem value="">无关联章节</MenuItem>
                 {chapters.map(chapter => (
@@ -638,14 +933,34 @@ const CoursewareManagement: React.FC = () => {
             </FormControl>
           </Box>
         </DialogContent>
-        <DialogActions>
-          <Button onClick={handleClose}>取消</Button>
+        <DialogActions sx={{ 
+          p: 3,
+          borderTop: `1px solid ${theme.palette.divider}`
+        }}>
+          <Button 
+            onClick={handleClose}
+            sx={{ 
+              borderRadius: 1.5,
+              px: 3
+            }}
+          >
+            取消
+          </Button>
           <Button 
             onClick={handleSave} 
             variant="contained"
+            color="primary"
             disabled={submitting || (!editingCourseware && !formData.file)}
+            sx={{ 
+              borderRadius: 1.5,
+              px: 3,
+              boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+              '&:hover': {
+                boxShadow: '0 4px 8px rgba(0,0,0,0.2)',
+              }
+            }}
           >
-            {submitting ? '保存中...' : '保存'}
+            {editingCourseware ? '更新' : '创建'}
           </Button>
         </DialogActions>
       </Dialog>
