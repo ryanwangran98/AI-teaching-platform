@@ -19,8 +19,6 @@ import {
   Dashboard,
   School,
   Notifications,
-  Group,
-  BarChart,
   Psychology,
 } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
@@ -31,8 +29,6 @@ const menuItems = [
   { text: '仪表板', icon: <Dashboard />, path: '/teacher' },
   { text: '我的课程', icon: <School />, path: '/teacher/courses' },
   { text: '通知管理', icon: <Notifications />, path: '/teacher/notifications' },
-  { text: '班级管理', icon: <Group />, path: '/teacher/classes' },
-  { text: '统计分析', icon: <BarChart />, path: '/teacher/statistics' },
   { text: 'AI助手', icon: <Psychology />, path: '/ai/courseware-assistant' },
 ];
 

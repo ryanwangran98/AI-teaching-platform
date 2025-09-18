@@ -38,7 +38,11 @@ import NotificationsIcon from '@mui/icons-material/Notifications';
 import Info from '@mui/icons-material/Info';
 import Warning from '@mui/icons-material/Warning';
 import Error from '@mui/icons-material/Error';
-import { courseAPI, learningRecordAPI, notificationAPI } from '../../services/api';
+import VideoLibrary from '@mui/icons-material/VideoLibrary';
+import Book from '@mui/icons-material/Book';
+import Quiz from '@mui/icons-material/Quiz';
+import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import { courseAPI, learningRecordAPI, notificationAPI, submissionAPI, videoSegmentAPI, chapterProgressAPI } from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
 
 // 定义活动类型
@@ -76,6 +80,9 @@ const StudentDashboard: React.FC = () => {
     weeklyHours: 0,
   });
   const [recentActivities, setRecentActivities] = useState<Activity[]>([]);
+  const [videoLearningData, setVideoLearningData] = useState<any[]>([]);
+  const [assignmentData, setAssignmentData] = useState<any[]>([]);
+  
   const [loading, setLoading] = useState(true);
   const { logout, user } = useAuth();
   const navigate = useNavigate();
@@ -85,22 +92,14 @@ const StudentDashboard: React.FC = () => {
   }, []);
 
   const fetchDashboardData = async () => {
+    console.log('fetchDashboardData function called...');
+    setLoading(true);
     try {
-      setLoading(true);
       
       // 获取学生课程数据以计算统计信息
       const coursesResponse = await courseAPI.getStudentCourses();
       // 修复数据处理逻辑，正确提取课程数据
       const courses = coursesResponse.data || coursesResponse || [];
-      
-      // 获取学习记录数据
-      const params: any = {};
-      if (user?.id) {
-        params.studentId = user.id;
-      }
-      
-      const recordsResponse = await learningRecordAPI.getLearningRecords(params);
-      const records = recordsResponse.data || recordsResponse || [];
       
       // 计算统计数据
       const enrolledCount = Array.isArray(courses) ? courses.length : 0;
@@ -110,21 +109,203 @@ const StudentDashboard: React.FC = () => {
       const avgProgress = Array.isArray(courses) && courses.length > 0 
         ? Math.round(courses.reduce((sum: number, course: any) => sum + (course.progress || 0), 0) / courses.length)
         : 0;
-      const weeklyHours = Math.round(records.length * 2); // 简单估算
+      
+      // 获取章节学习进度数据
+      console.log('Fetching chapter progress data...');
+      const chapterProgressResponse = await chapterProgressAPI.getChapterProgress();
+      console.log('ChapterProgress API Response:', chapterProgressResponse);
+      const chapterProgressData = chapterProgressResponse.data || [];
+      console.log('ChapterProgress Data:', chapterProgressData);
+      console.log('ChapterProgress Data length:', chapterProgressData.length);
+      
+      // 计算本周学习时长（基于章节学习进度）
+      let weeklyHours = 0;
+      let totalVideoTime = 0;
+      
+      // 处理章节学习进度数据，累计视频学习时长
+      chapterProgressData.forEach((progress: any) => {
+        if (progress.watchedTime) {
+          totalVideoTime += progress.watchedTime;
+        }
+      });
+      
+      // 将秒转换为小时
+      weeklyHours = Math.round(totalVideoTime / 3600 * 10) / 10;
+      
+      // 计算学习进度 - 基于章节进度
+      let totalProgress = 0;
+      let completedChapters = 0;
+      let totalChapters = 0;
+      
+      if (chapterProgressData.length > 0) {
+        // 获取所有课程ID
+        const courseIds = [...new Set(chapterProgressData.map((p: any) => p.courseId))];
+        
+        // 计算每个课程的进度
+        for (const courseId of courseIds) {
+          const courseProgress = chapterProgressData.filter((p: any) => p.courseId === courseId);
+          const courseChapters = courseProgress.length;
+          
+          if (courseChapters > 0) {
+            const courseTotalProgress = courseProgress.reduce((sum: number, p: any) => sum + p.progress, 0);
+            const courseAverageProgress = courseTotalProgress / courseChapters;
+            const courseCompletedChapters = courseProgress.filter((p: any) => p.isCompleted).length;
+            
+            totalProgress += courseAverageProgress;
+            completedChapters += courseCompletedChapters;
+            totalChapters += courseChapters;
+          }
+        }
+      }
+      
+      const averageProgress = totalChapters > 0 ? totalProgress / totalChapters : 0;
       
       setStats({
         enrolledCourses: enrolledCount,
         earnedCredits: totalCredits,
-        learningProgress: avgProgress,
+        learningProgress: Math.round(averageProgress * 10) / 10,
         weeklyHours: weeklyHours,
       });
+
+      // 获取作业提交记录
+      const submissionsResponse = await submissionAPI.getSubmissions({ studentId: user?.id });
+      const submissions = Array.isArray(submissionsResponse.data?.records) 
+        ? submissionsResponse.data.records 
+        : Array.isArray(submissionsResponse.data) 
+          ? submissionsResponse.data 
+          : [];
+
+      // 生成真实的学习数据图表数据（基于当前月份）
+      const now = new Date();
+      const currentYear = now.getFullYear();
+      const currentMonth = now.getMonth();
+      
+      // 获取当前月份的天数
+      const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+      
+      // 初始化当前月份的学习数据（使用学习时间作为数值，单位改为分钟）
+      const videoLearningChartData: any[] = [];
+      const assignmentChartData: any[] = [];
+      
+      // 生成当前月份的日期数组
+      for (let day = 1; day <= daysInMonth; day++) {
+        const date = new Date(currentYear, currentMonth, day);
+        const dateStr = `${date.getMonth() + 1}/${date.getDate()}`;
+        
+        videoLearningChartData.push({
+          name: dateStr,
+          学习时间: 0, // 单位：分钟
+          fullDate: date.toISOString().split('T')[0] // 存储完整日期用于比较
+        });
+        
+        assignmentChartData.push({
+          name: dateStr,
+          学习时间: 0, // 单位：分钟
+          fullDate: date.toISOString().split('T')[0] // 存储完整日期用于比较
+        });
+      }
+      
+      
+      
+      // 处理章节学习进度数据，按天分类并计算学习时间
+      console.log('Processing chapter progress data for chart...');
+      chapterProgressData.forEach((progress: any) => {
+        console.log('Processing progress item:', progress);
+        if (progress.watchedTime > 0 && progress.lastWatchedAt) {
+          const studyDate = new Date(progress.lastWatchedAt);
+          console.log('Study date:', studyDate);
+          const studyDateStr = studyDate.toISOString().split('T')[0];
+          
+          // 查找对应日期的索引
+          const dayIndex = videoLearningChartData.findIndex(item => item.fullDate === studyDateStr);
+          
+          console.log('Study date string:', studyDateStr, 'Day index:', dayIndex);
+          
+          if (dayIndex >= 0) {
+            // 将学习时长从秒转换为分钟
+            const studyMinutes = Math.round(progress.watchedTime / 60);
+            console.log(`Adding ${studyMinutes} minutes to day ${dayIndex}`);
+            videoLearningChartData[dayIndex].学习时间 += studyMinutes;
+          }
+        }
+      });
+      
+      console.log('Final video learning chart data:', videoLearningChartData);
+      
+      // 处理作业提交数据，按天分类并估算学习时间（假设每次作业平均花费60分钟）
+      submissions.forEach((submission: any) => {
+        if (submission.createdAt) {
+          const submitDate = new Date(submission.createdAt);
+          const submitDateStr = submitDate.toISOString().split('T')[0];
+          
+          // 查找对应日期的索引
+          const dayIndex = assignmentChartData.findIndex(item => item.fullDate === submitDateStr);
+          
+          if (dayIndex >= 0) {
+            // 假设每次作业平均花费60分钟
+            assignmentChartData[dayIndex].学习时间 += 60;
+          }
+        }
+      });
+      
+      
+      
+      // 保留整数
+      videoLearningChartData.forEach(item => {
+        item.学习时间 = Math.round(item.学习时间);
+      });
+      
+      assignmentChartData.forEach(item => {
+        item.学习时间 = Math.round(item.学习时间);
+      });
+      
+      
+      
+      setVideoLearningData(videoLearningChartData);
+      setAssignmentData(assignmentChartData);
 
       // 获取真实的用户通知数据
       const notificationsResponse = await notificationAPI.getNotifications({ limit: 5 });
       const notificationsData = notificationsResponse.data?.notifications || [];
       
-      // 处理活动数据 - 使用真实的用户通知
+      // 处理活动数据 - 使用章节学习进度和通知
       const activities: Activity[] = [];
+      
+      // 添加最近的学习进度记录
+      const recentProgress = [...chapterProgressData]
+        .sort((a: any, b: any) => new Date(b.lastWatchedAt || 0).getTime() - new Date(a.lastWatchedAt || 0).getTime())
+        .slice(0, 3);
+      
+      recentProgress.forEach((progress: any) => {
+        if (progress.lastWatchedAt) {
+          activities.push({
+            id: `progress-${progress.id}`,
+            type: '视频学习',
+            content: `学习章节: ${progress.chapter?.title || '未知章节'}`,
+            time: formatDate(progress.lastWatchedAt),
+            icon: <VideoLibrary color="primary" />,
+            relatedCourse: progress.course ? { id: progress.course.id, title: progress.course.name } : undefined,
+          });
+        }
+      });
+      
+      // 添加最近的作业提交记录
+      const recentSubmissions = [...submissions]
+        .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+        .slice(0, 3);
+      
+      recentSubmissions.forEach((submission: any) => {
+        activities.push({
+          id: `submission-${submission.id}`,
+          type: '作业提交',
+          content: `提交作业: ${submission.assignment?.title || '未知作业'}`,
+          time: formatDate(submission.createdAt),
+          icon: <Assignment color="success" />,
+          relatedCourse: submission.assignment?.knowledgePoint?.chapter?.course ? 
+            { id: submission.assignment.knowledgePoint.chapter.course.id, title: submission.assignment.knowledgePoint.chapter.course.name } : 
+            undefined,
+        });
+      });
       
       // 添加通知
       notificationsData.slice(0, 5).forEach((notification: any) => {
@@ -138,20 +319,25 @@ const StudentDashboard: React.FC = () => {
         });
       });
       
-      // 如果没有通知数据，使用模拟数据
+      // 如果没有活动数据，使用模拟数据
       if (activities.length === 0) {
         activities.push(
           {
             id: 1,
             type: '通知',
-            content: '暂无新通知',
+            content: '暂无新活动',
             time: '刚刚',
             icon: <NotificationsIcon color="info" />,
           }
         );
       }
       
-      setRecentActivities(activities);
+      // 按时间排序并只保留最近的5条
+      setRecentActivities(
+        activities
+          .sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime())
+          .slice(0, 5)
+      );
 
     } catch (error) {
       console.error('获取学生仪表板数据失败:', error);
@@ -162,6 +348,41 @@ const StudentDashboard: React.FC = () => {
         learningProgress: 0,
         weeklyHours: 0,
       });
+      
+      // 出错时使用模拟图表数据
+      const now = new Date();
+      const currentYear = now.getFullYear();
+      const currentMonth = now.getMonth();
+      
+      // 获取当前月份的天数
+      const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+      
+      const videoLearningChartData: any[] = [];
+      const assignmentChartData: any[] = [];
+      
+      // 生成当前月份的日期数组
+      for (let day = 1; day <= daysInMonth; day++) {
+        const date = new Date(currentYear, currentMonth, day);
+        const dateStr = `${date.getMonth() + 1}/${date.getDate()}`;
+        
+        videoLearningChartData.push({
+          name: dateStr,
+          学习时间: day === 15 ? 5 : 0, // 月中某一天有5分钟学习时间
+          fullDate: date.toISOString().split('T')[0]
+        });
+        
+        assignmentChartData.push({
+          name: dateStr,
+          学习时间: day === 10 ? 60 : 0, // 月中某一天有60分钟作业时间
+          fullDate: date.toISOString().split('T')[0]
+        });
+      }
+      
+      
+      
+      setVideoLearningData(videoLearningChartData);
+      setAssignmentData(assignmentChartData);
+      
       setRecentActivities([
         {
           id: 1,
@@ -194,6 +415,10 @@ const StudentDashboard: React.FC = () => {
       case 'warning': return '警告';
       case 'error': return '错误';
       case 'success': return '成功';
+      case 'course': return '课程';
+      case 'assignment': return '作业';
+      case 'exam': return '考试';
+      case 'general': return '通用';
       default: return type;
     }
   };
@@ -239,6 +464,9 @@ const StudentDashboard: React.FC = () => {
       color: 'warning',
     },
   ];
+
+  // 图表颜色配置
+  const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042'];
 
   const handleLogout = async () => {
     try {
@@ -298,35 +526,81 @@ const StudentDashboard: React.FC = () => {
           </Grid>
 
           <Grid container spacing={3} sx={{ mb: 4 }}>
-            {/* 快捷功能 */}
-            {/* 已移除快捷功能模块 */}
-
-            {/* 学习统计 */}
-            <Grid size={{ xs: 12, md: 12 }}>
+            {/* 视频学习折线图 */}
+            <Grid size={{ xs: 12, md: 6 }}>
               <Card>
                 <CardContent>
                   <Typography variant="h6" gutterBottom>
-                    学习统计
+                    视频学习时间
                   </Typography>
-                  <Box sx={{ textAlign: 'center', py: 2 }}>
-                    <Typography variant="h3" color="primary">
-                      {isNaN(Number(stats.learningProgress)) ? '0.0' : Math.max(0, Math.min(100, stats.learningProgress || 0)).toFixed(1)}%
-                    </Typography>
-                    <Typography variant="body1" color="textSecondary">
-                      平均学习进度
-                    </Typography>
-                  </Box>
-                  <Box sx={{ mt: 2 }}>
-                    <Typography variant="body2" color="textSecondary">
-                      本周学习时长: {stats.weeklyHours}小时
-                    </Typography>
-                    <Typography variant="body2" color="textSecondary">
-                      获得学分: {stats.earnedCredits}
-                    </Typography>
+                  <Box sx={{ height: 300 }}>
+                    <ResponsiveContainer width="100%" height="100%">
+                      <LineChart
+                        data={videoLearningData}
+                        margin={{
+                          top: 20,
+                          right: 30,
+                          left: 20,
+                          bottom: 5,
+                        }}
+                      >
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis 
+                          dataKey="name" 
+                          angle={-45} 
+                          textAnchor="end"
+                          height={60}
+                          interval={Math.floor(videoLearningData.length / 15)} // 显示约15个刻度
+                        />
+                        <YAxis label={{ value: '学习时间(分钟)', angle: -90, position: 'insideLeft' }} domain={[0, Math.max(10, 'dataMax + 2')]} />
+                        <RechartsTooltip />
+                        <Legend />
+                        <Line type="monotone" dataKey="学习时间" stroke="#0088FE" activeDot={{ r: 8 }} />
+                      </LineChart>
+                    </ResponsiveContainer>
                   </Box>
                 </CardContent>
               </Card>
             </Grid>
+
+            {/* 作业完成折线图 */}
+            <Grid size={{ xs: 12, md: 6 }}>
+              <Card>
+                <CardContent>
+                  <Typography variant="h6" gutterBottom>
+                    作业完成时间
+                  </Typography>
+                  <Box sx={{ height: 300 }}>
+                    <ResponsiveContainer width="100%" height="100%">
+                      <LineChart
+                        data={assignmentData}
+                        margin={{
+                          top: 20,
+                          right: 30,
+                          left: 20,
+                          bottom: 5,
+                        }}
+                      >
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis 
+                          dataKey="name" 
+                          angle={-45} 
+                          textAnchor="end"
+                          height={60}
+                          interval={Math.floor(assignmentData.length / 15)} // 显示约15个刻度
+                        />
+                        <YAxis label={{ value: '学习时间(分钟)', angle: -90, position: 'insideLeft' }} domain={[0, Math.max(10, 'dataMax + 2')]} />
+                        <RechartsTooltip />
+                        <Legend />
+                        <Line type="monotone" dataKey="学习时间" stroke="#00C49F" activeDot={{ r: 8 }} />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </Box>
+                </CardContent>
+              </Card>
+            </Grid>
+
+            
           </Grid>
 
         <Grid container spacing={3}>
@@ -356,7 +630,7 @@ const StudentDashboard: React.FC = () => {
                       <Box sx={{ flexGrow: 1 }}>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
                           <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
-                            {activity.type}
+                            {activity.content}
                           </Typography>
                           {activity.relatedCourse && (
                             <Chip 
@@ -367,9 +641,6 @@ const StudentDashboard: React.FC = () => {
                             />
                           )}
                         </Box>
-                        <Typography variant="body2" color="textSecondary">
-                          {activity.content}
-                        </Typography>
                         <Typography variant="caption" color="textSecondary">
                           {activity.time}
                         </Typography>

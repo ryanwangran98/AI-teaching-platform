@@ -50,7 +50,6 @@ interface Course {
   coverImage?: string;
   description: string;
   category: string;
-  level: 'beginner' | 'intermediate' | 'advanced';
   difficulty?: string;
   duration: number; // 小时
   totalChapters: number;
@@ -72,8 +71,6 @@ const MyCourses: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [courses, setCourses] = useState<Course[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('all');
-  const [selectedLevel, setSelectedLevel] = useState('all');
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' as 'success' | 'error' });
 
   // 获取课程数据
@@ -114,7 +111,6 @@ const MyCourses: React.FC = () => {
         thumbnail: course.coverImage || course.thumbnail || '/api/placeholder/300/200',
         description: course.description || '',
         category: course.category || '未分类',
-        level: mapDifficultyToLevel(course.difficulty || course.level),
         duration: course.duration || 0,
         totalChapters: course.totalChapters || course._count?.chapters || 0,
         completedChapters: course.completedChapters || 0,
@@ -177,46 +173,13 @@ const MyCourses: React.FC = () => {
     }
   };
 
-  // 将难度映射到级别
-  const mapDifficultyToLevel = (difficulty: string): 'beginner' | 'intermediate' | 'advanced' => {
-    switch (difficulty?.toLowerCase()) {
-      case 'easy':
-        return 'beginner';
-      case 'medium':
-        return 'intermediate';
-      case 'hard':
-        return 'advanced';
-      default:
-        return 'intermediate';
-    }
-  };
+  
 
   // 根据进度确定状态
   const determineStatus = (progress: number): 'in-progress' | 'completed' | 'not-started' => {
     if (progress >= 100) return 'completed';
     if (progress > 0) return 'in-progress';
     return 'not-started';
-  };
-
-  const categories = ['all', ...Array.from(new Set(courses.map(course => course.category)))];
-  const levels = [
-    { value: 'all', label: '全部' },
-    { value: 'beginner', label: '初级' },
-    { value: 'intermediate', label: '中级' },
-    { value: 'advanced', label: '高级' },
-  ];
-
-  const getLevelColor = (level: string) => {
-    switch (level) {
-      case 'beginner': return 'success';
-      case 'intermediate': return 'warning';
-      case 'advanced': return 'error';
-      default: return 'default';
-    }
-  };
-
-  const getLevelLabel = (level: string) => {
-    return levels.find(l => l.value === level)?.label || level;
   };
 
   const getStatusColor = (status: string) => {
@@ -241,11 +204,8 @@ const MyCourses: React.FC = () => {
     const matchesSearch = course.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          course.instructor.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          course.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()));
-    
-    const matchesCategory = selectedCategory === 'all' || course.category === selectedCategory;
-    const matchesLevel = selectedLevel === 'all' || course.level === selectedLevel;
 
-    return matchesSearch && matchesCategory && matchesLevel;
+    return matchesSearch;
   });
 
   const stats = {
@@ -355,36 +315,6 @@ const MyCourses: React.FC = () => {
           size="small"
           sx={{ minWidth: 200 }}
         />
-
-        <FormControl size="small" sx={{ minWidth: 120 }}>
-          <InputLabel>分类</InputLabel>
-          <Select
-            value={selectedCategory}
-            label="分类"
-            onChange={(e) => setSelectedCategory(e.target.value)}
-          >
-            {categories.map(category => (
-              <MenuItem key={category} value={category}>
-                {category === 'all' ? '全部分类' : category}
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
-
-        <FormControl size="small" sx={{ minWidth: 120 }}>
-          <InputLabel>难度</InputLabel>
-          <Select
-            value={selectedLevel}
-            label="难度"
-            onChange={(e) => setSelectedLevel(e.target.value)}
-          >
-            {levels.map(level => (
-              <MenuItem key={level.value} value={level.value}>
-                {level.label}
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
       </Box>
 
       {/* 课程列表 */}
@@ -401,12 +331,6 @@ const MyCourses: React.FC = () => {
               
               <CardContent sx={{ flexGrow: 1, pb: 1 }}>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-                  <Chip 
-                    label={getLevelLabel(course.level)} 
-                    size="small" 
-                    color={getLevelColor(course.level) as any}
-                    variant="outlined"
-                  />
                   <Chip 
                     label={getStatusLabel(course.status)} 
                     size="small" 
@@ -432,12 +356,7 @@ const MyCourses: React.FC = () => {
                   {course.description}
                 </Typography>
 
-                <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                  <Rating value={course.rating} readOnly size="small" sx={{ mr: 1 }} />
-                  <Typography variant="body2" color="text.secondary">
-                    {course.rating}
-                  </Typography>
-                </Box>
+                
 
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
                   <Typography variant="body2" color="text.secondary">

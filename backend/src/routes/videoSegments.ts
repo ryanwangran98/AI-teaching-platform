@@ -241,8 +241,8 @@ async function recalculateChapterProgress(chapterProgressId: string) {
     // 获取视频总时长（假设章节的duration字段是以分钟为单位的）
     const totalDuration = chapterProgress.chapter.duration ? chapterProgress.chapter.duration * 60 : 0; // 转换为秒
     
-    // 计算进度百分比
-    const progress = totalDuration > 0 ? Math.min(100, (totalWatchedTime / totalDuration) * 100) : 0;
+    // 计算进度百分比，保留一位小数
+    const progress = totalDuration > 0 ? Math.min(100, Math.round((totalWatchedTime / totalDuration) * 100 * 10) / 10) : 0;
     
     // 更新章节进度
     await prisma.chapterProgress.update({
@@ -296,7 +296,7 @@ async function updateCourseOverallProgress(courseId: string, userId: string) {
         }
       }
 
-      const overallProgress = totalProgress / chapters.length;
+      const overallProgress = Math.round((totalProgress / chapters.length) * 10) / 10;
 
       // 更新选课记录
       await prisma.enrollment.updateMany({
@@ -397,7 +397,7 @@ router.get('/course/:courseId/progress', authenticateToken, async (req: AuthRequ
       }
 
       // 计算章节进度
-      const chapterProgress = chapterDuration > 0 ? Math.min(100, Math.round((chapterWatchedTime / chapterDuration) * 100)) : 0;
+      const chapterProgress = chapterDuration > 0 ? Math.min(100, Math.round((chapterWatchedTime / chapterDuration) * 100 * 10) / 10) : 0;
 
       chapterProgressList.push({
         chapterId: chapter.id,
@@ -412,7 +412,7 @@ router.get('/course/:courseId/progress', authenticateToken, async (req: AuthRequ
     }
 
     // 计算课程总进度
-    const courseProgress = totalDuration > 0 ? Math.round((totalProgress / totalDuration) * 100) : 0;
+    const courseProgress = totalDuration > 0 ? Math.round((totalProgress / totalDuration) * 100 * 10) / 10 : 0;
 
     return res.status(200).json({
       success: true,

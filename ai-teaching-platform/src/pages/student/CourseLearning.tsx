@@ -32,6 +32,7 @@ import {
   Star,
   School,
   AccountTree,
+  Replay,
 } from '@mui/icons-material';
 import { useParams, useNavigate } from 'react-router-dom';
 // 引入学习资料和课程图谱组件
@@ -105,6 +106,21 @@ const CourseLearning: React.FC = () => {
     if (courseId) {
       fetchCourseData();
     }
+  }, [courseId]);
+
+  // 添加页面获得焦点时重新获取学生统计数据的逻辑
+  useEffect(() => {
+    const handleFocus = () => {
+      if (courseId) {
+        console.log('页面获得焦点，重新获取学生统计数据');
+        fetchStudentStats();
+      }
+    };
+
+    window.addEventListener('focus', handleFocus);
+    return () => {
+      window.removeEventListener('focus', handleFocus);
+    };
   }, [courseId]);
 
   // 添加获取学生统计数据的函数
@@ -418,6 +434,23 @@ const CourseLearning: React.FC = () => {
     navigate(`/student/course/${courseId}/assignment/${assignmentId}`);
   };
 
+  // 添加重新学习章节的处理函数
+  const handleRestartChapter = async (chapterId: string) => {
+    try {
+      // 重置章节学习进度
+      await chapterProgressAPI.resetChapterProgress(chapterId);
+      console.log('重置章节学习进度成功:', chapterId);
+      
+      // 刷新课程数据
+      fetchCourseData();
+    } catch (err: any) {
+      console.error('重置章节学习进度失败:', err);
+      alert('重置学习进度失败，请重试');
+    }
+  };
+
+
+
   if (loading) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '50vh' }}>
@@ -450,95 +483,211 @@ const CourseLearning: React.FC = () => {
   }
 
   return (
-    <Box sx={{ flexGrow: 1 }}>
+    <Box sx={{ flexGrow: 1, maxWidth: '1200px', mx: 'auto', px: { xs: 2, sm: 3 } }}>
       {/* 课程头部 */}
-      <Box sx={{ mb: 3 }}>
+      <Paper 
+        elevation={0} 
+        sx={{ 
+          p: { xs: 3, md: 4 }, 
+          mb: 4, 
+          borderRadius: 3,
+          background: 'linear-gradient(135deg, #f5f7fa 0%, #e4e8f0 100%)',
+          boxShadow: '0 4px 12px rgba(0,0,0,0.05)'
+        }}
+      >
         <Grid container spacing={3}>
           <Grid size={{ xs: 12, md: 8 }}>
-            <Typography variant="h4" gutterBottom>
+            <Typography 
+              variant="h4" 
+              gutterBottom 
+              sx={{ 
+                fontWeight: 700,
+                color: '#1a237e',
+                mb: 1
+              }}
+            >
               {course.title}
             </Typography>
-            <Typography variant="h6" color="text.secondary" gutterBottom>
+            <Typography 
+              variant="h6" 
+              color="text.secondary" 
+              gutterBottom
+              sx={{ 
+                display: 'flex',
+                alignItems: 'center',
+                mb: 2
+              }}
+            >
+              <School sx={{ mr: 1, fontSize: 20 }} />
               讲师：{course.instructor}
             </Typography>
-            <Typography variant="body1" color="text.secondary" paragraph>
+            <Typography 
+              variant="body1" 
+              color="text.secondary" 
+              paragraph
+              sx={{ 
+                lineHeight: 1.6,
+                mb: 3
+              }}
+            >
               {course.description}
             </Typography>
             
-            <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', mb: 2 }}>
-              <Box>
-                <Typography variant="h6" color="primary">
-                  {course.overallProgress}%
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  总体进度
-                </Typography>
-              </Box>
-              <Box>
-                <Typography variant="h6">
+            <Box sx={{ 
+              display: 'flex', 
+              gap: { xs: 2, md: 4 }, 
+              alignItems: 'center', 
+              flexWrap: 'wrap',
+              mb: 2 
+            }}>
+              <Paper 
+                elevation={1} 
+                sx={{ 
+                  p: 2, 
+                  borderRadius: 2,
+                  textAlign: 'center',
+                  minWidth: '120px',
+                  bgcolor: 'background.paper'
+                }}
+              >
+                <Typography 
+                  variant="h6" 
+                  sx={{ 
+                    fontWeight: 700,
+                    color: 'primary.main'
+                  }}
+                >
                   {course.completedChapters}/{course.totalChapters}
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
                   已完成章节
                 </Typography>
-              </Box>
-              <Box>
-                <Typography variant="h6">
-                  {studentStats ? Math.floor(studentStats.studyTime / 60) : 0}小时
+              </Paper>
+              <Paper 
+                elevation={1} 
+                sx={{ 
+                  p: 2, 
+                  borderRadius: 2,
+                  textAlign: 'center',
+                  minWidth: '120px',
+                  bgcolor: 'background.paper'
+                }}
+              >
+                <Typography 
+                  variant="h6" 
+                  sx={{ 
+                    fontWeight: 700,
+                    color: 'primary.main'
+                  }}
+                >
+                  {studentStats ? (studentStats.studyTime >= 3600 ? `${Math.floor(studentStats.studyTime / 3600)}小时${Math.floor((studentStats.studyTime % 3600) / 60)}分钟${studentStats.studyTime % 60}秒` : 
+                                  studentStats.studyTime >= 60 ? `${Math.floor(studentStats.studyTime / 60)}分钟${studentStats.studyTime % 60}秒` : 
+                                  `${studentStats.studyTime}秒`) : '0秒'}
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
                   学习时长
                 </Typography>
+              </Paper>
+            </Box>
+          </Grid>
+          <Grid size={{ xs: 12, md: 4 }} sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+            <Box sx={{ position: 'relative', width: '100%', maxWidth: '200px' }}>
+              <Box
+                sx={{
+                  position: 'relative',
+                  display: 'inline-flex',
+                  width: '100%',
+                  height: '200px',
+                }}
+              >
+                <CircularProgress
+                  variant="determinate"
+                  value={course.overallProgress || 0}
+                  size={200}
+                  thickness={4}
+                  sx={{
+                    color: 'primary.main',
+                    '& .MuiCircularProgress-circle': {
+                      strokeLinecap: 'round',
+                    },
+                  }}
+                />
+                <Box
+                  sx={{
+                    top: 0,
+                    left: 0,
+                    bottom: 0,
+                    right: 0,
+                    position: 'absolute',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexDirection: 'column',
+                  }}
+                >
+                  <Typography variant="h4" component="div" sx={{ fontWeight: 700 }}>
+                    {`${Math.round(course.overallProgress || 0)}%`}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    总体进度
+                  </Typography>
+                </Box>
               </Box>
             </Box>
-
-            <LinearProgress 
-              variant="determinate" 
-              value={isNaN(Number(course.overallProgress)) ? 0 : Math.max(0, Math.min(100, course.overallProgress || 0))} 
-              sx={{ height: 8, borderRadius: 4, mb: 2 }}
-            />
-          </Grid>
-          
-          <Grid size={{ xs: 12, md: 4 }}>
-            <Card>
-              <CardContent>
-                <Typography variant="h6" gutterBottom>
-                  课程统计
-                </Typography>
-                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <Typography variant="body2">完成进度</Typography>
-                    <Typography variant="body2" color="primary">
-                      {isNaN(Number(course.overallProgress)) ? '0.0' : Math.max(0, Math.min(100, course.overallProgress || 0)).toFixed(1)}%
-                    </Typography>
-                  </Box>
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <Typography variant="body2">学习时长</Typography>
-                    <Typography variant="body2">
-                      {studentStats ? Math.floor(studentStats.studyTime / 60) : 0}小时
-                    </Typography>
-                  </Box>
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <Typography variant="body2">平均得分</Typography>
-                    <Typography variant="body2">
-                      <Star sx={{ fontSize: 16, color: 'warning.main', verticalAlign: 'middle' }} />
-                      {studentStats ? studentStats.averageScore.toFixed(1) : '0.0'}/100
-                    </Typography>
-                  </Box>
-                </Box>
-              </CardContent>
-            </Card>
           </Grid>
         </Grid>
-      </Box>
+      </Paper>
 
-      {/* 标签页 - 移除"学习内容"标签 */}
-      <Paper elevation={0} sx={{ mb: 3 }}>
-        <Tabs value={tabValue} onChange={(e, newValue) => setTabValue(newValue)}>
-          <Tab label="课程章节" />
-          <Tab label="作业任务" />
-          <Tab label="学习资料" />
-          <Tab label="课程图谱" />
+      {/* 标签页 */}
+      <Paper 
+        elevation={0} 
+        sx={{ 
+          mb: 4, 
+          borderRadius: 2,
+          bgcolor: 'background.paper',
+          boxShadow: '0 2px 8px rgba(0,0,0,0.05)'
+        }}
+      >
+        <Tabs 
+          value={tabValue} 
+          onChange={(e, newValue) => setTabValue(newValue)}
+          variant="fullWidth"
+          sx={{
+            '& .MuiTab-root': {
+              py: 2,
+              fontWeight: 600,
+              fontSize: '0.95rem',
+              transition: 'all 0.3s ease',
+            },
+            '& .Mui-selected': {
+              color: 'primary.main',
+            },
+            '& .MuiTabs-indicator': {
+              height: 3,
+              borderRadius: '3px 3px 0 0',
+            }
+          }}
+        >
+          <Tab 
+            label="课程章节" 
+            icon={<VideoLibrary />} 
+            iconPosition="start"
+          />
+          <Tab 
+            label="作业任务" 
+            icon={<Assignment />} 
+            iconPosition="start"
+          />
+          <Tab 
+            label="学习资料" 
+            icon={<Description />} 
+            iconPosition="start"
+          />
+          <Tab 
+            label="课程图谱" 
+            icon={<AccountTree />} 
+            iconPosition="start"
+          />
         </Tabs>
       </Paper>
 
@@ -546,56 +695,183 @@ const CourseLearning: React.FC = () => {
       {tabValue === 0 && (
         <Grid container spacing={3}>
           {course.chapters.map((chapter) => (
-            <Grid size={{ xs: 12, md: 6, lg: 4 }} key={chapter.id}>
-              <Card>
-                <CardContent>
+            <Grid size={{ xs: 12, sm: 6, lg: 4 }} key={chapter.id}>
+              <Card 
+                elevation={2} 
+                sx={{ 
+                  height: '100%', 
+                  display: 'flex', 
+                  flexDirection: 'column',
+                  borderRadius: 3,
+                  transition: 'transform 0.3s ease, box-shadow 0.3s ease',
+                  '&:hover': {
+                    transform: 'translateY(-5px)',
+                    boxShadow: '0 8px 16px rgba(0,0,0,0.1)',
+                  },
+                  overflow: 'hidden'
+                }}
+              >
+                <Box 
+                  sx={{ 
+                    height: '8px', 
+                    bgcolor: chapter.completed ? 'success.main' : 'primary.main',
+                    position: 'relative'
+                  }}
+                >
+                  <Box 
+                    sx={{ 
+                      position: 'absolute', 
+                      top: 0, 
+                      left: 0, 
+                      height: '100%', 
+                      width: `${chapter.progress}%`,
+                      bgcolor: chapter.completed ? 'success.dark' : 'primary.dark',
+                      transition: 'width 0.5s ease'
+                    }}
+                  />
+                </Box>
+                <CardContent sx={{ flexGrow: 1, p: 3 }}>
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                    <Avatar sx={{ bgcolor: chapter.completed ? 'success.main' : 'primary.main' }}>
+                    <Avatar 
+                      sx={{ 
+                        bgcolor: chapter.completed ? 'success.main' : 'primary.main',
+                        width: 48,
+                        height: 48
+                      }}
+                    >
                       {getTypeIcon(chapter.type)}
                     </Avatar>
                     <Chip 
                       label={chapter.completed ? '已完成' : '进行中'} 
                       color={chapter.completed ? 'success' : 'primary'}
                       size="small"
+                      sx={{ fontWeight: 600 }}
                     />
                   </Box>
 
-                  <Typography variant="h6" gutterBottom>
+                  <Typography 
+                    variant="h6" 
+                    gutterBottom
+                    sx={{ 
+                      fontWeight: 600,
+                      color: 'text.primary',
+                      mb: 1.5
+                    }}
+                  >
                     {chapter.title}
                   </Typography>
                   
-                  <Typography variant="body2" color="text.secondary" paragraph>
+                  <Typography 
+                    variant="body2" 
+                    color="text.secondary" 
+                    paragraph
+                    sx={{ 
+                      lineHeight: 1.5,
+                      mb: 2,
+                      minHeight: '3em'
+                    }}
+                  >
                     {chapter.description}
                   </Typography>
 
-                  <Box sx={{ mb: 2 }}>
-                    <Typography variant="body2" color="text.secondary">
-                      时长: {formatVideoDuration(chapter.duration)}
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      类型: {getTypeLabel(chapter.type)}
-                    </Typography>
+                  <Box sx={{ mb: 3 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                      <AccessTime sx={{ fontSize: 16, mr: 1, color: 'text.secondary' }} />
+                      <Typography variant="body2" color="text.secondary">
+                        时长: {formatVideoDuration(chapter.duration)}
+                      </Typography>
+                    </Box>
+                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                      {getTypeIcon(chapter.type)}
+                      <Typography variant="body2" color="text.secondary" sx={{ ml: 1 }}>
+                        类型: {getTypeLabel(chapter.type)}
+                      </Typography>
+                    </Box>
                   </Box>
 
-                  <LinearProgress 
-                    variant="determinate" 
-                    value={isNaN(Number(chapter.progress)) ? 0 : Math.max(0, Math.min(100, chapter.progress || 0))} 
-                    sx={{ height: 6, borderRadius: 3, mb: 2 }}
-                  />
-                  
-                  <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                    进度: {isNaN(Number(chapter.progress)) ? 0 : Math.max(0, Math.min(100, chapter.progress || 0)).toFixed(1)}%
-                  </Typography>
+                  <Box sx={{ mb: 3 }}>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                      <Typography variant="body2" color="text.secondary">
+                        学习进度
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary" fontWeight={600}>
+                        {isNaN(Number(chapter.progress)) ? 0 : Math.max(0, Math.min(100, chapter.progress || 0)).toFixed(1)}%
+                      </Typography>
+                    </Box>
+                    <LinearProgress 
+                      variant="determinate" 
+                      value={isNaN(Number(chapter.progress)) ? 0 : Math.max(0, Math.min(100, chapter.progress || 0))} 
+                      sx={{ 
+                        height: 8, 
+                        borderRadius: 4,
+                        mb: 1,
+                        '& .MuiLinearProgress-bar': {
+                          borderRadius: 4,
+                        }
+                      }}
+                    />
+                  </Box>
 
-                  <Button
-                    variant="contained"
-                    fullWidth
-                    startIcon={<PlayCircle />}
-                    onClick={() => handleChapterClick(chapter.id)}
-                    disabled={chapter.completed}
-                  >
-                    {chapter.completed ? '复习' : '开始学习'}
-                  </Button>
+                  <Box sx={{ display: 'flex', gap: 1.5 }}>
+                    {chapter.completed ? (
+                      <>
+                        <Button
+                          variant="outlined"
+                          fullWidth
+                          startIcon={<Replay />}
+                          onClick={() => handleRestartChapter(chapter.id)}
+                          sx={{
+                            borderRadius: 2,
+                            py: 1,
+                            fontWeight: 600,
+                            borderColor: 'primary.main',
+                            color: 'primary.main',
+                            '&:hover': {
+                              borderColor: 'primary.dark',
+                              bgcolor: 'primary.light',
+                            }
+                          }}
+                        >
+                          重新学习
+                        </Button>
+                        <Button
+                          variant="contained"
+                          fullWidth
+                          startIcon={<PlayCircle />}
+                          onClick={() => handleChapterClick(chapter.id)}
+                          sx={{
+                            borderRadius: 2,
+                            py: 1,
+                            fontWeight: 600,
+                            boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                            '&:hover': {
+                              boxShadow: '0 4px 8px rgba(0,0,0,0.2)',
+                            }
+                          }}
+                        >
+                          复习
+                        </Button>
+                      </>
+                    ) : (
+                      <Button
+                        variant="contained"
+                        fullWidth
+                        startIcon={<PlayCircle />}
+                        onClick={() => handleChapterClick(chapter.id)}
+                        sx={{
+                          borderRadius: 2,
+                          py: 1.2,
+                          fontWeight: 600,
+                          boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                          '&:hover': {
+                            boxShadow: '0 4px 8px rgba(0,0,0,0.2)',
+                          }
+                        }}
+                      >
+                        开始学习
+                      </Button>
+                    )}
+                  </Box>
                 </CardContent>
               </Card>
             </Grid>
@@ -603,42 +879,100 @@ const CourseLearning: React.FC = () => {
         </Grid>
       )}
 
-      {/* 作业任务 - 现在是tabValue=1 */}
+      {/* 作业任务 */}
       {tabValue === 1 && (
         <Grid container spacing={3}>
           {course.assignments.length > 0 ? (
             course.assignments.map((assignment) => (
-              <Grid size={{ xs: 12, md: 6 }} key={assignment.id}>
-                <Card>
-                  <CardContent>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                      <Typography variant="h6">
+              <Grid size={{ xs: 12, sm: 6, lg: 4 }} key={assignment.id}>
+                <Card 
+                  elevation={2} 
+                  sx={{ 
+                    height: '100%', 
+                    display: 'flex', 
+                    flexDirection: 'column',
+                    borderRadius: 3,
+                    transition: 'transform 0.3s ease, box-shadow 0.3s ease',
+                    '&:hover': {
+                      transform: 'translateY(-5px)',
+                      boxShadow: '0 8px 16px rgba(0,0,0,0.1)',
+                    },
+                    overflow: 'hidden'
+                  }}
+                >
+                  <Box 
+                    sx={{ 
+                      height: '8px', 
+                      bgcolor: assignment.status === 'graded' ? 'success.main' : 
+                              assignment.status === 'submitted' ? 'info.main' : 'warning.main',
+                    }}
+                  />
+                  <CardContent sx={{ flexGrow: 1, p: 3 }}>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
+                      <Typography 
+                        variant="h6" 
+                        gutterBottom
+                        sx={{ 
+                          fontWeight: 600,
+                          color: 'text.primary',
+                          mb: 0,
+                          pr: 1
+                        }}
+                      >
                         {assignment.title}
                       </Typography>
                       <Chip 
                         label={getStatusLabel(assignment.status)} 
                         color={getStatusColor(assignment.status) as any}
+                        size="small"
+                        sx={{ fontWeight: 600 }}
                       />
                     </Box>
 
-                    <Box sx={{ mb: 2 }}>
-                      <Typography variant="body2" color="text.secondary">
-                        类型: {getTypeLabel(assignment.type)}
-                      </Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        截止日期: {assignment.dueDate}
-                      </Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        总分: {assignment.totalScore || assignment.totalPoints}分
-                      </Typography>
+                    <Box sx={{ mb: 3 }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', mb: 1.5 }}>
+                        {getTypeIcon(assignment.type)}
+                        <Typography variant="body2" color="text.secondary" sx={{ ml: 1 }}>
+                          类型: {getTypeLabel(assignment.type)}
+                        </Typography>
+                      </Box>
+                      <Box sx={{ display: 'flex', alignItems: 'center', mb: 1.5 }}>
+                        <AccessTime sx={{ fontSize: 16, mr: 1, color: 'text.secondary' }} />
+                        <Typography variant="body2" color="text.secondary">
+                          截止日期: {assignment.dueDate}
+                        </Typography>
+                      </Box>
+                      <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                        <Star sx={{ fontSize: 16, mr: 1, color: 'text.secondary' }} />
+                        <Typography variant="body2" color="text.secondary">
+                          总分: {assignment.totalScore || assignment.totalPoints}分
+                        </Typography>
+                      </Box>
                     </Box>
 
                     {assignment.status === 'graded' && assignment.score !== undefined && (
-                      <Box sx={{ mb: 2 }}>
-                        <Typography variant="h6" color="primary">
+                      <Paper 
+                        elevation={0} 
+                        sx={{ 
+                          p: 2, 
+                          borderRadius: 2,
+                          bgcolor: 'success.light',
+                          mb: 3,
+                          border: '1px solid',
+                          borderColor: 'success.main'
+                        }}
+                      >
+                        <Typography 
+                          variant="h6" 
+                          color="success.dark"
+                          sx={{ 
+                            fontWeight: 700,
+                            textAlign: 'center'
+                          }}
+                        >
                           得分: {assignment.score}/{assignment.totalScore || assignment.totalPoints}
                         </Typography>
-                      </Box>
+                      </Paper>
                     )}
 
                     <Button
@@ -646,6 +980,19 @@ const CourseLearning: React.FC = () => {
                       fullWidth
                       disabled={assignment.status === 'graded'}
                       onClick={() => handleStartAssignment(assignment.id)}
+                      sx={{
+                        borderRadius: 2,
+                        py: 1.2,
+                        fontWeight: 600,
+                        boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                        '&:hover': {
+                          boxShadow: '0 4px 8px rgba(0,0,0,0.2)',
+                        },
+                        '&.Mui-disabled': {
+                          bgcolor: 'action.disabledBackground',
+                          color: 'text.disabled'
+                        }
+                      }}
                     >
                       {assignment.status === 'pending' ? '开始作业' :
                        assignment.status === 'submitted' ? '查看提交' :
@@ -657,31 +1004,70 @@ const CourseLearning: React.FC = () => {
             ))
           ) : (
             <Grid size={{ xs: 12 }}>
-              <Box sx={{ p: 4, textAlign: 'center' }}>
-                <Typography variant="h6" color="text.secondary">
+              <Paper 
+                elevation={0} 
+                sx={{ 
+                  p: 6, 
+                  textAlign: 'center',
+                  borderRadius: 3,
+                  bgcolor: 'background.paper',
+                  border: '2px dashed',
+                  borderColor: 'divider'
+                }}
+              >
+                <Assignment sx={{ fontSize: 48, color: 'text.disabled', mb: 2 }} />
+                <Typography variant="h6" color="text.secondary" sx={{ mb: 1 }}>
                   暂无教师发布的作业
                 </Typography>
-                <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
+                <Typography variant="body2" color="text.secondary">
                   教师还未在本课程中发布任何作业，请耐心等待。
                 </Typography>
-              </Box>
+              </Paper>
             </Grid>
           )}
         </Grid>
       )}
 
-      {/* 学习资料 - 现在是tabValue=2 */}
+      {/* 学习资料 */}
       {tabValue === 2 && (
-        <Box sx={{ mt: 2 }}>
+        <Paper 
+          elevation={0} 
+          sx={{ 
+            p: 4, 
+            borderRadius: 3,
+            border: '1px solid',
+            borderColor: 'divider'
+          }}
+        >
+          <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
+            <Description sx={{ fontSize: 28, mr: 2, color: 'primary.main' }} />
+            <Typography variant="h5" sx={{ fontWeight: 600 }}>
+              学习资料
+            </Typography>
+          </Box>
           <Materials courseId={courseId} />
-        </Box>
+        </Paper>
       )}
 
-      {/* 课程图谱 - 现在是tabValue=3 */}
+      {/* 课程图谱 */}
       {tabValue === 3 && (
-        <Box sx={{ mt: 2 }}>
+        <Paper 
+          elevation={0} 
+          sx={{ 
+            p: 4, 
+            borderRadius: 3,
+            border: '1px solid',
+            borderColor: 'divider'
+          }}
+        >
+          <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
+            <AccountTree sx={{ fontSize: 28, mr: 2, color: 'primary.main' }} />
+            <Typography variant="h5" sx={{ fontWeight: 600 }}>
+              课程图谱
+            </Typography>
+          </Box>
           <CourseGraph courseId={courseId} hideTitle={true} hideLegend={false} />
-        </Box>
+        </Paper>
       )}
     </Box>
   );

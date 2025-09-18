@@ -466,12 +466,25 @@ export const chapterProgressAPI = {
     const response = await api.delete(`/chapter-progress/${chapterId}`);
     return response.data;
   },
+
+  resetChapterProgress: async (chapterId: string) => {
+    const response = await api.post(`/chapter-progress/${chapterId}/reset`);
+    return response.data;
+  },
 };
 
 // 学生统计信息相关
 export const studentStatsAPI = {
   getStudentStats: async (courseId: string) => {
-    const response = await api.get(`/student-stats/student-stats/${courseId}`);
+    const timestamp = new Date().getTime();
+    const response = await api.get(`/student-stats/student-stats/${courseId}`, { 
+      params: { t: timestamp } 
+    });
+    return response.data;
+  },
+
+  getWeeklyActiveStudents: async () => {
+    const response = await api.get('/student-stats/weekly-active-students');
     return response.data;
   },
 };

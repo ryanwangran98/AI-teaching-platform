@@ -225,6 +225,7 @@ const NotificationsPage: React.FC = () => {
       case 'course': return '课程';
       case 'assignment': return '作业';
       case 'exam': return '考试';
+      case 'general': return '通用';
       default: return type;
     }
   };

@@ -88,13 +88,15 @@ const NotificationManagement: React.FC = () => {
   });
   const [scheduleTime, setScheduleTime] = useState('');
   
-  // 用于关联课程和作业的选项
+  // 用于关联课程、作业和考试的选项
   const [courses, setCourses] = useState<{id: string, name: string}[]>([]);
   const [assignments, setAssignments] = useState<{id: string, title: string}[]>([]);
+  const [exams, setExams] = useState<{id: string, title: string}[]>([]);
 
-  // 获取课程和作业列表
+  // 获取课程、作业和考试列表
   useEffect(() => {
     fetchCoursesAndAssignments();
+    fetchExams();
   }, []);
 
   const fetchCoursesAndAssignments = async () => {
@@ -112,6 +114,31 @@ const NotificationManagement: React.FC = () => {
       }
     } catch (err) {
       console.error('获取课程或作业列表失败:', err);
+    }
+  };
+
+  // 获取考试列表（实际为type为'EXAM'的作业）
+  const fetchExams = async () => {
+    try {
+      // 获取作业列表，直接过滤类型为'EXAM'的作业
+      const assignmentResponse = await assignmentAPI.getAssignments({ type: 'EXAM' });
+      if (assignmentResponse.success) {
+        // 直接使用返回的作业数据，即考试
+        const examAssignments = (assignmentResponse.data.assignments || assignmentResponse.data)
+          .map((assignment: any) => ({
+            id: assignment.id,
+            title: assignment.title
+          }));
+        setExams(examAssignments);
+        console.log('获取到的考试数据:', examAssignments);
+      } else {
+        console.error('获取考试列表失败:', assignmentResponse.message);
+        setExams([]);
+      }
+    } catch (err) {
+      console.error('获取考试列表失败:', err);
+      // 如果获取失败，使用空数组
+      setExams([]);
     }
   };
 
@@ -272,6 +299,11 @@ const NotificationManagement: React.FC = () => {
           n.id === editingNotification.id ? { 
             ...newNotification, 
             id: editingNotification.id,
+            status: editingNotification.status, // 保留原始状态
+            sendTime: editingNotification.sendTime, // 保留原始发送时间
+            createdAt: editingNotification.createdAt, // 保留原始创建时间
+            readCount: editingNotification.readCount, // 保留原始阅读数
+            totalCount: editingNotification.totalCount, // 保留原始总接收数
             relatedId: newNotification.relatedId || undefined,
             relatedType: newNotification.relatedType || undefined,
             targetType: newNotification.target,
@@ -383,6 +415,7 @@ const NotificationManagement: React.FC = () => {
     switch (status) {
       case 'DRAFT': return 'warning';
       case 'PUBLISHED': return 'success';
+      case 'sent': return 'info';
       default: return 'default';
     }
   };
@@ -391,7 +424,26 @@ const NotificationManagement: React.FC = () => {
     switch (status) {
       case 'DRAFT': return '草稿';
       case 'PUBLISHED': return '已发布';
+      case 'sent': return '已发送';
       default: return status;
+    }
+  };
+
+  const getRelatedContentName = (type: string, id: string) => {
+    if (!type || !id) return '关联内容';
+    
+    switch (type.toLowerCase()) {
+      case 'course':
+        const course = courses.find(c => c.id === id);
+        return course ? course.name : '未知课程';
+      case 'assignment':
+        const assignment = assignments.find(a => a.id === id);
+        return assignment ? assignment.title : '未知作业';
+      case 'exam':
+        const exam = exams.find(e => e.id === id);
+        return exam ? exam.title : '未知考试';
+      default:
+        return type;
     }
   };
 
@@ -463,7 +515,7 @@ const NotificationManagement: React.FC = () => {
                 <TableCell>
                   {notification.relatedId ? (
                     <Chip
-                      label={notification.relatedType || '关联内容'}
+                      label={getRelatedContentName(notification.relatedType, notification.relatedId)}
                       size="small"
                       variant="outlined"
                     />
@@ -613,16 +665,18 @@ const NotificationManagement: React.FC = () => {
             
             {newNotification.type === 'exam' && (
               <FormControl fullWidth sx={{ mb: 2 }}>
-                <TextField
-                  label="关联考试"
-                  variant="outlined"
-                  value={newNotification.relatedId || ''}
-                  onChange={(e) => setNewNotification({
-                    ...newNotification,
-                    relatedId: e.target.value,
-                    relatedType: 'EXAM'
-                  })}
-                  placeholder="请输入考试ID"
+                <Autocomplete
+                  options={exams}
+                  getOptionLabel={(option) => option.title}
+                  value={exams.find(e => e.id === newNotification.relatedId) || null}
+                  onChange={(event, newValue) => {
+                    setNewNotification({
+                      ...newNotification,
+                      relatedId: newValue?.id || '',
+                      relatedType: 'EXAM'
+                    });
+                  }}
+                  renderInput={(params) => <TextField {...params} label="关联考试" />}
                 />
               </FormControl>
             )}

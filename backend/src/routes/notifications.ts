@@ -67,20 +67,10 @@ router.get('/', authenticateToken, async (req: CustomRequest, res: Response) => 
       where.userId = req.user.id;
       where.status = 'PUBLISHED';
     } else {
-      // 教师和管理员不接收通知，返回空结果
-      res.json({
-        success: true,
-        data: {
-          notifications: [],
-          pagination: {
-            page: pageNum,
-            limit: limitNum,
-            total: 0,
-            pages: 0,
-          },
-        },
-      });
-      return;
+      // 教师和管理员可以看到自己创建的所有通知（草稿和已发布）
+      // 但需要去重，只显示原始通知记录，不显示学生副本
+      where.senderId = req.user.id;
+      where.userId = req.user.id; // 只显示发送给自己的原始通知记录
     }
 
     if (type) {

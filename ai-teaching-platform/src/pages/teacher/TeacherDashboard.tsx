@@ -31,14 +31,14 @@ import Notifications from '@mui/icons-material/Notifications';
 import Edit from '@mui/icons-material/Edit';
 import Delete from '@mui/icons-material/Delete';
 import { useAuth } from '../../contexts/AuthContext';
-import { courseAPI, assignmentAPI } from '../../services/api';
+import { courseAPI, assignmentAPI, studentStatsAPI } from '../../services/api';
 
 const TeacherDashboard: React.FC = () => {
   const [stats, setStats] = useState({
     totalCourses: 0,
     totalStudents: 0,
     pendingAssignments: 0,
-    weeklyActivity: 0,
+    weeklyActiveStudents: 0,
   });
   const [recentCourses, setRecentCourses] = useState<any[]>([]);
   const [recentActivities, setRecentActivities] = useState<any[]>([]);
@@ -118,13 +118,16 @@ const TeacherDashboard: React.FC = () => {
         a.gradingStatus === 'PENDING'
       ).length;
       
-      const weeklyActivity = Math.round(Math.random() * 30) + 70; // 模拟活跃度
+      // 获取本周活跃学生数
+      const weeklyActiveStudentsResponse = await studentStatsAPI.getWeeklyActiveStudents();
+      console.log('本周活跃学生数API响应:', weeklyActiveStudentsResponse);
+      const weeklyActiveStudents = weeklyActiveStudentsResponse?.data?.totalActiveStudents || 0;
       
       setStats({
         totalCourses,
         totalStudents,
         pendingAssignments,
-        weeklyActivity,
+        weeklyActiveStudents,
       });
 
       // 处理最近课程数据
@@ -178,8 +181,8 @@ const TeacherDashboard: React.FC = () => {
       color: 'warning',
     },
     {
-      title: '本周活跃度',
-      value: `${stats.weeklyActivity}%`,
+      title: '本周活跃学生数',
+      value: `${stats.weeklyActiveStudents}人`,
       icon: <TrendingUp />,
       color: 'info',
     },

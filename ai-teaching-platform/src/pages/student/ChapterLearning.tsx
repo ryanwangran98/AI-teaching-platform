@@ -145,9 +145,9 @@ const saveProgress = async (currentTime: number) => {
   try {
     setIsSaving(true);
     
-    // 计算学习进度百分比
+    // 计算学习进度百分比，保留一位小数
     const duration = currentChapter.duration * 60; // 转换为秒
-    const progress = duration > 0 ? Math.min(100, Math.floor((currentTime / duration) * 100)) : 0;
+    const progress = duration > 0 ? Math.min(100, Math.round((currentTime / duration) * 100 * 10) / 10) : 0;
     
     // 保存进度到后端
     await chapterProgressAPI.updateChapterProgress(chapterId, {
@@ -156,8 +156,8 @@ const saveProgress = async (currentTime: number) => {
       courseId
     });
     
-    // 记录视频播放片段（如果当前观看时间与上次记录时间相差超过10秒）
-    if (Math.abs(currentTime - lastRecordedTime) >= 10) {
+    // 记录视频播放片段（如果当前观看时间与上次记录时间相差超过3秒）
+    if (Math.abs(currentTime - lastRecordedTime) >= 3) {
       const startTime = Math.min(lastRecordedTime, currentTime);
       const endTime = Math.max(lastRecordedTime, currentTime);
       
@@ -223,6 +223,23 @@ const saveProgress = async (currentTime: number) => {
     }
   };
 
+  // 重置学习进度
+  const handleResetProgress = async () => {
+    if (!window.confirm('确定要重新学习这个章节吗？此操作将清除您的学习进度，不可撤销。')) {
+      return;
+    }
+
+    try {
+      await chapterProgressAPI.deleteChapterProgress(chapterId);
+      alert('学习进度已重置');
+      // 重置后重新加载页面以获取最新数据
+      window.location.reload();
+    } catch (error) {
+      console.error('重置学习进度失败:', error);
+      alert('重置学习进度失败，请重试');
+    }
+  };
+
   // 页面卸载时保存学习进度
   useEffect(() => {
     const handleBeforeUnload = () => {
@@ -270,8 +287,8 @@ const saveProgress = async (currentTime: number) => {
 
   return (
     <Box sx={{ p: 2 }}>
-      {/* 返回按钮 */}
-      <Box sx={{ mb: 2 }}>
+      {/* 返回按钮和重新学习按钮 */}
+      <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between' }}>
         <Button
           startIcon={<NavigateBefore />}
           onClick={() => navigate(`/student/course/${courseId}`)}
@@ -279,6 +296,13 @@ const saveProgress = async (currentTime: number) => {
           color="inherit"
         >
           返回课程
+        </Button>
+        <Button
+          variant="outlined"
+          color="error"
+          onClick={handleResetProgress}
+        >
+          重新学习
         </Button>
       </Box>
 
@@ -345,7 +369,7 @@ const saveProgress = async (currentTime: number) => {
                   学习进度
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
-                  {Math.floor((watchedTime / (currentChapter.duration * 60)) * 100)}%
+                  {((watchedTime / (currentChapter.duration * 60)) * 100).toFixed(1)}%
                 </Typography>
               </Box>
               <LinearProgress 

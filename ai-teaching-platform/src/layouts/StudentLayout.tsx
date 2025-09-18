@@ -21,7 +21,6 @@ import {
   MenuBook,
   Description,
   Notifications,
-  History,
   Map,
 } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
@@ -33,7 +32,6 @@ const menuItems = [
   { text: '我的课程', icon: <School />, path: '/student/courses' },
   { text: '加入课程', icon: <MenuBook />, path: '/student/courses/explore' },
   { text: '通知消息', icon: <Notifications />, path: '/student/notifications' },
-  { text: '学习记录', icon: <History />, path: '/student/learning-records' },
 ];
 
 const StudentLayout: React.FC = () => {

@@ -33,7 +33,6 @@ import StudentLayout from './layouts/StudentLayout';
 
 // 学生端页面
 import StudentDashboard from './pages/student/StudentDashboard';
-import LearningRecords from './pages/student/LearningRecords';
 import ChapterLearning from './pages/student/ChapterLearning';
 import MyCourses from './pages/student/MyCourses';
 import CourseLearning from './pages/student/CourseLearning';
@@ -132,7 +131,6 @@ function App() {
         }
       >
         <Route index element={<StudentDashboard />} />
-        <Route path="learning-records" element={<LearningRecords />} />
         <Route path="chapter-learning" element={<ChapterLearning />} />
         <Route path="my-courses" element={<MyCourses />} />
         <Route path="course/:courseId">

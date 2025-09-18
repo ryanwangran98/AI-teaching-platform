@@ -454,7 +454,8 @@ router.get('/teacher/recent-activities', authenticateToken, authorizeRoles('TEAC
     // 获取最近的通知（不限时间范围）
     const recentNotifications = await prisma.notification.findMany({
       where: { 
-        userId: teacherId 
+        userId: teacherId,
+        status: 'PUBLISHED' // 只获取已发布的通知
       },
       orderBy: { createdAt: 'desc' },
       take: Number(limit) * 2, // 获取更多记录以确保有足够的数据

@@ -32,7 +32,7 @@ import {
   ArrowBack
 } from '@mui/icons-material';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { courseAPI, videoSegmentAPI } from '../../services/api';
+import { courseAPI, videoSegmentAPI, studentStatsAPI } from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
 
 interface Course {
@@ -41,7 +41,6 @@ interface Course {
   instructor: string;
   description: string;
   category: string;
-  level: string;
   rating: number;
   studentsCount: number;
   duration: number;
@@ -59,8 +58,7 @@ const StudentCourseManagement: React.FC = () => {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<'my'>('my');
   const [searchTerm, setSearchTerm] = useState('');
-  const [categoryFilter, setCategoryFilter] = useState('all');
-  const [levelFilter, setLevelFilter] = useState('all');
+  
   const [page, setPage] = useState(1);
   const itemsPerPage = 6;
   const [myCourses, setMyCourses] = useState<Course[]>([]);
@@ -71,18 +69,7 @@ const StudentCourseManagement: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // 添加难度映射函数
-  const mapDifficultyToLevel = (difficulty: string) => {
-    const levelMap: { [key: string]: string } = {
-      'BEGINNER': 'beginner',
-      'INTERMEDIATE': 'intermediate',
-      'ADVANCED': 'advanced',
-      'EASY': 'beginner',
-      'MEDIUM': 'intermediate',
-      'HARD': 'advanced'
-    };
-    return levelMap[difficulty?.toUpperCase()] || 'beginner';
-  };
+  
 
   // 处理URL参数
   useEffect(() => {
@@ -93,14 +80,6 @@ const StudentCourseManagement: React.FC = () => {
       // 不再处理materials和graph标签
     }
   }, [location.search]);
-
-  const categories = ['全部', '数学', '计算机', '英语', '物理', '化学', '生物'];
-  const levels = [
-    { value: 'all', label: '全部难度' },
-    { value: 'beginner', label: '入门' },
-    { value: 'intermediate', label: '中级' },
-    { value: 'advanced', label: '高级' }
-  ];
 
   useEffect(() => {
     fetchCourses();
@@ -164,7 +143,6 @@ const StudentCourseManagement: React.FC = () => {
           : (course.instructor || course.teacher?.username || '未知教师'),
         description: course.description || '暂无描述',
         category: course.category || course.department || '未分类',
-        level: mapDifficultyToLevel(course.difficulty || course.level),
         duration: course.duration || course.totalHours || 0,
         studentsCount: course._count?.enrollments || course.studentsCount || course.studentCount || 0,
         tags: course.tags || [course.category || course.department || '其他'],
@@ -188,7 +166,6 @@ const StudentCourseManagement: React.FC = () => {
             : (course.instructor || course.teacher?.username || '未知教师'),
           description: course.description || '暂无描述',
           category: course.category || course.department || '未分类',
-          level: mapDifficultyToLevel(course.difficulty || course.level),
           duration: course.duration || course.totalHours || 0,
           studentsCount: course._count?.enrollments || course.studentsCount || course.studentCount || 0,
           tags: course.tags || [course.category || course.department || '其他'],
@@ -206,53 +183,82 @@ const StudentCourseManagement: React.FC = () => {
       
       // 获取基于视频片段计算的课程进度
       try {
-        // 为我的课程获取视频进度
-        const myCoursesWithVideoProgress = await Promise.all(
+        // 为我的课程获取视频进度和学习统计数据
+        const myCoursesWithProgress = await Promise.all(
           formattedMyCourses.map(async (course) => {
             try {
+              // 获取视频进度
               const videoProgressResponse = await videoSegmentAPI.getCourseProgressByVideoSegments(course.id);
               console.log(`获取课程 ${course.id} 的视频进度:`, videoProgressResponse);
+              
+              // 获取学习统计数据
+              const studentStatsResponse = await studentStatsAPI.getStudentStats(course.id);
+              console.log(`获取课程 ${course.id} 的学习统计数据:`, studentStatsResponse);
+              
+              let progress = course.progress;
               if (videoProgressResponse && videoProgressResponse.data) {
-                return {
-                  ...course,
-                  progress: videoProgressResponse.data.overallProgress || 0
-                };
+                progress = videoProgressResponse.data.overallProgress || 0;
               }
-              return course;
+              
+              let studyTime = course.duration;
+              if (studentStatsResponse && studentStatsResponse.data && studentStatsResponse.data.studyTime) {
+                studyTime = studentStatsResponse.data.studyTime / 60; // 转换为小时
+              }
+              
+              return {
+                ...course,
+                progress,
+                duration: studyTime
+              };
             } catch (err) {
-              console.error(`获取课程 ${course.id} 的视频进度失败:`, err);
+              console.error(`获取课程 ${course.id} 的进度数据失败:`, err);
               return course;
             }
           })
         );
         
-        // 为所有课程获取视频进度（仅针对已加入的课程）
-        const allCoursesWithVideoProgress = await Promise.all(
+        // 为所有课程获取视频进度和学习统计数据（仅针对已加入的课程）
+        const allCoursesWithProgress = await Promise.all(
           formattedAllCourses.map(async (course) => {
-            // 只为已加入的课程获取视频进度
+            // 只为已加入的课程获取进度数据
             if (course.enrolled) {
               try {
+                // 获取视频进度
                 const videoProgressResponse = await videoSegmentAPI.getCourseProgressByVideoSegments(course.id);
                 console.log(`获取课程 ${course.id} 的视频进度:`, videoProgressResponse);
+                
+                // 获取学习统计数据
+                const studentStatsResponse = await studentStatsAPI.getStudentStats(course.id);
+                console.log(`获取课程 ${course.id} 的学习统计数据:`, studentStatsResponse);
+                
+                let progress = course.progress;
                 if (videoProgressResponse && videoProgressResponse.data) {
-                  return {
-                    ...course,
-                    progress: videoProgressResponse.data.overallProgress || 0
-                  };
+                  progress = videoProgressResponse.data.overallProgress || 0;
                 }
+                
+                let studyTime = course.duration;
+                if (studentStatsResponse && studentStatsResponse.data && studentStatsResponse.data.studyTime) {
+                  studyTime = studentStatsResponse.data.studyTime / 60; // 转换为小时
+                }
+                
+                return {
+                  ...course,
+                  progress,
+                  duration: studyTime
+                };
               } catch (err) {
-                console.error(`获取课程 ${course.id} 的视频进度失败:`, err);
+                console.error(`获取课程 ${course.id} 的进度数据失败:`, err);
               }
             }
             return course;
           })
         );
         
-        setMyCourses(myCoursesWithVideoProgress);
-        setAllCourses(allCoursesWithVideoProgress);
+        setMyCourses(myCoursesWithProgress);
+        setAllCourses(allCoursesWithProgress);
       } catch (err) {
-        console.error('获取视频进度失败:', err);
-        // 如果获取视频进度失败，仍然使用原始数据
+        console.error('获取进度数据失败:', err);
+        // 如果获取进度数据失败，仍然使用原始数据
         setMyCourses(formattedMyCourses);
         setAllCourses(formattedAllCourses);
       }
@@ -267,23 +273,7 @@ const StudentCourseManagement: React.FC = () => {
     }
   };
 
-  const getLevelText = (level: string) => {
-    const levelMap: { [key: string]: string } = {
-      'beginner': '入门',
-      'intermediate': '中级',
-      'advanced': '高级'
-    };
-    return levelMap[level] || level;
-  };
-
-  const getLevelColor = (level: string) => {
-    const colorMap: { [key: string]: 'default' | 'success' | 'warning' | 'error' } = {
-      'beginner': 'success',
-      'intermediate': 'warning',
-      'advanced': 'error'
-    };
-    return colorMap[level] || 'default';
-  };
+  
 
   // 根据当前模式选择要显示的课程
   // 在加入课程页面显示所有可加入的课程（包括已加入的，但会特殊标记）
@@ -295,10 +285,8 @@ const StudentCourseManagement: React.FC = () => {
       const matchesSearch = course.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
                            course.instructor.toLowerCase().includes(searchTerm.toLowerCase()) ||
                            course.description.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesCategory = categoryFilter === 'all' || course.category === categoryFilter;
-      const matchesLevel = levelFilter === 'all' || course.level === levelFilter;
       
-      return matchesSearch && matchesCategory && matchesLevel;
+      return matchesSearch;
     })
     .slice((page - 1) * itemsPerPage, page * itemsPerPage);
 
@@ -440,30 +428,6 @@ const StudentCourseManagement: React.FC = () => {
             }}
             sx={{ minWidth: 300 }}
           />
-          <FormControl size="small" sx={{ minWidth: 120 }}>
-            <InputLabel>分类</InputLabel>
-            <Select
-              value={categoryFilter}
-              onChange={(e) => setCategoryFilter(e.target.value)}
-              label="分类"
-            >
-              {categories.map(cat => (
-                <MenuItem key={cat} value={cat.toLowerCase()}>{cat}</MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-          <FormControl size="small" sx={{ minWidth: 120 }}>
-            <InputLabel>难度</InputLabel>
-            <Select
-              value={levelFilter}
-              onChange={(e) => setLevelFilter(e.target.value)}
-              label="难度"
-            >
-              {levels.map(level => (
-                <MenuItem key={level.value} value={level.value}>{level.label}</MenuItem>
-              ))}
-            </Select>
-          </FormControl>
         </Box>
 
         {/* 课程网格 */}
@@ -512,56 +476,17 @@ const StudentCourseManagement: React.FC = () => {
                                 }}
                               />
                             )}
-                            <Chip 
-                              label={getLevelText(course.level)} 
-                              size="small" 
-                              color={getLevelColor(course.level)}
-                              sx={{ 
-                                fontWeight: 500,
-                                '& .MuiChip-label': {
-                                  fontSize: '0.75rem'
-                                }
-                              }}
-                            />
                           </Box>
                         </Box>
                       </Box>
                       
                       <Typography variant="body2" color="textSecondary" gutterBottom sx={{ fontSize: '0.875rem', mt: 1 }}>
-                        {course.instructor} • {course.category}
+                        {course.instructor}
                       </Typography>
                       
                       <Typography variant="body2" color="textSecondary" sx={{ mb: 2, lineHeight: 1.6 }}>
-                        {course.description.substring(0, 100)}{course.description.length > 100 ? '...' : ''}
+                        {course.description}
                       </Typography>
-
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
-                        <Rating value={course.rating} readOnly size="small" sx={{ color: '#FFB400' }} />
-                        <Typography variant="body2" color="textSecondary" sx={{ fontWeight: 500 }}>
-                          {course.rating}
-                        </Typography>
-                        <Typography variant="body2" color="textSecondary">
-                          ({course.studentsCount}人)
-                        </Typography>
-                      </Box>
-
-                      <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mb: 2 }}>
-                        {course.tags.slice(0, 2).map((tag) => (
-                          <Chip 
-                            key={tag} 
-                            label={tag} 
-                            size="small" 
-                            variant="outlined"
-                            sx={{
-                              borderColor: '#E0E0E0',
-                              color: '#666',
-                              '& .MuiChip-label': {
-                                fontSize: '0.75rem'
-                              }
-                            }}
-                          />
-                        ))}
-                      </Box>
 
                       {course.enrolled && (
                         <Box sx={{ mb: 2 }}>

@@ -158,7 +158,7 @@ async function main() {
       description: '计算机科学入门课程',
       credits: 3,
       department: '计算机系',
-      category: '专业课程',
+      category: '计算机课程',
       teacherId: teachers[2].id,
     }
   ];

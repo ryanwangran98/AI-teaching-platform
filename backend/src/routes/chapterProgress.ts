@@ -214,7 +214,7 @@ router.put('/:chapterId', authenticateToken, authorizeRoles('STUDENT'), async (r
         }
       },
       data: {
-        progress: Math.round(averageProgress),
+        progress: Math.round(averageProgress * 10) / 10,
         updatedAt: new Date()
       }
     });
@@ -235,7 +235,8 @@ router.delete('/:chapterId', authenticateToken, authorizeRoles('STUDENT'), async
     const { chapterId } = req.params;
     const userId = req.user!.id;
 
-    const deletedProgress = await prisma.chapterProgress.delete({
+    // 先查找章节进度记录，以便获取课程ID
+    const chapterProgress = await prisma.chapterProgress.findUnique({
       where: {
         userId_chapterId: {
           userId,
@@ -244,12 +245,151 @@ router.delete('/:chapterId', authenticateToken, authorizeRoles('STUDENT'), async
       }
     });
 
+    if (chapterProgress) {
+      // 删除相关的视频片段记录
+      await prisma.videoSegment.deleteMany({
+        where: {
+          chapterProgressId: chapterProgress.id
+        }
+      });
+
+      // 删除章节进度记录
+      const deletedProgress = await prisma.chapterProgress.delete({
+        where: {
+          userId_chapterId: {
+            userId,
+            chapterId
+          }
+        }
+      });
+
+      // 更新课程总体进度
+      const allChapterProgress = await prisma.chapterProgress.findMany({
+        where: {
+          userId,
+          courseId: chapterProgress.courseId
+        }
+      });
+
+      const totalChapters = await prisma.chapter.count({
+        where: {
+          courseId: chapterProgress.courseId
+        }
+      });
+
+      const averageProgress = allChapterProgress.length > 0 
+        ? allChapterProgress.reduce((sum, cp) => sum + cp.progress, 0) / totalChapters
+        : 0;
+
+      await prisma.enrollment.update({
+        where: {
+          userId_courseId: {
+            userId,
+            courseId: chapterProgress.courseId
+          }
+        },
+        data: {
+          progress: Math.round(averageProgress * 10) / 10,
+          updatedAt: new Date()
+        }
+      });
+    }
+
     res.json({
       success: true,
       message: 'Chapter progress deleted successfully'
     });
   } catch (error) {
     console.error('删除章节学习进度失败:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// 重置章节学习进度
+router.post('/:chapterId/reset', authenticateToken, authorizeRoles('STUDENT'), async (req: AuthRequest, res) => {
+  try {
+    const { chapterId } = req.params;
+    const userId = req.user!.id;
+
+    // 先查找章节进度记录，以便获取课程ID
+    const chapterProgress = await prisma.chapterProgress.findUnique({
+      where: {
+        userId_chapterId: {
+          userId,
+          chapterId
+        }
+      }
+    });
+
+    if (chapterProgress) {
+      // 删除相关的视频片段记录
+      await prisma.videoSegment.deleteMany({
+        where: {
+          chapterProgressId: chapterProgress.id
+        }
+      });
+
+      // 重置章节进度记录
+      const resetProgress = await prisma.chapterProgress.update({
+        where: {
+          userId_chapterId: {
+            userId,
+            chapterId
+          }
+        },
+        data: {
+          watchedTime: 0,
+          progress: 0,
+          isCompleted: false,
+          lastWatchedAt: null,
+          updatedAt: new Date()
+        }
+      });
+
+      // 更新课程总体进度
+      const allChapterProgress = await prisma.chapterProgress.findMany({
+        where: {
+          userId,
+          courseId: chapterProgress.courseId
+        }
+      });
+
+      const totalChapters = await prisma.chapter.count({
+        where: {
+          courseId: chapterProgress.courseId
+        }
+      });
+
+      const averageProgress = allChapterProgress.length > 0 
+        ? allChapterProgress.reduce((sum, cp) => sum + cp.progress, 0) / totalChapters
+        : 0;
+
+      await prisma.enrollment.update({
+        where: {
+          userId_courseId: {
+            userId,
+            courseId: chapterProgress.courseId
+          }
+        },
+        data: {
+          progress: Math.round(averageProgress * 10) / 10,
+          updatedAt: new Date()
+        }
+      });
+
+      res.json({
+        success: true,
+        data: resetProgress,
+        message: 'Chapter progress reset successfully'
+      });
+    } else {
+      res.json({
+        success: true,
+        message: 'No chapter progress found to reset'
+      });
+    }
+  } catch (error) {
+    console.error('重置章节学习进度失败:', error);
     res.status(500).json({ error: 'Server error' });
   }
 });
