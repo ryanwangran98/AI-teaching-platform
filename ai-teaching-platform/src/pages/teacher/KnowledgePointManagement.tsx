@@ -44,6 +44,10 @@ import {
   Cancel,
   Close,
   Lightbulb,
+  Description,
+  MenuBook,
+  Assignment,
+  Quiz,
 } from '@mui/icons-material';
 import { Snackbar } from '@mui/material';
 import { useNavigate, useParams } from 'react-router-dom';
@@ -467,7 +471,7 @@ const KnowledgePointManagement: React.FC = () => {
       <Card sx={{ mb: 3, borderRadius: 2, boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
         <CardContent sx={{ py: 2 }}>
           <Grid container spacing={2} alignItems="center">
-            <Grid item xs={12} sm={6} md={3}>
+            <Grid size={{ xs: 12, sm: 6, md: 3 }}>
               <Button
                 variant="contained"
                 startIcon={<Add />}
@@ -487,7 +491,7 @@ const KnowledgePointManagement: React.FC = () => {
             </Grid>
             
             {/* 搜索和筛选 */}
-            <Grid item xs={12} sm={8} md={7}>
+            <Grid size={{ xs: 12, sm: 8, md: 7 }}>
               <Box sx={{ display: 'flex', gap: 2 }}>
                 <TextField
                   placeholder="搜索知识点"
@@ -528,7 +532,7 @@ const KnowledgePointManagement: React.FC = () => {
               </Box>
             </Grid>
             
-            <Grid item xs={12} sm={4} md={2}>
+            <Grid size={{ xs: 12, sm: 4, md: 2 }}>
               <Chip 
                 label={`${filteredKnowledgePoints.length} 个知识点`}
                 color="primary"
@@ -542,7 +546,7 @@ const KnowledgePointManagement: React.FC = () => {
 
       <Grid container spacing={3}>
         {filteredKnowledgePoints.length === 0 ? (
-          <Grid item xs={12}>
+          <Grid size={{ xs: 12 }}>
             <Card sx={{ 
               borderRadius: 2, 
               boxShadow: '0 4px 12px rgba(0, 0, 0, 0.05)',
@@ -556,7 +560,7 @@ const KnowledgePointManagement: React.FC = () => {
           </Grid>
         ) : (
           filteredKnowledgePoints.map((kp) => (
-            <Grid item xs={12} sm={6} md={4} key={kp.id}>
+            <Grid size={{ xs: 12, sm: 6, md: 4 }} key={kp.id}>
               <Card 
                 sx={{ 
                   borderRadius: 2, 
@@ -652,71 +656,123 @@ const KnowledgePointManagement: React.FC = () => {
                       资源统计
                     </Typography>
                     <Grid container spacing={1.5}>
-                      <Grid item xs={6} sm={3}>
+                      <Grid size={{ xs: 6, sm: 3 }}>
                         <Box sx={{ 
                           bgcolor: alpha(theme.palette.primary.main, 0.08),
                           borderRadius: 1.5,
                           p: 1.2,
                           textAlign: 'center',
-                          border: '1px solid rgba(0, 0, 0, 0.08)'
+                          border: '1px solid rgba(0, 0, 0, 0.08)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between'
                         }}>
-                          <Typography variant="h6" sx={{ fontWeight: 'bold', color: 'primary.main', mb: 0.3 }}>
-                            {kp.materialsCount}
-                          </Typography>
-                          <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                            资料
-                          </Typography>
+                          <Box sx={{ textAlign: 'left' }}>
+                            <Typography variant="h6" sx={{ fontWeight: 'bold', color: 'primary.main', mb: 0.3 }}>
+                              {kp.materialsCount}
+                            </Typography>
+                            <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                              资料
+                            </Typography>
+                          </Box>
+                          <Avatar sx={{ 
+                            bgcolor: alpha(theme.palette.primary.main, 0.1),
+                            color: theme.palette.primary.main,
+                            width: 32,
+                            height: 32
+                          }}>
+                            <Description fontSize="small" />
+                          </Avatar>
                         </Box>
                       </Grid>
                       
-                      <Grid item xs={6} sm={3}>
+                      <Grid size={{ xs: 6, sm: 3 }}>
                         <Box sx={{ 
                           bgcolor: alpha(theme.palette.secondary.main, 0.08),
                           borderRadius: 1.5,
                           p: 1.2,
                           textAlign: 'center',
-                          border: '1px solid rgba(0, 0, 0, 0.08)'
+                          border: '1px solid rgba(0, 0, 0, 0.08)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between'
                         }}>
-                          <Typography variant="h6" sx={{ fontWeight: 'bold', color: 'secondary.main', mb: 0.3 }}>
-                            {kp.coursewareCount}
-                          </Typography>
-                          <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                            课件
-                          </Typography>
+                          <Box sx={{ textAlign: 'left' }}>
+                            <Typography variant="h6" sx={{ fontWeight: 'bold', color: 'secondary.main', mb: 0.3 }}>
+                              {kp.coursewareCount}
+                            </Typography>
+                            <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                              课件
+                            </Typography>
+                          </Box>
+                          <Avatar sx={{ 
+                            bgcolor: alpha(theme.palette.secondary.main, 0.1),
+                            color: theme.palette.secondary.main,
+                            width: 32,
+                            height: 32
+                          }}>
+                            <MenuBook fontSize="small" />
+                          </Avatar>
                         </Box>
                       </Grid>
                       
-                      <Grid item xs={6} sm={3}>
+                      <Grid size={{ xs: 6, sm: 3 }}>
                         <Box sx={{ 
                           bgcolor: alpha(theme.palette.info.main, 0.08),
                           borderRadius: 1.5,
                           p: 1.2,
                           textAlign: 'center',
-                          border: '1px solid rgba(0, 0, 0, 0.08)'
+                          border: '1px solid rgba(0, 0, 0, 0.08)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between'
                         }}>
-                          <Typography variant="h6" sx={{ fontWeight: 'bold', color: 'info.main', mb: 0.3 }}>
-                            {kp.assignmentsCount}
-                          </Typography>
-                          <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                            作业
-                          </Typography>
+                          <Box sx={{ textAlign: 'left' }}>
+                            <Typography variant="h6" sx={{ fontWeight: 'bold', color: 'info.main', mb: 0.3 }}>
+                              {kp.assignmentsCount}
+                            </Typography>
+                            <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                              作业
+                            </Typography>
+                          </Box>
+                          <Avatar sx={{ 
+                            bgcolor: alpha(theme.palette.info.main, 0.1),
+                            color: theme.palette.info.main,
+                            width: 32,
+                            height: 32
+                          }}>
+                            <Assignment fontSize="small" />
+                          </Avatar>
                         </Box>
                       </Grid>
                       
-                      <Grid item xs={6} sm={3}>
+                      <Grid size={{ xs: 6, sm: 3 }}>
                         <Box sx={{ 
                           bgcolor: alpha(theme.palette.warning.main, 0.08),
                           borderRadius: 1.5,
                           p: 1.2,
                           textAlign: 'center',
-                          border: '1px solid rgba(0, 0, 0, 0.08)'
+                          border: '1px solid rgba(0, 0, 0, 0.08)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between'
                         }}>
-                          <Typography variant="h6" sx={{ fontWeight: 'bold', color: 'warning.main', mb: 0.3 }}>
-                            {kp.questionsCount}
-                          </Typography>
-                          <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                            题目
-                          </Typography>
+                          <Box sx={{ textAlign: 'left' }}>
+                            <Typography variant="h6" sx={{ fontWeight: 'bold', color: 'warning.main', mb: 0.3 }}>
+                              {kp.questionsCount}
+                            </Typography>
+                            <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                              题目
+                            </Typography>
+                          </Box>
+                          <Avatar sx={{ 
+                            bgcolor: alpha(theme.palette.warning.main, 0.1),
+                            color: theme.palette.warning.main,
+                            width: 32,
+                            height: 32
+                          }}>
+                            <Quiz fontSize="small" />
+                          </Avatar>
                         </Box>
                       </Grid>
                     </Grid>
@@ -739,9 +795,8 @@ const KnowledgePointManagement: React.FC = () => {
                   </Box>
                 </CardContent>
                 
-                <CardActions sx={{ px: 2, pb: 2, pt: 1.5, flexDirection: 'column', gap: 1.5 }}>
-                  {/* 主要操作按钮 */}
-                  <Box sx={{ display: 'flex', gap: 1, width: '100%' }}>
+                <CardActions sx={{ px: 2, pb: 2, pt: 1.5 }}>
+                  <Box sx={{ display: 'flex', flexDirection: 'row', flexWrap: 'wrap', gap: 0.5, width: '100%' }}>
                     <Button
                       size="small"
                       variant="contained"
@@ -749,10 +804,9 @@ const KnowledgePointManagement: React.FC = () => {
                       sx={{ 
                         flex: 1,
                         py: 0.8,
-                        borderRadius: 1.5,
-                        boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                        borderRadius: 1,
                         '&:hover': { 
-                          boxShadow: '0 4px 8px rgba(0,0,0,0.2)',
+                          bgcolor: 'rgba(0, 0, 0, 0.04)',
                         }
                       }}
                     >
@@ -766,19 +820,14 @@ const KnowledgePointManagement: React.FC = () => {
                       sx={{ 
                         flex: 1,
                         py: 0.8,
-                        borderRadius: 1.5,
-                        boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                        borderRadius: 1,
                         '&:hover': { 
-                          boxShadow: '0 4px 8px rgba(0,0,0,0.2)',
+                          bgcolor: 'rgba(0, 0, 0, 0.04)',
                         }
                       }}
                     >
                       编辑
                     </Button>
-                  </Box>
-                  
-                  {/* 次要操作按钮 */}
-                  <Box sx={{ display: 'flex', gap: 1, width: '100%' }}>
                     {kp.status === 'draft' ? (
                       <Button
                         size="small"
@@ -788,7 +837,7 @@ const KnowledgePointManagement: React.FC = () => {
                         sx={{ 
                           flex: 1,
                           py: 0.8,
-                          borderRadius: 1.5,
+                          borderRadius: 1,
                           borderColor: 'success.main',
                           color: 'success.main',
                           '&:hover': { 
@@ -808,7 +857,7 @@ const KnowledgePointManagement: React.FC = () => {
                         sx={{ 
                           flex: 1,
                           py: 0.8,
-                          borderRadius: 1.5,
+                          borderRadius: 1,
                           '&:hover': { 
                             bgcolor: 'rgba(0, 0, 0, 0.04)',
                           }
@@ -817,7 +866,6 @@ const KnowledgePointManagement: React.FC = () => {
                         取消发布
                       </Button>
                     )}
-                    
                     <Button
                       size="small"
                       variant="outlined"
@@ -827,7 +875,7 @@ const KnowledgePointManagement: React.FC = () => {
                       sx={{ 
                         flex: 1,
                         py: 0.8,
-                        borderRadius: 1.5,
+                        borderRadius: 1,
                         borderColor: 'error.main',
                         '&:hover': { 
                           borderColor: 'error.dark',

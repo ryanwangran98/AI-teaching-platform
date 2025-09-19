@@ -128,13 +128,11 @@ const AssignmentManagement: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedType, setSelectedType] = useState('');
 
-  // 添加章节和知识点状态
-  const [chapters, setChapters] = useState<Chapter[]>([]);
+  // 添加章节和知识点状态  const [chapters, setChapters] = useState<Chapter[]>([]);
   const [knowledgePoints, setKnowledgePoints] = useState<KnowledgePoint[]>([]);
   const [filteredKnowledgePoints, setFilteredKnowledgePoints] = useState<KnowledgePoint[]>([]);
 
-  // 添加创建和编辑作业的状态
-  const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  // 添加创建和编辑作业的状�?  const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [editingAssignment, setEditingAssignment] = useState<Assignment | null>(null);
   const [formData, setFormData] = useState({
     title: '',
@@ -154,8 +152,7 @@ const AssignmentManagement: React.FC = () => {
 
   useEffect(() => {
     fetchAssignments();
-    // 修复：确保在组件加载时获取章节和知识点数据
-    fetchChapters();
+    // 修复：确保在组件加载时获取章节和知识点数�?    fetchChapters();
   }, []);
 
   // 当章节改变时，过滤知识点
@@ -188,8 +185,7 @@ const AssignmentManagement: React.FC = () => {
       // 添加调试日志
       console.log('API response:', response);
       
-      // 处理后端返回的数据结构
-      let assignmentsData = [];
+      // 处理后端返回的数据结�?      let assignmentsData = [];
       if (response && response.success && response.data) {
         // 如果后端返回的是带success字段的对象
         assignmentsData = Array.isArray(response.data.assignments) 
@@ -206,8 +202,7 @@ const AssignmentManagement: React.FC = () => {
           ? response.assignments 
           : [];
       } else {
-        // 其他情况，确保是空数组
-        assignmentsData = [];
+        // 其他情况，确保是空数�?        assignmentsData = [];
       }
       
       // 添加调试日志
@@ -249,8 +244,7 @@ const AssignmentManagement: React.FC = () => {
     } catch (error: any) {
       console.error('获取作业失败:', error);
       setError(`获取作业失败: ${error.response?.data?.error || error.message || '请稍后重试'}`);
-      setAssignments([]); // 确保是数组
-    } finally {
+      setAssignments([]); // 确保是数�?    } finally {
       setLoading(false);
     }
   };
@@ -290,8 +284,7 @@ const AssignmentManagement: React.FC = () => {
     setFormData({
       title: '',
       description: '',
-      type: 'homework', // 确保使用英文小写值
-      difficulty: 'medium',
+      type: 'homework', // 确保使用英文小写�?      difficulty: 'medium',
       totalScore: 100,
       passingScore: 60,
       timeLimit: 60,
@@ -309,8 +302,7 @@ const AssignmentManagement: React.FC = () => {
 
   const handleEdit = (assignment: Assignment) => {
     setEditingAssignment(assignment);
-    // 查找作业关联的知识点对应的章节
-    let chapterId = '';
+    // 查找作业关联的知识点对应的章�?    let chapterId = '';
     if (assignment.knowledgePoint?.id) {
       const kp = knowledgePoints.find(k => k.id === assignment.knowledgePoint?.id);
       if (kp) {
@@ -318,8 +310,7 @@ const AssignmentManagement: React.FC = () => {
       }
     }
     
-    // 确保类型值是有效的枚举值
-    const validTypes = ['homework', 'quiz', 'exam', 'project'];
+    // 确保类型值是有效的枚举�?    const validTypes = ['homework', 'quiz', 'exam', 'project'];
     const assignmentType = validTypes.includes(assignment.type) ? assignment.type : 'homework';
     
     setFormData({
@@ -338,8 +329,7 @@ const AssignmentManagement: React.FC = () => {
       status: assignment.status || 'draft', // 确保状态被正确设置
     });
     setCreateDialogOpen(true);
-    // 修复：每次打开编辑对话框时重新获取章节数据和题目数据
-    fetchChapters();
+    // 修复：每次打开编辑对话框时重新获取章节数据和题目数�?    fetchChapters();
   };
 
   const handleDialogClose = () => {
@@ -353,8 +343,7 @@ const AssignmentManagement: React.FC = () => {
 
   const handleSave = async () => {
     try {
-      // 检查必填字段
-      const missingFields = [];
+      // 检查必填字�?      const missingFields = [];
       if (!formData.title) missingFields.push('作业标题');
       if (!formData.type) missingFields.push('作业类型');
       if (!formData.knowledgePointId) missingFields.push('知识点');
@@ -373,7 +362,7 @@ const AssignmentManagement: React.FC = () => {
         dueDate: formData.endTime ? new Date(formData.endTime).toISOString() : undefined,
         timeLimit: formData.timeLimit ? Number(formData.timeLimit) : undefined,
         totalPoints: formData.totalScore,
-        status: formData.status // 添加状态字段
+        status: formData.status, // 添加状态字段
         // 移除状态字段，让后端设置默认状态
       };
 
@@ -445,8 +434,7 @@ const AssignmentManagement: React.FC = () => {
   const getStatusColor = (status: string) => {
     switch (status?.toLowerCase()) {
       case 'draft': return 'default';
-      case 'published': return 'success'; // 改为绿色表示已发布
-      case 'grading': return 'warning';
+      case 'published': return 'success'; // 改为绿色表示已发�?      case 'grading': return 'warning';
       case 'completed': return 'info';
       default: return 'default';
     }
@@ -505,8 +493,7 @@ const AssignmentManagement: React.FC = () => {
     return new Date(dateString).toLocaleString('zh-CN');
   };
 
-  // 获取作业类型对应的图标
-  const getAssignmentTypeIcon = (type: string) => {
+  // 获取作业类型对应的图�?  const getAssignmentTypeIcon = (type: string) => {
     switch (type.toLowerCase()) {
       case 'homework': return <Description />;
       case 'quiz': return <Quiz />;
@@ -557,7 +544,7 @@ const AssignmentManagement: React.FC = () => {
 
   return (
     <Box sx={{ p: 3 }}>
-      {/* 页面标题和返回按钮 */}
+      {/* 页面标题和返回按钮*/}
       <Card sx={{ mb: 3, boxShadow: 3, borderRadius: 2 }}>
         <CardContent sx={{ display: 'flex', alignItems: 'center', py: 2 }}>
           <IconButton 
@@ -600,7 +587,7 @@ const AssignmentManagement: React.FC = () => {
         </CardContent>
       </Card>
 
-      {/* 操作按钮和搜索筛选区域 */}
+      {/* 操作按钮和搜索筛选区域*/}
       <Card sx={{ mb: 3, boxShadow: 2, borderRadius: 2 }}>
         <CardContent sx={{ py: 2 }}>
           <Grid container spacing={2} alignItems="center">
@@ -688,7 +675,6 @@ const AssignmentManagement: React.FC = () => {
                   flexDirection: 'column',
                   boxShadow: 3,
                   borderRadius: 2,
-                  minHeight: '500px',
                   transition: 'all 0.3s ease',
                   '&:hover': { 
                     transform: 'translateY(-4px)',
@@ -720,7 +706,7 @@ const AssignmentManagement: React.FC = () => {
                       </Typography>
                     </Box>
                   </Box>
-                  <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                  <Box sx={{ display: 'flex', gap: 1, flexWrap: 'nowrap', overflowX: 'auto' }}>
                     <Chip 
                       label={getTypeLabel(assignment.type)}
                       size="small"
@@ -772,7 +758,7 @@ const AssignmentManagement: React.FC = () => {
                       <Box sx={{ display: 'flex', alignItems: 'center' }}>
                         <CheckCircle sx={{ mr: 1, color: theme.palette.warning.main, fontSize: '1rem' }} />
                         <Box>
-                          <Typography variant="caption" color="textSecondary">及格分</Typography>
+                          <Typography variant="caption" color="textSecondary">及格�?/Typography>
                           <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
                             {assignment.passingScore}
                           </Typography>
@@ -805,7 +791,7 @@ const AssignmentManagement: React.FC = () => {
                       <Box sx={{ display: 'flex', alignItems: 'center' }}>
                         <Schedule sx={{ mr: 1, color: theme.palette.secondary.main, fontSize: '1rem' }} />
                         <Box>
-                          <Typography variant="caption" color="textSecondary">开始时间</Typography>
+                          <Typography variant="caption" color="textSecondary">开始时�?/Typography>
                           <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
                             {formatDateTime(assignment.startTime)}
                           </Typography>
@@ -833,7 +819,7 @@ const AssignmentManagement: React.FC = () => {
                     </Grid>
                     <Grid size={{ xs: 4 }}>
                       <Box sx={{ textAlign: 'center' }}>
-                        <Typography variant="caption" color="textSecondary">平均分</Typography>
+                        <Typography variant="caption" color="textSecondary">平均�?/Typography>
                         <Typography variant="body2" sx={{ fontWeight: 'bold', color: theme.palette.success.main }}>
                           {assignment.statistics?.averageScore || 0}
                         </Typography>
@@ -841,7 +827,7 @@ const AssignmentManagement: React.FC = () => {
                     </Grid>
                     <Grid size={{ xs: 4 }}>
                       <Box sx={{ textAlign: 'center' }}>
-                        <Typography variant="caption" color="textSecondary">及格率</Typography>
+                        <Typography variant="caption" color="textSecondary">及格�?/Typography>
                         <Typography variant="body2" sx={{ fontWeight: 'bold', color: theme.palette.warning.main }}>
                           {assignment.statistics?.passRate || 0}%
                         </Typography>
@@ -852,7 +838,7 @@ const AssignmentManagement: React.FC = () => {
                         <Box sx={{ display: 'flex', alignItems: 'center' }}>
                           <Book sx={{ mr: 1, color: theme.palette.secondary.main, fontSize: '1rem' }} />
                           <Box>
-                            <Typography variant="caption" color="textSecondary">关联知识点</Typography>
+                            <Typography variant="caption" color="textSecondary">关联知识�?/Typography>
                             <Typography variant="body2" sx={{ fontWeight: 'bold' }} noWrap>
                               {assignment.knowledgePoint.title}
                             </Typography>
@@ -866,18 +852,7 @@ const AssignmentManagement: React.FC = () => {
                 {/* 卡片操作按钮 */}
                 <Box sx={{ p: 2, pt: 0 }}>
                   <Divider sx={{ mb: 2 }} />
-                  <Box sx={{ 
-                    display: 'flex', 
-                    gap: { xs: 0.5, sm: 0.5, md: 0.5 }, 
-                    justifyContent: 'flex-start', 
-                    alignItems: 'center',
-                    flexWrap: 'wrap',
-                    rowGap: 1,
-                    '& > button': {
-                      flex: '0 0 calc(33.333% - 4px)',
-                      maxWidth: 'calc(33.333% - 4px)'
-                    }
-                  }}>
+                  <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'nowrap', overflowX: 'auto' }}>
                     <Button 
                       size="small"
                       variant="outlined"
@@ -885,13 +860,8 @@ const AssignmentManagement: React.FC = () => {
                       sx={{ 
                         borderRadius: 1,
                         minWidth: 'auto',
-                        width: '100%',
-                        px: { xs: 0.5, sm: 0.8 },
-                        py: 0.5,
-                        fontSize: { xs: '0.65rem', sm: '0.7rem' },
-                        whiteSpace: 'nowrap',
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
+                        px: 1,
+                        fontSize: '0.75rem',
                         '&:hover': { 
                           backgroundColor: 'rgba(0, 0, 0, 0.04)' 
                         } 
@@ -907,13 +877,8 @@ const AssignmentManagement: React.FC = () => {
                       sx={{ 
                         borderRadius: 1,
                         minWidth: 'auto',
-                        width: '100%',
-                        px: { xs: 0.5, sm: 0.8 },
-                        py: 0.5,
-                        fontSize: { xs: '0.65rem', sm: '0.7rem' },
-                        whiteSpace: 'nowrap',
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
+                        px: 1,
+                        fontSize: '0.75rem',
                         '&:hover': { 
                           backgroundColor: 'rgba(0, 0, 0, 0.04)' 
                         } 
@@ -929,13 +894,8 @@ const AssignmentManagement: React.FC = () => {
                       sx={{ 
                         borderRadius: 1,
                         minWidth: 'auto',
-                        width: '100%',
-                        px: { xs: 0.5, sm: 0.8 },
-                        py: 0.5,
-                        fontSize: { xs: '0.65rem', sm: '0.7rem' },
-                        whiteSpace: 'nowrap',
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
+                        px: 1,
+                        fontSize: '0.75rem',
                         '&:hover': { 
                           backgroundColor: 'rgba(0, 0, 0, 0.04)' 
                         } 
@@ -951,13 +911,8 @@ const AssignmentManagement: React.FC = () => {
                       sx={{ 
                         borderRadius: 1,
                         minWidth: 'auto',
-                        width: '100%',
-                        px: { xs: 0.5, sm: 0.8 },
-                        py: 0.5,
-                        fontSize: { xs: '0.65rem', sm: '0.7rem' },
-                        whiteSpace: 'nowrap',
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
+                        px: 1,
+                        fontSize: '0.75rem',
                         '&:hover': { 
                           backgroundColor: 'rgba(0, 0, 0, 0.04)' 
                         } 
@@ -974,13 +929,8 @@ const AssignmentManagement: React.FC = () => {
                         sx={{ 
                           borderRadius: 1,
                           minWidth: 'auto',
-                          width: '100%',
-                          px: { xs: 0.5, sm: 0.8 },
-                          py: 0.5,
-                          fontSize: { xs: '0.65rem', sm: '0.7rem' },
-                          whiteSpace: 'nowrap',
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
+                          px: 1,
+                          fontSize: '0.75rem',
                           '&:hover': { 
                             backgroundColor: 'rgba(0, 0, 0, 0.04)' 
                           } 
@@ -998,13 +948,8 @@ const AssignmentManagement: React.FC = () => {
                         sx={{ 
                           borderRadius: 1,
                           minWidth: 'auto',
-                          width: '100%',
-                          px: { xs: 0.5, sm: 0.8 },
-                          py: 0.5,
-                          fontSize: { xs: '0.65rem', sm: '0.7rem' },
-                          whiteSpace: 'nowrap',
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
+                          px: 1,
+                          fontSize: '0.75rem',
                           '&:hover': { 
                             backgroundColor: 'rgba(0, 0, 0, 0.04)' 
                           } 
@@ -1020,13 +965,9 @@ const AssignmentManagement: React.FC = () => {
                       startIcon={<Delete />}
                       sx={{ 
                         borderRadius: 1,
-                        minWidth: '70px',
-                        px: { xs: 0.5, sm: 0.8 },
-                        py: 0.5,
-                        fontSize: { xs: '0.65rem', sm: '0.7rem' },
-                        whiteSpace: 'nowrap',
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
+                        minWidth: 'auto',
+                        px: 1,
+                        fontSize: '0.75rem',
                         '&:hover': { 
                           backgroundColor: 'rgba(0, 0, 0, 0.04)' 
                         } 
@@ -1044,7 +985,7 @@ const AssignmentManagement: React.FC = () => {
 
 
 
-      {/* 创建/编辑作业对话框 */}
+      {/* 创建/编辑作业对话�?*/}
       <Dialog 
         open={createDialogOpen} 
         onClose={handleDialogClose} 
@@ -1136,7 +1077,7 @@ const AssignmentManagement: React.FC = () => {
               />
             </Card>
             
-            {/* 类型和难度设置 */}
+            {/* 类型和难度设�?*/}
             <Card sx={{ 
               p: 2, 
               border: '1px solid', 
@@ -1155,8 +1096,7 @@ const AssignmentManagement: React.FC = () => {
                   <Quiz fontSize="small" />
                 </Avatar>
                 <Typography variant="h6" sx={{ fontWeight: 'bold', color: theme.palette.secondary.main }}>
-                  类型和难度
-                </Typography>
+                  类型和难�?                </Typography>
               </Box>
               
               <Grid container spacing={3}>
@@ -1242,8 +1182,7 @@ const AssignmentManagement: React.FC = () => {
                             maxWidth: '100%',
                             width: '100%'
                           }} title="简单">
-                            简单
-                          </Typography>
+                            简�?                          </Typography>
                         </Box>
                       </MenuItem>
                       <MenuItem value="medium">
@@ -1278,7 +1217,7 @@ const AssignmentManagement: React.FC = () => {
               </Grid>
             </Card>
             
-            {/* 作业状态设置 */}
+            {/* 作业状态设�?*/}
             <Card sx={{
               p: 2,
               border: '1px solid',
@@ -1297,12 +1236,11 @@ const AssignmentManagement: React.FC = () => {
                   <Schedule fontSize="small" />
                 </Avatar>
                 <Typography variant="h6" sx={{ fontWeight: 'bold', color: theme.palette.info.main }}>
-                  作业状态
-                </Typography>
+                  作业状�?                </Typography>
               </Box>
               
               <FormControl fullWidth>
-                <InputLabel>状态</InputLabel>
+                <InputLabel>状�?/InputLabel>
                 <Select
                   value={formData.status}
                   onChange={(e) => handleFormChange('status', e.target.value)}
@@ -1318,15 +1256,13 @@ const AssignmentManagement: React.FC = () => {
                   <MenuItem value="published">
                     <Box sx={{ display: 'flex', alignItems: 'center' }}>
                       <FolderOpen sx={{ mr: 1, color: theme.palette.success.main }} />
-                      已发布
-                    </Box>
+                      已发�?                    </Box>
                   </MenuItem>
                 </Select>
               </FormControl>
               
               <Typography variant="body2" color="textSecondary" sx={{ mt: 1 }}>
-                选择"已发布"状态可立即发布作业给学生，选择"草稿"状态可保存为草稿
-              </Typography>
+                选择"已发�?状态可立即发布作业给学生，选择"草稿"状态可保存为草�?              </Typography>
             </Card>
             
             {/* 分数设置 */}
@@ -1441,7 +1377,7 @@ const AssignmentManagement: React.FC = () => {
                       sx: { borderRadius: 2 }
                     }}
                     error={!formData.startTime}
-                    helperText={!formData.startTime ? '开始时间为必填项' : ''}
+                    helperText={!formData.startTime ? '开始时间为必填�? : ''}
                   />
                 </Grid>
                 <Grid size={{ xs: 12, sm: 6 }}>
@@ -1528,16 +1464,16 @@ const AssignmentManagement: React.FC = () => {
                 </Grid>
                 <Grid size={{ xs: 12, sm: 6 }}>
                   <FormControl fullWidth required disabled={!formData.chapterId}>
-                    <InputLabel>知识点 *</InputLabel>
+                    <InputLabel>知识�?*</InputLabel>
                     <Select
                       value={formData.knowledgePointId}
                       onChange={(e) => handleFormChange('knowledgePointId', e.target.value)}
-                      label="知识点 *"
+                      label="知识�?*"
                       error={!formData.knowledgePointId}
                       sx={{ borderRadius: 2 }}
                     >
                       <MenuItem value="">
-                        <em>请选择知识点</em>
+                        <em>请选择知识�?/em>
                       </MenuItem>
                       {filteredKnowledgePoints.map((kp) => (
                         <MenuItem key={kp.id} value={kp.id}>

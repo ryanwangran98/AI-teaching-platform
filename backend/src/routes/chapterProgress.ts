@@ -26,8 +26,7 @@ router.get('/', authenticateToken, async (req: AuthRequest, res) => {
         chapter: {
           select: {
             id: true,
-            title: true,
-            order: true
+            title: true
           }
         },
         course: {
@@ -67,8 +66,7 @@ router.get('/:chapterId', authenticateToken, async (req: AuthRequest, res) => {
         chapter: {
           select: {
             id: true,
-            title: true,
-            order: true
+            title: true
           }
         },
         course: {

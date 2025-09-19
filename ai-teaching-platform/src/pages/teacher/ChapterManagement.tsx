@@ -68,8 +68,6 @@ interface Chapter {
   content?: string; // API返回的描述字段
   courseId: string;
   courseName: string;
-  order: number; // API返回的排序字段
-  orderIndex: number; // 兼容字段
   status: 'draft' | 'published' | 'archived';
   knowledgePointsCount: number;
   materialsCount: number;
@@ -96,7 +94,6 @@ interface Chapter {
 interface ChapterFormData {
   title: string;
   description: string;
-  orderIndex: number;
   status: 'draft' | 'published' | 'archived';
 }
 
@@ -117,7 +114,6 @@ const ChapterManagement: React.FC = () => {
   const [formData, setFormData] = useState<ChapterFormData>({
     title: '',
     description: '',
-    orderIndex: 0,
     status: 'draft',
   });
   const [submitting, setSubmitting] = useState(false);
@@ -166,8 +162,6 @@ const ChapterManagement: React.FC = () => {
         description: chapter.description || chapter.content || '',
         courseId: chapter.courseId,
         courseName: chapter.course?.name || '未知课程',
-        orderIndex: chapter.order || 0,
-        order: chapter.order || 0,
         status: chapter.status || 'draft',
         knowledgePointsCount: chapter._count?.knowledgePoints || 0,
         materialsCount: chapter.materialsCount || chapter._count?.materials || 0,
@@ -218,7 +212,6 @@ const ChapterManagement: React.FC = () => {
     setFormData({
       title: '',
       description: '',
-      orderIndex: chapters.length + 1,
       status: 'draft',
     });
     setOpen(true);
@@ -229,7 +222,6 @@ const ChapterManagement: React.FC = () => {
     setFormData({
       title: chapter.title,
       description: chapter.description || chapter.content || '',
-      orderIndex: chapter.orderIndex || chapter.order || 0,
       status: chapter.status || 'draft',
     });
     setOpen(true);
@@ -241,7 +233,6 @@ const ChapterManagement: React.FC = () => {
     setFormData({
       title: '',
       description: '',
-      orderIndex: 0,
       status: 'draft',
     });
   };
@@ -270,7 +261,6 @@ const ChapterManagement: React.FC = () => {
         title: formData.title.trim(),
         content: formData.description.trim(), // 修改这里，使用content而不是description
         courseId: currentCourseId, // 使用当前课程ID
-        order: Number(formData.orderIndex), // 转换为数字类型，后端使用order字段
         status: formData.status,
       };
 
@@ -284,7 +274,6 @@ const ChapterManagement: React.FC = () => {
           ...updatedChapter,
           description: updatedChapter.description || updatedChapter.content || '', // 保持description字段用于前端显示
           courseName: updatedChapter.course?.name || currentCourse?.name || '未知课程',
-          orderIndex: updatedChapter.order || 0,
           knowledgePointsCount: updatedChapter._count?.knowledgePoints || 0
         };
         
@@ -296,7 +285,6 @@ const ChapterManagement: React.FC = () => {
         const response = await chapterAPI.createChapter(currentCourseId, {
           title: formData.title.trim(),
           content: formData.description.trim(), // 修改这里，使用content而不是description
-          order: Number(formData.orderIndex), // 转换为数字类型
         });
         const newChapter = response.data || response;
         
@@ -305,7 +293,6 @@ const ChapterManagement: React.FC = () => {
           ...newChapter,
           description: newChapter.description || newChapter.content || '', // 保持description字段用于前端显示
           courseName: newChapter.course?.name || currentCourse?.name || '未知课程',
-          orderIndex: newChapter.order || 0,
           knowledgePointsCount: newChapter._count?.knowledgePoints || 0
         };
         
@@ -707,9 +694,6 @@ const ChapterManagement: React.FC = () => {
                           }
                         }}
                       />
-                      <Typography variant="body2" sx={{ opacity: 0.9 }}>
-                        排序: {chapter.order}
-                      </Typography>
                     </Box>
                   }
                 />
@@ -973,25 +957,6 @@ const ChapterManagement: React.FC = () => {
               fullWidth
               required
               helperText="请输入章节的详细描述，包括学习目标和主要内容"
-              variant="outlined"
-              sx={{ 
-                '& .MuiOutlinedInput-root': {
-                  borderRadius: 2,
-                  '&:hover fieldset': {
-                    borderColor: 'primary.main',
-                  },
-                }
-              }}
-            />
-            <TextField
-              label="排序"
-              name="orderIndex"
-              type="number"
-              value={formData.orderIndex}
-              onChange={handleInputChange}
-              fullWidth
-              required
-              helperText="数字越小排序越靠前"
               variant="outlined"
               sx={{ 
                 '& .MuiOutlinedInput-root': {

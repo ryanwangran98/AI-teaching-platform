@@ -50,11 +50,7 @@ router.get('/', async (req, res) => {
         chapters: {
           select: {
             id: true,
-            title: true,
-            order: true
-          },
-          orderBy: {
-            order: 'asc'
+            title: true
           }
         },
         _count: {
@@ -104,12 +100,8 @@ router.get('/:id', async (req, res) => {
         },
         chapters: {
           include: {
-            knowledgePoints: {
-              orderBy: { order: 'asc' }
-            },
-            // chapters关联不存在于Course模型中
-          },
-          orderBy: { order: 'asc' }
+            knowledgePoints: true
+          }
         },
         _count: {
           select: {
@@ -730,11 +722,7 @@ router.get('/student/my-courses', authenticateToken, authorizeRoles('STUDENT'), 
             chapters: {
               select: {
                 id: true,
-                title: true,
-                order: true
-              },
-              orderBy: {
-                order: 'asc'
+                title: true
               }
             },
             _count: {

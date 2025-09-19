@@ -223,8 +223,7 @@ router.post('/', authenticateToken, authorizeRoles('TEACHER', 'ADMIN'), upload.s
         fileUrl,
         fileSize: fileSize || 0,
         chapterId: chapterId || (await prisma.chapter.findFirst({ 
-          where: { courseId: req.body.courseId }, 
-          orderBy: { order: 'asc' } 
+          where: { courseId: req.body.courseId }
         }))?.id || '',
         uploadedById: req.user!.id
       },
