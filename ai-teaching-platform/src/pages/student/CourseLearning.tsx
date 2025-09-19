@@ -35,7 +35,7 @@ import {
   Replay,
 } from '@mui/icons-material';
 import { useParams, useNavigate } from 'react-router-dom';
-// 引入学习资料和课程图谱组件
+// 引入学习资料和课程图谱组�?
 import Materials from './Materials';
 import CourseGraph from './CourseGraph';
 import { courseAPI, chapterAPI, assignmentAPI, studentStatsAPI, chapterProgressAPI, videoSegmentAPI } from '../../services/api';
@@ -126,7 +126,7 @@ const CourseLearning: React.FC = () => {
   // 添加获取学生统计数据的函数
   const fetchStudentStats = async () => {
     try {
-      console.log('开始获取学生统计数据, courseId:', courseId);
+      console.log('开始获取学生统计数据 courseId:', courseId);
       const statsResponse = await studentStatsAPI.getStudentStats(courseId!);
       console.log('获取到的学生统计数据:', statsResponse);
       console.log('学生统计数据详情:', JSON.stringify(statsResponse, null, 2));
@@ -146,14 +146,14 @@ const CourseLearning: React.FC = () => {
       console.log('获取到的课程数据:', courseResponse);
       
       // 获取课程章节（所有状态的章节）
-      const chaptersResponse = await chapterAPI.getChapters(courseId!, 'all');
+      const chaptersResponse = await chapterAPI.getChapters(courseId!, 'published');
       console.log('获取到的章节数据:', chaptersResponse);
       
       // 获取课程作业
       const assignmentsResponse = await assignmentAPI.getAssignments({ courseId: courseId! });
       console.log('获取到的作业数据原始响应:', assignmentsResponse);
       console.log('获取到的作业数据类型:', typeof assignmentsResponse);
-      console.log('获取到的作业数据是否为数组:', Array.isArray(assignmentsResponse));
+      console.log('获取到的作业数据是否为数组?', Array.isArray(assignmentsResponse));
       
       // 获取学生统计数据
       await fetchStudentStats();
@@ -197,13 +197,13 @@ const CourseLearning: React.FC = () => {
         for (const chapter of chaptersData) {
           try {
             const progressResponse = await chapterProgressAPI.getChapterProgressById(chapter.id);
-            console.log(`获取章节 ${chapter.id} 的学习进度:`, progressResponse);
+            console.log(`获取章节 ${chapter.id} 的学习进度`, progressResponse);
             if (progressResponse && progressResponse.data) {
               chapterProgressMap.set(chapter.id, progressResponse.data);
             }
           } catch (err) {
-            console.error(`获取章节 ${chapter.id} 的学习进度失败:`, err);
-            // 如果获取失败，使用默认进度0
+            console.error(`获取章节 ${chapter.id} 的学习进度失败`, err);
+            // 如果获取失败，使用默认进度
             chapterProgressMap.set(chapter.id, { progress: 0, currentTime: 0 });
           }
         }
@@ -230,7 +230,7 @@ const CourseLearning: React.FC = () => {
         // 直接从data.assignments获取（主要修复点）
         else if (assignmentsResponse.data && assignmentsResponse.data.assignments && Array.isArray(assignmentsResponse.data.assignments)) {
           assignmentsData = assignmentsResponse.data.assignments;
-          console.log('从嵌套结构中提取的作业数据:', assignmentsData.length);
+          console.log('从嵌套结构中提取的作业数据', assignmentsData.length);
         } 
         // 兼容其他可能的数据结构
         else if (Array.isArray(assignmentsResponse)) {
@@ -240,7 +240,7 @@ const CourseLearning: React.FC = () => {
           assignmentsData = assignmentsResponse.data;
           console.log('从data属性提取的数组:', assignmentsData.length);
         } else {
-          console.log('无法识别的作业数据结构:', assignmentsResponse);
+          console.log('无法识别的作业数据结构', assignmentsResponse);
         }
       }
       
@@ -249,7 +249,7 @@ const CourseLearning: React.FC = () => {
       assignmentsData = assignmentsData.filter((assignment: any) => {
         // 允许PUBLISHED/published状态的作业，或者没有明确状态的作业（默认视为已发布）
         const status = assignment.status?.toString().toLowerCase();
-        console.log('作业状态检查:', { id: assignment.id, title: assignment.title, status });
+        console.log('作业状态检查', { id: assignment.id, title: assignment.title, status });
         return status === 'published' || status === 'PUBLISHED' || status === undefined || status === null || status === '';
       });
       console.log('筛选后已发布的作业数量:', assignmentsData.length);
@@ -289,15 +289,15 @@ const CourseLearning: React.FC = () => {
           }
           
           // 处理章节标题，如果标题是数字则添加前缀
-          let title = chapter.title || `第${chapter.order || index + 1}章`;
+          let title = chapter.title || `�?{chapter.order || index + 1}章`;
           if (/^\d+$/.test(title)) {
-            title = `第${title}章`;
+            title = `�?{title}章`;
           }
           
           // 处理章节描述
           let description = chapter.description || chapter.content || '暂无描述';
           if (/^\d+$/.test(description) && description === chapter.title) {
-            description = `这是第${description}章的内容`;
+            description = `这是�?{description}章的内容`;
           }
           
           return {
@@ -314,7 +314,7 @@ const CourseLearning: React.FC = () => {
           };
         }),
         assignments: assignmentsData.map((assignment: any) => {
-          // 找到当前用户的提交记录
+          // 找到当前用户的提交记�?
           const userSubmission = assignment.submissions && assignment.submissions.length > 0 
             ? assignment.submissions.find((sub: any) => sub.userId === currentUserId)
             : null;
@@ -425,7 +425,7 @@ const CourseLearning: React.FC = () => {
 
   const handleStartLearning = (chapterId: string) => {
     // 开始学习逻辑
-    console.log('开始学习章节:', chapterId);
+    console.log('开始学习章节', chapterId);
   };
 
   // 添加开始作业的处理函数
@@ -1020,7 +1020,7 @@ const CourseLearning: React.FC = () => {
                   暂无教师发布的作业
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
-                  教师还未在本课程中发布任何作业，请耐心等待。
+                  教师还未在本课程中发布任何作业，请耐心等待
                 </Typography>
               </Paper>
             </Grid>

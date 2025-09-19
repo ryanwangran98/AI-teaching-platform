@@ -569,79 +569,123 @@ const TeacherCourseManagement: React.FC = () => {
         {filteredCourses.map((course) => (
           <Grid size={{ xs: 12, sm: 6, md: 4 }} key={course.id}>
             <CourseCard>
-              <CardContent sx={{ flexGrow: 1, pt: 3 }}>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
-                  <Box sx={{ position: 'relative', flex: 1 }}>
-                    <Typography variant="h6" component="h2" noWrap sx={{ fontWeight: 600, fontSize: '1.1rem' }}>
-                      {course.name}
-                    </Typography>
-                    <Typography variant="body2" color="textSecondary" sx={{ mt: 0.5 }}>
-                      {course.code}
-                    </Typography>
-                    <Box sx={{ display: 'flex', gap: 1, mt: 0.5 }}>
-                      <Chip 
-                        label={getStatusText(course.status)} 
-                        size="small" 
-                        color={getStatusColor(course.status) as any}
-                        sx={{ 
-                          fontWeight: 500,
-                          '& .MuiChip-label': {
-                            fontSize: '0.75rem'
-                          }
-                        }}
-                      />
-                    </Box>
-                  </Box>
+              {/* 卡片头部 - 状态标签 */}
+              <Box sx={{ 
+                position: 'relative', 
+                height: 120, 
+                background: `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.1)} 0%, ${alpha(theme.palette.primary.light, 0.05)} 100%)`,
+                borderRadius: '16px 16px 0 0',
+                overflow: 'hidden'
+              }}>
+                <Box sx={{ 
+                  position: 'absolute', 
+                  top: 16, 
+                  right: 16, 
+                  display: 'flex', 
+                  gap: 1 
+                }}>
+                  <Chip 
+                    label={getStatusText(course.status)} 
+                    size="small" 
+                    color={getStatusColor(course.status) as any}
+                    sx={{ 
+                      fontWeight: 600,
+                      backdropFilter: 'blur(4px)',
+                      backgroundColor: alpha(theme.palette.background.paper, 0.9),
+                      '& .MuiChip-label': {
+                        fontSize: '0.75rem'
+                      }
+                    }}
+                  />
+                  <Chip 
+                    label={course.department} 
+                    size="small"
+                    sx={{ 
+                      backdropFilter: 'blur(4px)',
+                      backgroundColor: alpha(theme.palette.background.paper, 0.9)
+                    }}
+                  />
                 </Box>
                 
-                <Typography variant="body2" color="textSecondary" sx={{ mb: 2, lineHeight: 1.6 }}>
-                  {course.description.substring(0, 80)}...
-                </Typography>
+                {/* 课程图标 */}
+                <Box sx={{ 
+                  position: 'absolute', 
+                  top: '50%', 
+                  left: '50%', 
+                  transform: 'translate(-50%, -50%)'
+                }}>
+                  <Avatar sx={{ 
+                    width: 64, 
+                    height: 64, 
+                    bgcolor: alpha(theme.palette.primary.main, 0.1),
+                    color: theme.palette.primary.main
+                  }}>
+                    <School sx={{ fontSize: 32 }} />
+                  </Avatar>
+                </Box>
+              </Box>
 
-                <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                  <Chip label={course.department} size="small" />
-                </Box>
-                
-                <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                  <Group fontSize="small" sx={{ mr: 1, color: 'text.secondary' }} />
-                  <Typography variant="body2">
-                    {course.studentCount}人
+              <CardContent sx={{ flexGrow: 1, pt: 3, pb: 2 }}>
+                {/* 课程标题和代码 */}
+                <Box sx={{ mb: 2 }}>
+                  <Typography variant="h6" component="h2" noWrap sx={{ 
+                    fontWeight: 700, 
+                    fontSize: '1.25rem',
+                    color: theme.palette.text.primary,
+                    mb: 0.5
+                  }}>
+                    {course.name}
+                  </Typography>
+                  <Typography variant="body2" color="textSecondary" sx={{ 
+                    fontWeight: 500,
+                    fontSize: '0.875rem'
+                  }}>
+                    {course.code}
                   </Typography>
                 </Box>
                 
-                <Box sx={{ mb: 2 }}>
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
-                    <Typography variant="body2" color="textSecondary" sx={{ fontSize: '0.875rem' }}>
-                      课程进度
+                {/* 课程描述 */}
+                <Typography variant="body2" color="textSecondary" sx={{ 
+                  mb: 3, 
+                  lineHeight: 1.7,
+                  fontSize: '0.875rem',
+                  display: '-webkit-box',
+                  WebkitLineClamp: 2,
+                  WebkitBoxOrient: 'vertical',
+                  overflow: 'hidden'
+                }}>
+                  {course.description}
+                </Typography>
+
+                {/* 统计信息 */}
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3 }}>
+                  <Box sx={{ textAlign: 'center' }}>
+                    <Typography variant="h6" sx={{ fontWeight: 700, color: theme.palette.primary.main }}>
+                      {course.studentCount}
                     </Typography>
-                    <Typography variant="body2" color="textSecondary">
-                      {course.status === 'active' ? '进行中' : course.status === 'draft' ? '草稿' : '已结束'}
+                    <Typography variant="caption" color="textSecondary">
+                      学生
                     </Typography>
                   </Box>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <Box sx={{ flex: 1, bgcolor: '#F5F5F5', borderRadius: 4, height: 8, overflow: 'hidden' }}>
-                      <Box 
-                        sx={{ 
-                          width: `${course.status === 'active' ? 60 : course.status === 'draft' ? 30 : 100}%`, 
-                          background: 'linear-gradient(90deg, #2196F3 0%, #21CBF3 100%)', 
-                          height: 8, 
-                          borderRadius: 4,
-                          transition: 'width 0.3s ease'
-                        }} 
-                      />
-                    </Box>
-                    <Typography variant="body2" color="textSecondary" sx={{ fontWeight: 500, minWidth: 35 }}>
-                      {course.status === 'active' ? '60.0' : course.status === 'draft' ? '30.0' : '100.0'}%
+                  <Box sx={{ textAlign: 'center' }}>
+                    <Typography variant="h6" sx={{ fontWeight: 700, color: theme.palette.success.main }}>
+                      {course.totalHours}
+                    </Typography>
+                    <Typography variant="caption" color="textSecondary">
+                      课时
+                    </Typography>
+                  </Box>
+                  <Box sx={{ textAlign: 'center' }}>
+                    <School sx={{ fontSize: 24, color: theme.palette.info.main }} />
+                    <Typography variant="caption" color="textSecondary">
+                      {course.credits}学分
                     </Typography>
                   </Box>
                 </Box>
               </CardContent>
               
-              <CardActions sx={{ justifyContent: 'space-between', px: 2.5, pb: 2.5, pt: 1 }}>
-                <Typography variant="body2" color="textSecondary" sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                  <AccessTime sx={{ fontSize: 16 }} />
-                  {course.totalHours}小时
-                </Typography>
+              {/* 操作按钮 */}
+              <CardActions sx={{ justifyContent: 'space-between', px: 2.5, pb: 2.5, pt: 0 }}>
                 <Box sx={{ display: 'flex', gap: 1 }}>
                   <Button
                     variant="outlined"
@@ -652,8 +696,9 @@ const TeacherCourseManagement: React.FC = () => {
                       borderRadius: 2,
                       textTransform: 'none',
                       fontWeight: 500,
-                      px: 2,
+                      px: 1.5,
                       py: 0.5,
+                      minWidth: 'auto'
                     }}
                   >
                     编辑
@@ -668,29 +713,31 @@ const TeacherCourseManagement: React.FC = () => {
                       borderRadius: 2,
                       textTransform: 'none',
                       fontWeight: 500,
-                      px: 2,
+                      px: 1.5,
                       py: 0.5,
+                      minWidth: 'auto'
                     }}
                   >
                     资源
                   </Button>
-                  <Button
-                    variant="outlined"
-                    size="small"
-                    startIcon={<Delete />}
-                    onClick={() => handleDeleteCourse(course.id)}
-                    color="error"
-                    sx={{
-                      borderRadius: 2,
-                      textTransform: 'none',
-                      fontWeight: 500,
-                      px: 2,
-                      py: 0.5,
-                    }}
-                  >
-                    删除
-                  </Button>
                 </Box>
+                <Button
+                  variant="text"
+                  size="small"
+                  startIcon={<Delete />}
+                  onClick={() => handleDeleteCourse(course.id)}
+                  color="error"
+                  sx={{
+                    borderRadius: 2,
+                    textTransform: 'none',
+                    fontWeight: 500,
+                    px: 1.5,
+                    py: 0.5,
+                    minWidth: 'auto'
+                  }}
+                >
+                  删除
+                </Button>
               </CardActions>
             </CourseCard>
           </Grid>

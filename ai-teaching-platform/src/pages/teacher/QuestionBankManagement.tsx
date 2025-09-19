@@ -365,14 +365,37 @@ const QuestionBankManagement: React.FC = () => {
     // 获取题目的章节ID（从知识点中获取）
     const selectedChapterId = question.knowledgePoint?.chapter?.id || '';
     
-    // 初始化选项数组
+    // 初始化选项数组 - 修复选项显示问题
     let options = ['', '', '', ''];
-    if (question.options && Array.isArray(question.options)) {
-      options = [...question.options];
-      // 确保至少有4个选项
-      while (options.length < 4) {
-        options.push('');
+    
+    // 更安全地处理选项数据，确保能正确显示之前设置的选项
+    // 后端返回的options可能是字符串格式的JSON数组
+    if (question.options) {
+      if (typeof question.options === 'string') {
+        try {
+          const parsedOptions = JSON.parse(question.options);
+          if (Array.isArray(parsedOptions)) {
+            options = [...parsedOptions];
+            // 确保至少有4个选项
+            while (options.length < 4) {
+              options.push('');
+            }
+          }
+        } catch (e) {
+          console.error('解析选项数据失败:', e);
+          // 如果解析失败，使用原始字符串作为第一个选项
+          options = [question.options, '', '', ''];
+        }
+      } else if (Array.isArray(question.options)) {
+        options = [...question.options];
+        // 确保至少有4个选项
+        while (options.length < 4) {
+          options.push('');
+        }
       }
+    } else if (question.type === 'single_choice' || question.type === 'multiple_choice') {
+      // 如果是选择题但没有选项数据，使用默认空选项
+      console.warn('选择题缺少选项数据，使用默认空选项');
     }
     
     setCreateForm({
@@ -1414,7 +1437,7 @@ const QuestionBankManagement: React.FC = () => {
                 <FormControl fullWidth sx={{ mb: 2 }} variant="outlined">
                   <InputLabel>请选择正确选项</InputLabel>
                   <Select
-                    value={createForm.correctAnswer}
+                    value={createForm.correctAnswer || ''}
                     onChange={(e) => handleCreateFormChange('correctAnswer', e.target.value)}
                     label="请选择正确选项"
                     sx={{ 
@@ -1427,6 +1450,8 @@ const QuestionBankManagement: React.FC = () => {
                     }}
                   >
                     {Array.isArray(createForm.options) && createForm.options.map((option, index) => {
+                      // 只显示非空选项
+                      if (!option) return null;
                       const optionLetter = String.fromCharCode(65 + index);
                       return (
                         <MenuItem key={optionLetter} value={optionLetter}>
@@ -1449,6 +1474,8 @@ const QuestionBankManagement: React.FC = () => {
                   </Typography>
                   <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
                     {Array.isArray(createForm.options) && createForm.options.map((option, index) => {
+                      // 只显示非空选项
+                      if (!option) return null;
                       const optionLetter = String.fromCharCode(65 + index);
                       const isSelected = createForm.correctAnswer.split(',').filter(Boolean).includes(optionLetter);
                       return (

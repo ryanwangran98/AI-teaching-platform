@@ -50,6 +50,20 @@ const AssignmentDetail: React.FC = () => {
     return difficultyMap[difficulty as keyof typeof difficultyMap] || difficulty || '未知';
   };
 
+  // 获取难度对应的颜色
+  const getDifficultyColor = (difficulty: string) => {
+    switch (difficulty?.toLowerCase()) {
+      case 'easy':
+        return '#4caf50'; // 绿色
+      case 'medium':
+        return '#ff9800'; // 橙色
+      case 'hard':
+        return '#f44336'; // 红色
+      default:
+        return '#9e9e9e'; // 灰色
+    }
+  };
+
   useEffect(() => {
     if (assignmentId) {
       fetchAssignmentDetail();
@@ -420,98 +434,317 @@ const AssignmentDetail: React.FC = () => {
   console.log('题目选项:', questionOptions);
 
   return (
-    <Card key={questionAssignment.id || index} sx={{ mb: 3 }}>
-      <CardContent>
-        <Typography variant="h6" gutterBottom>
-          {index + 1}. {questionContent}
-        </Typography>
-        <Typography variant="body2" color="textSecondary" gutterBottom>
-          分值: {question.points || 0}分 | 难度: {getChineseDifficulty(question.difficulty)} | 类型: {getChineseQuestionType(question.type)}
-        </Typography>
+    <Card 
+      key={questionAssignment.id || index} 
+      sx={{ 
+        mb: 3, 
+        borderRadius: 2,
+        boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+        border: '1px solid #e0e0e0',
+        transition: 'all 0.2s',
+        '&:hover': {
+          boxShadow: '0 4px 16px rgba(0,0,0,0.15)',
+          transform: 'translateY(-1px)'
+        }
+      }}
+    >
+      <CardContent sx={{ p: 4 }}>
+        {/* 题目标题和编号 */}
+        <Box sx={{ 
+          display: 'flex', 
+          alignItems: 'flex-start', 
+          gap: 2, 
+          mb: 3,
+          pb: 2,
+          borderBottom: '1px solid #f0f0f0'
+        }}>
+          <Box 
+            sx={{ 
+              width: 32, 
+              height: 32, 
+              borderRadius: '50%', 
+              backgroundColor: '#1976d2',
+              color: 'white',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontWeight: 600,
+              fontSize: '0.9rem',
+              flexShrink: 0
+            }}
+          >
+            {index + 1}
+          </Box>
+          <Box sx={{ flex: 1 }}>
+            <Typography 
+              variant="h6" 
+              sx={{ 
+                fontWeight: 600, 
+                color: '#333',
+                lineHeight: 1.4,
+                mb: 1
+              }}
+            >
+              {questionContent}
+            </Typography>
+            
+            {/* 题目信息标签 */}
+            <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+              <Chip 
+                label={`${question.points || 0}分`} 
+                size="small" 
+                sx={{ 
+                  backgroundColor: '#e8f5e8', 
+                  color: '#2e7d32',
+                  fontWeight: 500,
+                  fontSize: '0.8rem'
+                }} 
+              />
+              <Chip 
+                label={getChineseDifficulty(question.difficulty)} 
+                size="small" 
+                sx={{ 
+                  backgroundColor: getDifficultyColor(question.difficulty),
+                  color: 'white',
+                  fontWeight: 500,
+                  fontSize: '0.8rem'
+                }} 
+              />
+              <Chip 
+                label={getChineseQuestionType(question.type)} 
+                size="small" 
+                sx={{ 
+                  backgroundColor: '#e3f2fd', 
+                  color: '#1976d2',
+                  fontWeight: 500,
+                  fontSize: '0.8rem'
+                }} 
+              />
+            </Box>
+          </Box>
+        </Box>
           
           {/* 单选题 */}
           {questionType === 'single_choice' && (
-            <FormControl component="fieldset" fullWidth>
-              <FormLabel component="legend">选项</FormLabel>
-              <RadioGroup
-                value={answerValue}
-                onChange={(e) => handleSingleChoiceChange(questionAssignment.id, e.target.value)}
-                disabled={isDisabled}
+            <Box sx={{ mt: 3 }}>
+              <Typography 
+                variant="subtitle2" 
+                sx={{ 
+                  mb: 2, 
+                  fontWeight: 600, 
+                  color: '#666',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 1
+                }}
               >
-                {questionOptions.map((option: string, optIndex: number) => (
-                  <FormControlLabel
-                    key={optIndex}
-                    value={option}
-                    control={<Radio />}
-                    label={option}
-                    disabled={isDisabled}
-                  />
-                ))}
-              </RadioGroup>
-            </FormControl>
+                <FileCopy sx={{ fontSize: 16 }} />
+                选项
+              </Typography>
+              <FormControl component="fieldset" fullWidth>
+                <RadioGroup
+                  value={answerValue}
+                  onChange={(e) => handleSingleChoiceChange(questionAssignment.id, e.target.value)}
+                  disabled={isDisabled}
+                  sx={{ gap: 1 }}
+                >
+                  {questionOptions.map((option: string, optIndex: number) => (
+                    <Box 
+                      key={optIndex}
+                      sx={{
+                        p: 2,
+                        borderRadius: 1,
+                        border: '1px solid #e0e0e0',
+                        mb: 1,
+                        transition: 'all 0.2s',
+                        backgroundColor: isDisabled ? '#f5f5f5' : 'white',
+                        '&:hover': {
+                          backgroundColor: isDisabled ? '#f5f5f5' : '#f8f9fa',
+                          borderColor: '#1976d2'
+                        },
+                        '&.selected': {
+                          backgroundColor: '#e3f2fd',
+                          borderColor: '#1976d2'
+                        }
+                      }}
+                      className={answerValue === option ? 'selected' : ''}
+                    >
+                      <FormControlLabel
+                        value={option}
+                        control={<Radio />}
+                        label={option}
+                        disabled={isDisabled}
+                        sx={{ m: 0, width: '100%' }}
+                      />
+                    </Box>
+                  ))}
+                </RadioGroup>
+              </FormControl>
+            </Box>
           )}
           
           {/* 多选题 */}
           {questionType === 'multiple_choice' && (
-            <FormControl component="fieldset" fullWidth>
-              <FormLabel component="legend">选项（可多选）</FormLabel>
-              <FormGroup>
-                {questionOptions.map((option: string, optIndex: number) => (
-                  <FormControlLabel
-                    key={optIndex}
-                    control={
-                      <Checkbox
-                        checked={Array.isArray(answerValue) ? answerValue.includes(option) : false}
-                        onChange={(e) => handleMultipleChoiceChange(questionAssignment.id, option, e.target.checked)}
+            <Box sx={{ mt: 3 }}>
+              <Typography 
+                variant="subtitle2" 
+                sx={{ 
+                  mb: 2, 
+                  fontWeight: 600, 
+                  color: '#666',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 1
+                }}
+              >
+                <FileCopy sx={{ fontSize: 16 }} />
+                选项（可多选）
+              </Typography>
+              <FormControl component="fieldset" fullWidth>
+                <FormGroup sx={{ gap: 1 }}>
+                  {questionOptions.map((option: string, optIndex: number) => (
+                    <Box 
+                      key={optIndex}
+                      sx={{
+                        p: 2,
+                        borderRadius: 1,
+                        border: '1px solid #e0e0e0',
+                        mb: 1,
+                        transition: 'all 0.2s',
+                        backgroundColor: isDisabled ? '#f5f5f5' : 'white',
+                        '&:hover': {
+                          backgroundColor: isDisabled ? '#f5f5f5' : '#f8f9fa',
+                          borderColor: '#1976d2'
+                        },
+                        '&.selected': {
+                          backgroundColor: '#e3f2fd',
+                          borderColor: '#1976d2'
+                        }
+                      }}
+                      className={Array.isArray(answerValue) && answerValue.includes(option) ? 'selected' : ''}
+                    >
+                      <FormControlLabel
+                        control={
+                          <Checkbox
+                            checked={Array.isArray(answerValue) ? answerValue.includes(option) : false}
+                            onChange={(e) => handleMultipleChoiceChange(questionAssignment.id, option, e.target.checked)}
+                            disabled={isDisabled}
+                          />
+                        }
+                        label={option}
                         disabled={isDisabled}
+                        sx={{ m: 0, width: '100%' }}
                       />
-                    }
-                    label={option}
-                    disabled={isDisabled}
-                  />
-                ))}
-              </FormGroup>
-            </FormControl>
+                    </Box>
+                  ))}
+                </FormGroup>
+              </FormControl>
+            </Box>
           )}
           
           {/* 判断题 */}
           {questionType === 'true_false' && (
-            <FormControl component="fieldset" fullWidth>
-              <FormLabel component="legend">判断</FormLabel>
-              <RadioGroup
-                value={answerValue}
-                onChange={(e) => handleSingleChoiceChange(questionAssignment.id, e.target.value)}
-                disabled={isDisabled}
+            <Box sx={{ mt: 3 }}>
+              <Typography 
+                variant="subtitle2" 
+                sx={{ 
+                  mb: 2, 
+                  fontWeight: 600, 
+                  color: '#666',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 1
+                }}
               >
-                <FormControlLabel
-                  value="true"
-                  control={<Radio />}
-                  label="正确"
+                <FileCopy sx={{ fontSize: 16 }} />
+                判断
+              </Typography>
+              <FormControl component="fieldset" fullWidth>
+                <RadioGroup
+                  value={answerValue}
+                  onChange={(e) => handleSingleChoiceChange(questionAssignment.id, e.target.value)}
                   disabled={isDisabled}
-                />
-                <FormControlLabel
-                  value="false"
-                  control={<Radio />}
-                  label="错误"
-                  disabled={isDisabled}
-                />
-              </RadioGroup>
-            </FormControl>
+                  sx={{ gap: 1 }}
+                >
+                  {[
+                    { value: 'true', label: '正确', color: '#4caf50' },
+                    { value: 'false', label: '错误', color: '#f44336' }
+                  ].map((item, idx) => (
+                    <Box 
+                      key={idx}
+                      sx={{
+                        p: 2,
+                        borderRadius: 1,
+                        border: '1px solid #e0e0e0',
+                        mb: 1,
+                        transition: 'all 0.2s',
+                        backgroundColor: isDisabled ? '#f5f5f5' : 'white',
+                        '&:hover': {
+                          backgroundColor: isDisabled ? '#f5f5f5' : '#f8f9fa',
+                          borderColor: item.color
+                        },
+                        '&.selected': {
+                          backgroundColor: `${item.color}15`,
+                          borderColor: item.color
+                        }
+                      }}
+                      className={answerValue === item.value ? 'selected' : ''}
+                    >
+                      <FormControlLabel
+                        value={item.value}
+                        control={<Radio />}
+                        label={item.label}
+                        disabled={isDisabled}
+                        sx={{ m: 0, width: '100%' }}
+                      />
+                    </Box>
+                  ))}
+                </RadioGroup>
+              </FormControl>
+            </Box>
           )}
           
           {/* 简答题 */}
           {(questionType === 'short_answer' || questionType === 'essay') && (
-            <TextField
-              fullWidth
-              multiline
-              rows={4}
-              value={answerValue}
-              onChange={(e) => handleTextChange(questionAssignment.id, e.target.value)}
-              label="您的答案"
-              variant="outlined"
-              disabled={isDisabled}
-              margin="normal"
-            />
+            <Box sx={{ mt: 3 }}>
+              <Typography 
+                variant="subtitle2" 
+                sx={{ 
+                  mb: 2, 
+                  fontWeight: 600, 
+                  color: '#666',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 1
+                }}
+              >
+                <FileCopy sx={{ fontSize: 16 }} />
+                您的答案
+              </Typography>
+              <TextField
+                fullWidth
+                multiline
+                rows={6}
+                value={answerValue}
+                onChange={(e) => handleTextChange(questionAssignment.id, e.target.value)}
+                placeholder="请在此输入您的答案..."
+                variant="outlined"
+                disabled={isDisabled}
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    borderRadius: 2,
+                    backgroundColor: isDisabled ? '#f5f5f5' : 'white',
+                    '&:hover': {
+                      borderColor: '#1976d2'
+                    },
+                    '&.Mui-focused': {
+                      borderColor: '#1976d2',
+                      boxShadow: '0 0 0 2px rgba(25, 118, 210, 0.2)'
+                    }
+                  }
+                }}
+              />
+            </Box>
           )}
           
           {/* 默认文本输入框 - 确保任何情况下都有作答区域 */}
@@ -655,54 +888,167 @@ const AssignmentDetail: React.FC = () => {
 
   return (
     <div className="assignment-detail">
-      <Box sx={{ p: 3 }}>
-        <div style={{ mb: 4 }}>
-          <Typography variant="h5" component="h1">
+      <Box sx={{ p: 3, maxWidth: 1200, mx: 'auto' }}>
+        {/* 页面标题 */}
+        <Box sx={{ mb: 4, display: 'flex', alignItems: 'center', gap: 2 }}>
+          <Typography variant="h4" component="h1" sx={{ fontWeight: 600, color: '#1976d2' }}>
             作业详情
           </Typography>
-        </div>
+        </Box>
         
-        <Card sx={{ mb: 4 }}>
-          <CardContent>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-              <Typography variant="h4" gutterBottom>
+        {/* 作业信息卡片 */}
+        <Card sx={{ 
+          mb: 4, 
+          borderRadius: 2,
+          boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+          border: '1px solid #e0e0e0'
+        }}>
+          <CardContent sx={{ p: 4 }}>
+            {/* 标题和状态行 */}
+            <Box sx={{ 
+              display: 'flex', 
+              justifyContent: 'space-between', 
+              alignItems: 'flex-start', 
+              mb: 3,
+              flexWrap: 'wrap',
+              gap: 2
+            }}>
+              <Typography 
+                variant="h4" 
+                sx={{ 
+                  fontWeight: 600, 
+                  color: '#333',
+                  flex: 1,
+                  minWidth: '200px'
+                }}
+              >
                 {assignment.title}
               </Typography>
-              {/* 统一的状态显示 */}
-              {renderSubmissionStatus()}
-            </div>
-            <Typography variant="body1" paragraph>
+              {/* 状态显示 */}
+              <Box sx={{ flexShrink: 0 }}>
+                {renderSubmissionStatus()}
+              </Box>
+            </Box>
+            
+            {/* 作业描述 */}
+            <Typography 
+              variant="body1" 
+              paragraph 
+              sx={{ 
+                mb: 4,
+                lineHeight: 1.6,
+                color: '#555',
+                fontSize: '1.1rem',
+                p: 3,
+                backgroundColor: '#f8f9fa',
+                borderRadius: 1,
+                borderLeft: '4px solid #1976d2'
+              }}
+            >
               {assignment.description}
             </Typography>
             
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 20, mt: 3 }}>
-              <div>
-                <Typography variant="subtitle2" color="textSecondary">
-                  截止日期
-                </Typography>
-                <Typography variant="body2">
+            {/* 作业信息网格 */}
+            <Box sx={{ 
+              display: 'grid', 
+              gridTemplateColumns: { 
+                xs: '1fr', 
+                sm: 'repeat(2, 1fr)', 
+                md: 'repeat(3, 1fr)' 
+              },
+              gap: 3,
+              mt: 3
+            }}>
+              {/* 截止日期 */}
+              <Box sx={{ 
+                p: 3, 
+                backgroundColor: '#fff',
+                borderRadius: 1,
+                border: '1px solid #e0e0e0',
+                transition: 'all 0.2s',
+                '&:hover': {
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                  transform: 'translateY(-1px)'
+                }
+              }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                  <CalendarToday sx={{ color: '#1976d2', fontSize: 20 }} />
+                  <Typography variant="subtitle2" color="textSecondary" sx={{ fontWeight: 600 }}>
+                    截止日期
+                  </Typography>
+                </Box>
+                <Typography 
+                  variant="body1" 
+                  sx={{ 
+                    fontWeight: 500,
+                    color: '#333',
+                    fontSize: '1rem'
+                  }}
+                >
                   {assignment.dueDate ? new Date(assignment.dueDate).toLocaleString('zh-CN') : '无截止日期'}
                 </Typography>
-              </div>
+              </Box>
               
-              <div>
-                <Typography variant="subtitle2" color="textSecondary">
-                  总分
-                </Typography>
-                <Typography variant="body2">
+              {/* 总分 */}
+              <Box sx={{ 
+                p: 3, 
+                backgroundColor: '#fff',
+                borderRadius: 1,
+                border: '1px solid #e0e0e0',
+                transition: 'all 0.2s',
+                '&:hover': {
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                  transform: 'translateY(-1px)'
+                }
+              }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                  <FileCopy sx={{ color: '#4caf50', fontSize: 20 }} />
+                  <Typography variant="subtitle2" color="textSecondary" sx={{ fontWeight: 600 }}>
+                    总分
+                  </Typography>
+                </Box>
+                <Typography 
+                  variant="body1" 
+                  sx={{ 
+                    fontWeight: 500,
+                    color: '#4caf50',
+                    fontSize: '1.1rem'
+                  }}
+                >
                   {assignment.totalPoints}分
                 </Typography>
-              </div>
+              </Box>
               
-              <div>
-                <Typography variant="subtitle2" color="textSecondary">
-                  题目数量
-                </Typography>
-                <Typography variant="body2">
+              {/* 题目数量 */}
+              <Box sx={{ 
+                p: 3, 
+                backgroundColor: '#fff',
+                borderRadius: 1,
+                border: '1px solid #e0e0e0',
+                transition: 'all 0.2s',
+                '&:hover': {
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                  transform: 'translateY(-1px)'
+                }
+              }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                  <FileCopy sx={{ color: '#ff9800', fontSize: 20 }} />
+                  <Typography variant="subtitle2" color="textSecondary" sx={{ fontWeight: 600 }}>
+                    题目数量
+                  </Typography>
+                </Box>
+                <Typography 
+                  variant="body1" 
+                  sx={{ 
+                    fontWeight: 500,
+                    color: '#ff9800',
+                    fontSize: '1.1rem'
+                  }}
+                >
                   {assignment.questions ? assignment.questions.length : 0}题
                 </Typography>
-              </div>
-            </div>
+              </Box>
+            </Box>
           </CardContent>
         </Card>
         
@@ -724,126 +1070,163 @@ const AssignmentDetail: React.FC = () => {
           </Alert>
         )}
         
-        {/* 提交结果显示区域 */}
-        {(userSubmissionStatus === 'submitted' || userSubmissionStatus === 'graded') && (
-          <Card sx={{ mb: 4, backgroundColor: '#f8f9fa' }}>
-            <CardContent>
-              <Typography variant="h6" gutterBottom sx={{ color: '#1976d2' }}>
-                <CheckCircle sx={{ mr: 1, verticalAlign: 'middle' }} />
-                提交结果
-              </Typography>
-              
-              {userSubmissionStatus === 'graded' ? (
-                <Alert severity="success" sx={{ mb: 2 }}>
-                  作业已批改完成！您的得分：{assignment?.score || 0}/{assignment?.totalPoints || 0}分
-                </Alert>
-              ) : (
-                <Alert severity="info" sx={{ mb: 2 }}>
-                  作业已提交，等待教师批改
-                </Alert>
-              )}
-              
-              <Divider sx={{ my: 2 }} />
-              
-              <Typography variant="subtitle1" gutterBottom>
-                您的答案：
-              </Typography>
-              
-              {assignment?.questions?.map((question: any, index: number) => {
-                const currentAnswer = answers.find(ans => ans.questionId === question.id);
-                const answerValue = currentAnswer?.answer;
-                const questionType = question.type?.toLowerCase() || '';
-                
-                return (
-                  <Box key={question.id} sx={{ mb: 3, p: 2, backgroundColor: 'white', borderRadius: 1 }}>
-                    <Typography variant="subtitle2" gutterBottom>
-                      {index + 1}. {question.content || question.title || `问题 ${index + 1}`}
-                    </Typography>
-                    
-                    {questionType === 'single_choice' && (
-                      <Typography variant="body2" color="textSecondary">
-                        答案：{answerValue || '未作答'}
-                      </Typography>
-                    )}
-                    
-                    {questionType === 'multiple_choice' && (
-                      <Typography variant="body2" color="textSecondary">
-                        答案：{Array.isArray(answerValue) ? answerValue.join(', ') || '未作答' : '未作答'}
-                      </Typography>
-                    )}
-                    
-                    {questionType === 'true_false' && (
-                      <Typography variant="body2" color="textSecondary">
-                        答案：{answerValue === 'true' ? '正确' : answerValue === 'false' ? '错误' : '未作答'}
-                      </Typography>
-                    )}
-                    
-                    {(questionType === 'short_answer' || questionType === 'essay') && (
-                      <Typography variant="body2" color="textSecondary">
-                        答案：{answerValue || '未作答'}
-                      </Typography>
-                    )}
-                  </Box>
-                );
-              })}
-            </CardContent>
-          </Card>
-        )}
+        
         
 
         
-        <Typography variant="h6" gutterBottom sx={{ mt: 4 }}>
-          题目列表
-        </Typography>
-        
-        {assignment.questions && assignment.questions.length > 0 ? (
-          <div>
-            {assignment.questions.map((question: any, index: number) => renderQuestion(question, index))}
-          </div>
-        ) : (
-          <Typography variant="body1" color="textSecondary">
-            暂无题目
+        {/* 题目列表标题 */}
+        <Box sx={{ 
+          mt: 4, 
+          mb: 3, 
+          display: 'flex', 
+          alignItems: 'center', 
+          gap: 2,
+          pb: 2,
+          borderBottom: '2px solid #e0e0e0'
+        }}>
+          <Typography variant="h5" sx={{ fontWeight: 600, color: '#333' }}>
+            题目列表
           </Typography>
+          <Chip 
+            label={`${assignment.questions ? assignment.questions.length : 0}题`} 
+            size="small" 
+            sx={{ 
+              backgroundColor: '#e3f2fd', 
+              color: '#1976d2',
+              fontWeight: 500
+            }} 
+          />
+        </Box>
+        
+        {/* 题目列表 */}
+        {assignment.questions && assignment.questions.length > 0 ? (
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+            {assignment.questions.map((question: any, index: number) => renderQuestion(question, index))}
+          </Box>
+        ) : (
+          <Box sx={{ 
+            textAlign: 'center', 
+            py: 8, 
+            backgroundColor: '#f8f9fa',
+            borderRadius: 2,
+            border: '2px dashed #e0e0e0'
+          }}>
+            <Typography variant="h6" color="textSecondary" sx={{ mb: 1 }}>
+              暂无题目
+            </Typography>
+            <Typography variant="body2" color="textSecondary">
+              该作业暂未添加题目
+            </Typography>
+          </Box>
         )}
         
-        <div style={{ display: 'flex', justifyContent: 'space-between', mt: 6 }}>
-          <Button variant="outlined" onClick={handleBack}>
-            返回课程
-          </Button>
-          
-          {/* 调试信息：显示当前状态值 */}
-          <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
-            {/* 始终显示提交按钮，但根据状态调整可用性 */}
+        {/* 底部操作栏 */}
+        <Box sx={{ 
+          mt: 6, 
+          pt: 4, 
+          pb: 2,
+          borderTop: '1px solid #e0e0e0',
+          backgroundColor: '#fafafa',
+          borderRadius: 1,
+          position: 'sticky',
+          bottom: 0,
+          zIndex: 100
+        }}>
+          <Box sx={{ 
+            display: 'flex', 
+            justifyContent: 'space-between', 
+            alignItems: 'center',
+            flexWrap: 'wrap',
+            gap: 2
+          }}>
+            {/* 返回按钮 */}
             <Button
-              variant="contained"
-              onClick={handleSubmit}
-              disabled={isSubmitting || !assignment.questions?.length || assignment.status === 'DRAFT'}
-              sx={{ backgroundColor: '#4caf50' }}
+              variant="outlined"
+              onClick={handleBack}
+              startIcon={<ArrowBack />}
+              sx={{
+                px: 4,
+                py: 1.5,
+                borderRadius: 2,
+                borderColor: '#1976d2',
+                color: '#1976d2',
+                '&:hover': {
+                  backgroundColor: '#e3f2fd',
+                  borderColor: '#1565c0'
+                }
+              }}
             >
-              {isSubmitting ? (
-                <>
-                  <CircularProgress size={16} sx={{ mr: 1 }} />
-                  提交中...
-                </>
-              ) : (
-                '提交作业'
-              )}
+              返回课程
             </Button>
             
-            {/* 显示当前状态信息，但不替代提交按钮 */}
-            {(userSubmissionStatus === 'submitted' || hasLocalSubmission) && userSubmissionStatus !== 'graded' && (
-              <Typography variant="body2" color="textSecondary">
-                （作业已提交，等待评分）
-              </Typography>
-            )}
-            
-            {userSubmissionStatus === 'graded' && assignment.score !== undefined && (
-              <Typography variant="body2" color="textSecondary">
-                （已评分: {assignment.score}/{assignment.totalPoints}分）
-              </Typography>
-            )}
-          </div>
-        </div>
+            {/* 提交区域 */}
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+              {/* 状态信息 */}
+              <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 0.5 }}>
+                {(userSubmissionStatus === 'submitted' || hasLocalSubmission) && userSubmissionStatus !== 'graded' && (
+                  <Typography 
+                    variant="body2" 
+                    sx={{ 
+                      color: '#1976d2',
+                      fontWeight: 500,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 0.5
+                    }}
+                  >
+                    <CheckCircle sx={{ fontSize: 16 }} />
+                    作业已提交，等待评分
+                  </Typography>
+                )}
+                
+                {userSubmissionStatus === 'graded' && assignment.score !== undefined && (
+                  <Typography 
+                    variant="body2" 
+                    sx={{ 
+                      color: '#4caf50',
+                      fontWeight: 500,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 0.5
+                    }}
+                  >
+                    <CheckCircle sx={{ fontSize: 16 }} />
+                    已评分: {assignment.score}/{assignment.totalPoints}分
+                  </Typography>
+                )}
+              </Box>
+              
+              {/* 提交按钮 */}
+              <Button
+                variant="contained"
+                onClick={handleSubmit}
+                disabled={isSubmitting || !assignment.questions?.length || assignment.status === 'DRAFT'}
+                sx={{
+                  px: 6,
+                  py: 1.5,
+                  borderRadius: 2,
+                  backgroundColor: '#4caf50',
+                  '&:hover': {
+                    backgroundColor: '#45a049'
+                  },
+                  '&:disabled': {
+                    backgroundColor: '#e0e0e0',
+                    color: '#9e9e9e'
+                  }
+                }}
+              >
+                {isSubmitting ? (
+                  <>
+                    <CircularProgress size={16} sx={{ mr: 1, color: 'white' }} />
+                    提交中...
+                  </>
+                ) : (
+                  '提交作业'
+                )}
+              </Button>
+            </Box>
+          </Box>
+        </Box>
       </Box>
     </div>
   );
