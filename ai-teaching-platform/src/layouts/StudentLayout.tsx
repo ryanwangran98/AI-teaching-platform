@@ -22,6 +22,7 @@ import {
   Description,
   Notifications,
   Map,
+  SmartToy,
 } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
 

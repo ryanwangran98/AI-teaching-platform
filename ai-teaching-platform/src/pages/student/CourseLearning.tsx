@@ -33,6 +33,7 @@ import {
   School,
   AccountTree,
   Replay,
+  SmartToy,
 } from '@mui/icons-material';
 import { useParams, useNavigate } from 'react-router-dom';
 // 引入学习资料和课程图谱组�?
@@ -483,7 +484,7 @@ const CourseLearning: React.FC = () => {
   }
 
   return (
-    <Box sx={{ flexGrow: 1, maxWidth: '1200px', mx: 'auto', px: { xs: 2, sm: 3 } }}>
+    <Box sx={{ flexGrow: 1, maxWidth: '1600px', mx: 'auto', px: { xs: 2, sm: 3 } }}>
       {/* 课程头部 */}
       <Paper 
         elevation={0} 
@@ -686,6 +687,11 @@ const CourseLearning: React.FC = () => {
           <Tab 
             label="课程图谱" 
             icon={<AccountTree />} 
+            iconPosition="start"
+          />
+          <Tab 
+            label="课程答疑助手" 
+            icon={<SmartToy />} 
             iconPosition="start"
           />
         </Tabs>
@@ -1067,6 +1073,53 @@ const CourseLearning: React.FC = () => {
             </Typography>
           </Box>
           <CourseGraph courseId={courseId} hideTitle={true} hideLegend={false} />
+        </Paper>
+      )}
+
+      {/* 课程答疑助手 */}
+      {tabValue === 4 && (
+        <Paper 
+          elevation={0} 
+          sx={{ 
+            p: 4, 
+            borderRadius: 3,
+            border: '1px solid',
+            borderColor: 'divider'
+          }}
+        >
+          <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
+            <SmartToy sx={{ fontSize: 28, mr: 2, color: 'primary.main' }} />
+            <Typography variant="h5" sx={{ fontWeight: 600 }}>
+              课程答疑助手
+            </Typography>
+          </Box>
+          
+          <Alert severity="info" sx={{ mb: 3 }}>
+            智能AI助手为您提供24小时在线答疑服务，随时解答您的学习问题
+          </Alert>
+          
+          <Box sx={{ 
+            width: '100%', 
+            height: '700px', 
+            minHeight: '700px',
+            border: '1px solid #e0e0e0',
+            borderRadius: '8px',
+            overflow: 'hidden',
+            position: 'relative'
+          }}>
+            <iframe
+              src="http://localhost:3000/chatbot/RkKEUDRs2ZJHrStZ"
+              style={{
+                width: '100%',
+                height: '100%',
+                border: 'none',
+                borderRadius: '8px'
+              }}
+              frameBorder="0"
+              allow="microphone"
+              title="课程答疑助手"
+            />
+          </Box>
         </Paper>
       )}
     </Box>
