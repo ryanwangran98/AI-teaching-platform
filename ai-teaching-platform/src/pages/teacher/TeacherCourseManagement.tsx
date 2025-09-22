@@ -33,7 +33,8 @@ import {
   Avatar,
   useTheme,
   alpha,
-  styled
+  styled,
+  Divider
 } from '@mui/material';
 import {
   Edit,
@@ -658,8 +659,12 @@ const TeacherCourseManagement: React.FC = () => {
                 </Typography>
 
                 {/* 统计信息 */}
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3 }}>
-                  <Box sx={{ textAlign: 'center' }}>
+                <Box sx={{ 
+                  display: 'flex', 
+                  justifyContent: 'space-around', 
+                  mb: 3
+                }}>
+                  <Box sx={{ textAlign: 'center', px: 1 }}>
                     <Typography variant="h6" sx={{ fontWeight: 700, color: theme.palette.primary.main }}>
                       {course.studentCount}
                     </Typography>
@@ -667,25 +672,24 @@ const TeacherCourseManagement: React.FC = () => {
                       学生
                     </Typography>
                   </Box>
-                  <Box sx={{ textAlign: 'center' }}>
-                    <Typography variant="h6" sx={{ fontWeight: 700, color: theme.palette.success.main }}>
-                      {course.totalHours}
+                  <Box sx={{ textAlign: 'center', px: 1 }}>
+                    <Typography variant="h6" sx={{ fontWeight: 700, color: theme.palette.info.main }}>
+                      {course.credits}
                     </Typography>
                     <Typography variant="caption" color="textSecondary">
-                      课时
-                    </Typography>
-                  </Box>
-                  <Box sx={{ textAlign: 'center' }}>
-                    <School sx={{ fontSize: 24, color: theme.palette.info.main }} />
-                    <Typography variant="caption" color="textSecondary">
-                      {course.credits}学分
+                      学分
                     </Typography>
                   </Box>
                 </Box>
               </CardContent>
               
               {/* 操作按钮 */}
-              <CardActions sx={{ justifyContent: 'space-between', px: 2.5, pb: 2.5, pt: 0 }}>
+              <CardActions sx={{ 
+                justifyContent: 'space-between', 
+                px: 2.5, 
+                pb: 2.5, 
+                pt: 0
+              }}>
                 <Box sx={{ display: 'flex', gap: 1 }}>
                   <Button
                     variant="outlined"
@@ -696,9 +700,10 @@ const TeacherCourseManagement: React.FC = () => {
                       borderRadius: 2,
                       textTransform: 'none',
                       fontWeight: 500,
-                      px: 1.5,
-                      py: 0.5,
-                      minWidth: 'auto'
+                      px: 2,
+                      py: 0.75,
+                      minWidth: 'auto',
+                      fontSize: '0.8125rem'
                     }}
                   >
                     编辑
@@ -713,16 +718,17 @@ const TeacherCourseManagement: React.FC = () => {
                       borderRadius: 2,
                       textTransform: 'none',
                       fontWeight: 500,
-                      px: 1.5,
-                      py: 0.5,
-                      minWidth: 'auto'
+                      px: 2,
+                      py: 0.75,
+                      minWidth: 'auto',
+                      fontSize: '0.8125rem'
                     }}
                   >
                     资源
                   </Button>
                 </Box>
                 <Button
-                  variant="text"
+                  variant="outlined"
                   size="small"
                   startIcon={<Delete />}
                   onClick={() => handleDeleteCourse(course.id)}
@@ -731,9 +737,15 @@ const TeacherCourseManagement: React.FC = () => {
                     borderRadius: 2,
                     textTransform: 'none',
                     fontWeight: 500,
-                    px: 1.5,
-                    py: 0.5,
-                    minWidth: 'auto'
+                    px: 2,
+                    py: 0.75,
+                    minWidth: 'auto',
+                    fontSize: '0.8125rem',
+                    borderColor: alpha(theme.palette.error.main, 0.5),
+                    '&:hover': {
+                      borderColor: theme.palette.error.main,
+                      bgcolor: alpha(theme.palette.error.main, 0.04)
+                    }
                   }}
                 >
                   删除

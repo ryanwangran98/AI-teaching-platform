@@ -23,6 +23,7 @@ import {
   CardContent,
   CardHeader,
   Divider,
+  alpha,
 } from '@mui/material';
 import {
   Search,
@@ -301,13 +302,19 @@ const QuestionBank: React.FC = () => {
   return (
     <Box sx={{ p: 3 }}>
       <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
-        <IconButton 
-          onClick={() => navigate(-1)} 
-          sx={{ mr: 2 }}
-          title="返回"
+        <Button
+          startIcon={<ArrowBack />}
+          onClick={() => navigate(-1)}
+          sx={{ 
+            mr: 2,
+            backgroundColor: alpha(theme.palette.primary.main, 0.1),
+            '&:hover': {
+              backgroundColor: alpha(theme.palette.primary.main, 0.2),
+            }
+          }}
         >
-          <ArrowBack />
-        </IconButton>
+          返回
+        </Button>
         <Typography variant="h4" gutterBottom sx={{ mb: 0 }}>
           作业组题管理
         </Typography>

@@ -200,71 +200,6 @@ const ResourceManagement: React.FC = () => {
     <Box sx={{ display: 'flex' }}>
       <CssBaseline />
       
-      {/* 顶部导航栏 */}
-      <AppBar
-        position="fixed"
-        elevation={0}
-        sx={{
-          width: { sm: `calc(100% - ${drawerWidth}px)` },
-          ml: { sm: `${drawerWidth}px` },
-          bgcolor: theme.palette.background.paper,
-          color: theme.palette.text.primary,
-          borderBottom: `1px solid ${theme.palette.divider}`,
-          boxShadow: 'none',
-        }}
-      >
-        <Toolbar>
-          <IconButton
-            color="inherit"
-            aria-label="open drawer"
-            edge="start"
-            onClick={handleDrawerToggle}
-            sx={{ mr: 2, display: { sm: 'none' } }}
-          >
-            <MenuIcon />
-          </IconButton>
-          <IconButton
-            color="inherit"
-            onClick={() => navigate('/teacher/courses')}
-            sx={{ 
-              mr: 2,
-              '&:hover': {
-                bgcolor: alpha(theme.palette.primary.main, 0.05),
-              }
-            }}
-          >
-            <ArrowBack />
-          </IconButton>
-          <Box sx={{ display: 'flex', alignItems: 'center', flexGrow: 1 }}>
-            <Avatar 
-              sx={{ 
-                width: 32, 
-                height: 32, 
-                mr: 1.5,
-                bgcolor: theme.palette.primary.main,
-                color: theme.palette.primary.contrastText
-              }}
-            >
-              <School fontSize="small" />
-            </Avatar>
-            <Box>
-              <Typography variant="h6" noWrap component="div" fontWeight="bold">
-                {course?.name || '课程资源管理'}
-              </Typography>
-              <Typography variant="body2" color="textSecondary" noWrap>
-                {course?.code || '课程代码'}
-              </Typography>
-            </Box>
-          </Box>
-          <Chip 
-            label={course.status === 'PUBLISHED' || course.status === 'ACTIVE' ? '进行中' : course.status === 'DRAFT' ? '草稿' : '已结束'} 
-            size="small"
-            color={course.status === 'PUBLISHED' || course.status === 'ACTIVE' ? 'success' : course.status === 'DRAFT' ? 'warning' : 'default'}
-            variant="outlined"
-          />
-        </Toolbar>
-      </AppBar>
-      
       {/* 左侧导航栏 */}
       <Box
         component="nav"
@@ -297,8 +232,7 @@ const ResourceManagement: React.FC = () => {
         sx={{
           flexGrow: 1,
           width: { sm: `calc(100% - ${drawerWidth}px)` },
-          mt: 8,
-          minHeight: 'calc(100vh - 64px)',
+          minHeight: '100vh',
           bgcolor: theme.palette.background.default,
         }}
       >

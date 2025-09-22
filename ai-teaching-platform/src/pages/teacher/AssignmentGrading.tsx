@@ -213,7 +213,7 @@ const AssignmentGrading: React.FC = () => {
     <Box sx={{ flexGrow: 1, p: 3 }}>
       {/* 页面头部 */}
       <Box sx={{ mb: 3, display: 'flex', alignItems: 'center', gap: 2 }}>
-        <IconButton onClick={() => navigate(-1)}>
+        <IconButton onClick={() => navigate(`/teacher/courses/${courseId}/assignments`)}>
           <ArrowBack />
         </IconButton>
         <Typography variant="h4" component="h1">

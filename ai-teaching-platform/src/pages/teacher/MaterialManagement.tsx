@@ -468,7 +468,14 @@ const MaterialManagement: React.FC = () => {
           <Button
             startIcon={<ArrowBack />}
             onClick={() => navigate('/teacher/courses')}
-            sx={{ mr: 2, borderRadius: 1 }}
+            sx={{ 
+              mr: 2, 
+              borderRadius: 1,
+              backgroundColor: alpha(theme.palette.primary.main, 0.1),
+              '&:hover': {
+                backgroundColor: alpha(theme.palette.primary.main, 0.2),
+              }
+            }}
           >
             返回课程列表
           </Button>

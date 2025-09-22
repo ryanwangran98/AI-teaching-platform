@@ -560,8 +560,9 @@ const AssignmentManagement: React.FC = () => {
       {/* 页面标题和返回按钮 */}
       <Card sx={{ mb: 3, boxShadow: 3, borderRadius: 2 }}>
         <CardContent sx={{ display: 'flex', alignItems: 'center', py: 2 }}>
-          <IconButton 
+          <Button 
             onClick={() => navigate('/teacher/courses')} 
+            startIcon={<ArrowBack />}
             sx={{ 
               mr: 2,
               backgroundColor: alpha(theme.palette.primary.main, 0.1),
@@ -571,8 +572,8 @@ const AssignmentManagement: React.FC = () => {
             }}
             title="返回我的课程"
           >
-            <ArrowBack color="primary" />
-          </IconButton>
+            返回课程列表
+          </Button>
           <Box sx={{ display: 'flex', alignItems: 'center', flexGrow: 1 }}>
             <Avatar sx={{ 
               mr: 2, 

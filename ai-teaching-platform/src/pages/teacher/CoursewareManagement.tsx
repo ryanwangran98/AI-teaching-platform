@@ -475,8 +475,9 @@ const CoursewareManagement: React.FC = () => {
             onClick={() => navigate('/teacher/courses')}
             sx={{ 
               mr: 2,
+              backgroundColor: alpha(theme.palette.primary.main, 0.1),
               '&:hover': {
-                bgcolor: alpha(theme.palette.primary.main, 0.05),
+                backgroundColor: alpha(theme.palette.primary.main, 0.2),
               }
             }}
           >
