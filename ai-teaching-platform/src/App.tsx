@@ -20,6 +20,8 @@ import QuestionBankManagement from './pages/teacher/QuestionBankManagement';
 import AssignmentManagement from './pages/teacher/AssignmentManagement';
 import AssignmentQuestions from './pages/teacher/AssignmentQuestions'; // 添加导入
 import AssignmentGrading from './pages/teacher/AssignmentGrading';
+import SubmissionDetail from './pages/teacher/SubmissionDetail';
+import GradeSubmission from './pages/teacher/GradeSubmission';
 import QuestionBank from './pages/teacher/QuestionBank';
 import TeacherCourseManagement from './pages/teacher/TeacherCourseManagement';
 import CreateCourse from './pages/teacher/CreateCourse';
@@ -119,6 +121,8 @@ function App() {
         <Route path="assignments" element={<AssignmentManagement />} />
         <Route path="assignments/:assignmentId/questions" element={<AssignmentQuestions />} /> {/* 更新路由 */}
         <Route path="assignments/:assignmentId/grading" element={<AssignmentGrading />} />
+        <Route path="assignments/:assignmentId/submissions/:submissionId" element={<SubmissionDetail />} />
+        <Route path="assignments/:assignmentId/submissions/:submissionId/grade" element={<GradeSubmission />} />
       </Route>
 
       {/* 学生端路由 */}

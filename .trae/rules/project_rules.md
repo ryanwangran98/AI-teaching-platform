@@ -8,3 +8,5 @@
 teacher@example.com   密码 teacher123
 student@example.com   密码 student123
 7。不要修改前后端的启动端口
+8.使用中文回答
+9.修改代码后需要检查有没有语法问题

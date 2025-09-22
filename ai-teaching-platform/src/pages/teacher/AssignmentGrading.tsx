@@ -4,11 +4,7 @@ import {
   Typography,
   Button,
   Chip,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  TextField,
+  IconButton,
   Table,
   TableBody,
   TableCell,
@@ -21,33 +17,19 @@ import {
   Grid,
   Card,
   CardContent,
-  IconButton,
   Tabs,
   Tab,
-  Rating,
-  Divider,
-  List,
-  ListItem,
-  ListItemText,
   Avatar,
-  Badge,
+  Divider
 } from '@mui/material';
 import {
   ArrowBack,
-  CheckCircle,
-  Cancel,
   Visibility,
   Grade,
-  Description,
-  AccessTime,
-  Person,
-  School,
-  Assessment,
-  Edit,
-  Save,
+  ExpandMore
 } from '@mui/icons-material';
 import { useNavigate, useParams } from 'react-router-dom';
-import { assignmentAPI, submissionAPI } from '../../services/api';
+import { submissionAPI } from '../../services/api';
 
 interface Submission {
   id: string;
@@ -79,32 +61,25 @@ interface Submission {
       };
     };
   };
+  answers?: SubmissionAnswer[];
 }
 
-interface TabPanelProps {
-  children?: React.ReactNode;
-  index: number;
-  value: number;
-}
-
-function TabPanel(props: TabPanelProps) {
-  const { children, value, index, ...other } = props;
-
-  return (
-    <div
-      role="tabpanel"
-      hidden={value !== index}
-      id={`simple-tabpanel-${index}`}
-      aria-labelledby={`simple-tab-${index}`}
-      {...other}
-    >
-      {value === index && (
-        <Box sx={{ p: 3 }}>
-          {children}
-        </Box>
-      )}
-    </div>
-  );
+interface SubmissionAnswer {
+  id: string;
+  questionId: string;
+  questionAssignmentId: string;
+  answer: string;
+  isCorrect: boolean;
+  points: number;
+  question: {
+    id: string;
+    title: string;
+    content: string;
+    type: string;
+    points: number;
+    options?: string[];
+    correctAnswer?: string;
+  };
 }
 
 const AssignmentGrading: React.FC = () => {
@@ -115,11 +90,6 @@ const AssignmentGrading: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [tabValue, setTabValue] = useState(0);
-  const [selectedSubmission, setSelectedSubmission] = useState<Submission | null>(null);
-  const [gradingDialogOpen, setGradingDialogOpen] = useState(false);
-  const [score, setScore] = useState<number>(0);
-  const [feedback, setFeedback] = useState<string>('');
-  const [gradingLoading, setGradingLoading] = useState(false);
 
   // 统计数据
   const [stats, setStats] = useState({
@@ -176,48 +146,6 @@ const AssignmentGrading: React.FC = () => {
 
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue);
-  };
-
-  const handleGradeSubmission = (submission: Submission) => {
-    setSelectedSubmission(submission);
-    setScore(submission.score || 0);
-    setFeedback(submission.feedback || '');
-    setGradingDialogOpen(true);
-  };
-
-  const handleSaveGrade = async () => {
-    if (!selectedSubmission) return;
-
-    try {
-      setGradingLoading(true);
-      
-      const gradeData = {
-        score,
-        feedback,
-      };
-
-      await submissionAPI.updateSubmission(selectedSubmission.id, {
-        ...gradeData,
-        status: 'GRADED',
-      });
-
-      // 更新本地数据
-      const updatedSubmissions = submissions.map(s =>
-        s.id === selectedSubmission.id
-          ? { ...s, score, feedback, status: 'GRADED' as const, gradedAt: new Date().toISOString() }
-          : s
-      );
-      setSubmissions(updatedSubmissions);
-      calculateStats(updatedSubmissions);
-
-      setGradingDialogOpen(false);
-      setSelectedSubmission(null);
-    } catch (error) {
-      console.error('评分失败:', error);
-      setError('评分失败，请稍后重试');
-    } finally {
-      setGradingLoading(false);
-    }
   };
 
   const getFilteredSubmissions = () => {
@@ -295,7 +223,7 @@ const AssignmentGrading: React.FC = () => {
 
       {/* 统计卡片 */}
       <Grid container spacing={3} sx={{ mb: 3 }}>
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid xs={12} sm={6} md={3}>
           <Card>
             <CardContent sx={{ textAlign: 'center' }}>
               <Typography color="textSecondary" gutterBottom>
@@ -307,7 +235,7 @@ const AssignmentGrading: React.FC = () => {
             </CardContent>
           </Card>
         </Grid>
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid xs={12} sm={6} md={3}>
           <Card>
             <CardContent sx={{ textAlign: 'center' }}>
               <Typography color="textSecondary" gutterBottom>
@@ -319,7 +247,7 @@ const AssignmentGrading: React.FC = () => {
             </CardContent>
           </Card>
         </Grid>
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid xs={12} sm={6} md={3}>
           <Card>
             <CardContent sx={{ textAlign: 'center' }}>
               <Typography color="textSecondary" gutterBottom>
@@ -331,7 +259,7 @@ const AssignmentGrading: React.FC = () => {
             </CardContent>
           </Card>
         </Grid>
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid xs={12} sm={6} md={3}>
           <Card>
             <CardContent sx={{ textAlign: 'center' }}>
               <Typography color="textSecondary" gutterBottom>
@@ -405,7 +333,7 @@ const AssignmentGrading: React.FC = () => {
                       size="small"
                       variant="outlined"
                       startIcon={<Visibility />}
-                      onClick={() => setSelectedSubmission(submission)}
+                      onClick={() => navigate(`/teacher/courses/${courseId}/assignments/${assignmentId}/submissions/${submission.id}`)}
                     >
                       查看
                     </Button>
@@ -413,7 +341,7 @@ const AssignmentGrading: React.FC = () => {
                       size="small"
                       variant="contained"
                       startIcon={<Grade />}
-                      onClick={() => handleGradeSubmission(submission)}
+                      onClick={() => navigate(`/teacher/courses/${courseId}/assignments/${assignmentId}/submissions/${submission.id}/grade`)}
                       disabled={submission.status === 'GRADED'}
                     >
                       {submission.status === 'GRADED' ? '修改' : '批改'}
@@ -425,226 +353,6 @@ const AssignmentGrading: React.FC = () => {
           </TableBody>
         </Table>
       </TableContainer>
-
-      {/* 查看提交详情对话框 */}
-      <Dialog
-        open={selectedSubmission !== null && !gradingDialogOpen}
-        onClose={() => setSelectedSubmission(null)}
-        maxWidth="md"
-        fullWidth
-      >
-        <DialogTitle>提交详情</DialogTitle>
-        <DialogContent>
-          {selectedSubmission && (
-            <Box sx={{ mt: 2 }}>
-              <Typography variant="h6" gutterBottom>
-                学生信息
-              </Typography>
-              <Grid container spacing={2} sx={{ mb: 3 }}>
-                <Grid item xs={12} sm={6}>
-                  <Typography variant="body2" color="textSecondary">
-                    姓名
-                  </Typography>
-                  <Typography variant="body1">
-                    {selectedSubmission.user.firstName} {selectedSubmission.user.lastName}
-                  </Typography>
-                </Grid>
-                <Grid item xs={12} sm={6}>
-                  <Typography variant="body2" color="textSecondary">
-                    邮箱
-                  </Typography>
-                  <Typography variant="body1">{selectedSubmission.user.email}</Typography>
-                </Grid>
-                <Grid item xs={12} sm={6}>
-                  <Typography variant="body2" color="textSecondary">
-                    提交时间
-                  </Typography>
-                  <Typography variant="body1">
-                    {formatDate(selectedSubmission.submittedAt)}
-                  </Typography>
-                </Grid>
-                {selectedSubmission.gradedAt && (
-                  <Grid item xs={12} sm={6}>
-                    <Typography variant="body2" color="textSecondary">
-                      批改时间
-                    </Typography>
-                    <Typography variant="body1">
-                      {formatDate(selectedSubmission.gradedAt)}
-                    </Typography>
-                  </Grid>
-                )}
-              </Grid>
-
-              <Divider sx={{ my: 2 }} />
-
-              <Typography variant="h6" gutterBottom>
-                作业内容
-              </Typography>
-              <Paper variant="outlined" sx={{ p: 2, mb: 2 }}>
-                {selectedSubmission.content ? (
-                  (() => {
-                    try {
-                      const content = JSON.parse(selectedSubmission.content);
-                      return (
-                        <Box>
-                          <Typography variant="body1" gutterBottom>
-                            <strong>答案详情：</strong>
-                          </Typography>
-                          {Array.isArray(content) ? (
-                            content.map((item: any, index: number) => (
-                              <Box key={index} sx={{ mb: 2, p: 1, border: '1px solid #eee', borderRadius: 1 }}>
-                                <Typography variant="body2" color="textSecondary">
-                                  题目 {index + 1}:
-                                </Typography>
-                                <Typography variant="body2">
-                                  答案: {typeof item.answer === 'object' ? JSON.stringify(item.answer) : item.answer}
-                                </Typography>
-                                <Typography variant="body2">
-                                  得分: {item.score || 0}分
-                                </Typography>
-                              </Box>
-                            ))
-                          ) : (
-                            <Typography variant="body1" style={{ whiteSpace: 'pre-wrap' }}>
-                              {selectedSubmission.content}
-                            </Typography>
-                          )}
-                        </Box>
-                      );
-                    } catch (error) {
-                      return (
-                        <Typography variant="body1" style={{ whiteSpace: 'pre-wrap' }}>
-                          {selectedSubmission.content}
-                        </Typography>
-                      );
-                    }
-                  })()
-                ) : (
-                  <Typography variant="body1" color="textSecondary">
-                    无提交内容
-                  </Typography>
-                )}
-              </Paper>
-
-              {selectedSubmission.status === 'GRADED' && (
-                <>
-                  <Typography variant="h6" gutterBottom>
-                    评分信息
-                  </Typography>
-                  <Grid container spacing={2}>
-                    <Grid item xs={12} sm={6}>
-                      <Typography variant="body2" color="textSecondary">
-                        得分
-                      </Typography>
-                      <Typography variant="h5" color="primary">
-                        {selectedSubmission.score} / {selectedSubmission.assignment.totalPoints}
-                      </Typography>
-                    </Grid>
-                    <Grid item xs={12} sm={6}>
-                      <Typography variant="body2" color="textSecondary">
-                        得分率
-                      </Typography>
-                      <Typography variant="h5" color="primary">
-                        {Math.round(((selectedSubmission.score || 0) / selectedSubmission.assignment.totalPoints) * 100)}%
-                      </Typography>
-                    </Grid>
-                    {selectedSubmission.feedback && (
-                      <Grid item xs={12}>
-                        <Typography variant="body2" color="textSecondary">
-                          教师评语
-                        </Typography>
-                        <Typography variant="body1" style={{ whiteSpace: 'pre-wrap' }}>
-                          {selectedSubmission.feedback}
-                        </Typography>
-                      </Grid>
-                    )}
-                  </Grid>
-                </>
-              )}
-            </Box>
-          )}
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setSelectedSubmission(null)}>关闭</Button>
-          {selectedSubmission?.status === 'PENDING' && (
-            <Button
-              variant="contained"
-              onClick={() => {
-                setSelectedSubmission(null);
-                handleGradeSubmission(selectedSubmission);
-              }}
-            >
-              开始批改
-            </Button>
-          )}
-        </DialogActions>
-      </Dialog>
-
-      {/* 评分对话框 */}
-      <Dialog
-        open={gradingDialogOpen}
-        onClose={() => setGradingDialogOpen(false)}
-        maxWidth="sm"
-        fullWidth
-      >
-        <DialogTitle>作业评分</DialogTitle>
-        <DialogContent>
-          {selectedSubmission && (
-            <Box sx={{ mt: 2 }}>
-              <Typography variant="h6" gutterBottom>
-                学生: {selectedSubmission.user.firstName} {selectedSubmission.user.lastName}
-              </Typography>
-              <Typography variant="body1" gutterBottom>
-                作业: {selectedSubmission.assignment.title}
-              </Typography>
-              <Typography variant="body1" gutterBottom sx={{ mb: 3 }}>
-                总分: {selectedSubmission.assignment.totalPoints}分
-              </Typography>
-
-              <TextField
-                fullWidth
-                type="number"
-                label="得分"
-                value={score}
-                onChange={(e) => setScore(Math.max(0, Math.min(Number(e.target.value), selectedSubmission.assignment.totalPoints)))}
-                inputProps={{
-                  min: 0,
-                  max: selectedSubmission.assignment.totalPoints,
-                  step: 0.5,
-                }}
-                sx={{ mb: 2 }}
-              />
-
-              <TextField
-                fullWidth
-                multiline
-                rows={4}
-                label="评语"
-                value={feedback}
-                onChange={(e) => setFeedback(e.target.value)}
-                placeholder="请输入评语..."
-              />
-
-              <Box sx={{ mt: 2, p: 2, bgcolor: 'grey.50', borderRadius: 1 }}>
-                <Typography variant="body2" color="textSecondary">
-                  得分率: {Math.round((score / selectedSubmission.assignment.totalPoints) * 100)}%
-                </Typography>
-              </Box>
-            </Box>
-          )}
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setGradingDialogOpen(false)}>取消</Button>
-          <Button
-            variant="contained"
-            onClick={handleSaveGrade}
-            disabled={gradingLoading}
-            startIcon={gradingLoading ? <CircularProgress size={16} /> : <Save />}
-          >
-            {gradingLoading ? '保存中...' : '保存评分'}
-          </Button>
-        </DialogActions>
-      </Dialog>
     </Box>
   );
 };
