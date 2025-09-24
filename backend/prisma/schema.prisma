@@ -45,6 +45,9 @@ model Course {
   coverImage  String?
   status      String       @default("DRAFT")
   teacherId   String
+  agentAppId  String?      // Dify Agent应用ID
+  agentAccessToken String? // Dify Agent应用访问令牌
+  agentAccessCode String?  // Dify Agent应用访问代码
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
   chapters    Chapter[]
@@ -218,6 +221,8 @@ model Material {
   status       String   @default("draft")
   chapterId    String
   uploadedById String
+  datasetId    String?  // Dify知识库ID
+  documentId   String?  // Dify文档ID
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
   uploadedBy   User     @relation(fields: [uploadedById], references: [id])

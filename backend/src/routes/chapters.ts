@@ -144,9 +144,10 @@ router.post('/', authenticateToken, authorizeRoles('TEACHER', 'ADMIN'), async (r
     
     const chapter = await prisma.chapter.create({
       data: {
-        title: validCreateData.title,
-        content: validCreateData.description,
-        courseId: validCreateData.courseId
+        title: title,
+        content: description,
+        courseId: courseId,
+        order: order
       },
       include: {
         course: {

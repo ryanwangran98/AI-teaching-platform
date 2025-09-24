@@ -166,6 +166,18 @@ export const courseAPI = {
     return response.data;
   },
 
+  // 创建或重新创建课程的Agent应用
+  createAgentApp: async (courseId: string) => {
+    const response = await api.post(`/courses/${courseId}/agent-app`);
+    return response.data;
+  },
+
+  // 获取课程的Agent应用信息
+  getAgentAppInfo: async (courseId: string) => {
+    const response = await api.get(`/courses/${courseId}/agent-app-info`);
+    return response.data;
+  },
+
 };
 
 // 章节相关

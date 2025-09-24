@@ -512,11 +512,7 @@ const StudentCourseManagement: React.FC = () => {
                         </Box>
                       )}
                     </CardContent>
-                    <CardActions sx={{ justifyContent: 'space-between', px: 2.5, pb: 2.5, pt: 1 }}>
-                      <Typography variant="body2" color="textSecondary" sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                        <AccessTime sx={{ fontSize: 16 }} />
-                        {course.duration}小时
-                      </Typography>
+                    <CardActions sx={{ justifyContent: 'flex-end', px: 2.5, pb: 2.5, pt: 1 }}>
                       {isExploreMode ? (
                         // 在加入课程页面，显示不同的按钮状态
                         course.enrolled ? (
@@ -569,6 +565,17 @@ const StudentCourseManagement: React.FC = () => {
                           variant="contained"
                           startIcon={<PlayCircle />}
                           onClick={() => handleStartLearning(course.id)}
+                          sx={{
+                            borderRadius: 2,
+                            textTransform: 'none',
+                            fontWeight: 500,
+                            px: 2,
+                            py: 0.5,
+                            boxShadow: '0 2px 8px rgba(33, 150, 243, 0.3)',
+                            '&:hover': {
+                              boxShadow: '0 4px 12px rgba(33, 150, 243, 0.4)'
+                            }
+                          }}
                         >
                           进入学习
                         </Button>

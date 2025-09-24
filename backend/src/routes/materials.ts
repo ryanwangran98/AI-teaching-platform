@@ -328,6 +328,80 @@ router.put('/:id', authenticateToken, authorizeRoles('TEACHER', 'ADMIN'), async 
   }
 });
 
+// 更新资料知识库信息
+router.put('/:id/knowledge-base', authenticateToken, async (req: any, res) => {
+  try {
+    const { id } = req.params;
+    const { datasetId, documentId } = req.body;
+
+    // 验证资料是否存在
+    const material = await prisma.material.findUnique({
+      where: { id },
+      include: {
+        chapter: {
+          include: {
+            course: true
+          }
+        }
+      }
+    });
+
+    if (!material) {
+      return res.status(404).json({ error: 'Material not found' });
+    }
+
+    // 验证用户是否有权限更新此资料的知识库信息
+    // 学生可以为自己学习的课程资料创建知识库
+    if (req.user!.role === 'STUDENT') {
+      // 检查学生是否 enrolled 在该课程中
+      const enrollment = await prisma.enrollment.findFirst({
+        where: {
+          userId: req.user!.id,
+          courseId: material.chapter.course.id
+        }
+      });
+
+      if (!enrollment) {
+        return res.status(403).json({ error: 'Not authorized to update this material' });
+      }
+    } 
+    // 教师和管理员也可以更新知识库信息
+    else if (req.user!.role !== 'ADMIN' && req.user!.role !== 'TEACHER') {
+      return res.status(403).json({ error: 'Not authorized to update this material' });
+    }
+
+    // 如果是教师，验证是否是该课程的教师
+    if (req.user!.role === 'TEACHER' && material.chapter.course.teacherId !== req.user!.id) {
+      return res.status(403).json({ error: 'Not authorized to update this material' });
+    }
+
+    // 更新资料的知识库信息
+    const updatedMaterial = await prisma.material.update({
+      where: { id },
+      data: {
+        datasetId,
+        documentId
+      },
+      include: {
+        chapter: {
+          include: {
+            course: true
+          }
+        },
+        uploadedBy: true
+      }
+    });
+
+    res.json({
+      success: true,
+      data: updatedMaterial
+    });
+  } catch (error) {
+    console.error('Error updating material knowledge base:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
 // 删除资料（仅教师或管理员）
 router.delete('/:id', authenticateToken, authorizeRoles('TEACHER', 'ADMIN'), async (req: any, res) => {
   try {

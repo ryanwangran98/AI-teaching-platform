@@ -75,6 +75,8 @@ interface Course {
   overallProgress: number;
   chapters: Chapter[];
   assignments: Assignment[];
+  agentAppId?: string;
+  agentAccessToken?: string;
 }
 
 interface Assignment {
@@ -145,6 +147,15 @@ const CourseLearning: React.FC = () => {
       // 获取课程详情
       const courseResponse = await courseAPI.getCourse(courseId!);
       console.log('获取到的课程数据:', courseResponse);
+      
+      // 获取课程AI助手信息
+      let agentAppInfo = null;
+      try {
+        agentAppInfo = await courseAPI.getAgentAppInfo(courseId!);
+        console.log('获取到的AI助手信息:', agentAppInfo);
+      } catch (err) {
+        console.error('获取AI助手信息失败:', err);
+      }
       
       // 获取课程章节（所有状态的章节）
       const chaptersResponse = await chapterAPI.getChapters(courseId!, 'published');
@@ -276,6 +287,9 @@ const CourseLearning: React.FC = () => {
         totalChapters: chaptersData.length,
         completedChapters: 0, // 需要从学习记录中获取
         overallProgress: videoProgress, // 使用基于视频片段计算的进度
+        agentAppId: agentAppInfo?.data?.agentAppId || courseData.agentAppId,
+        agentAccessToken: agentAppInfo?.data?.agentAccessToken || courseData.agentAccessToken,
+        agentAccessCode: agentAppInfo?.data?.agentAccessCode || courseData.agentAccessCode,
         chapters: chaptersData.map((chapter: any, index: number) => {
           // 获取章节学习进度，优先使用基于视频片段计算的进度
           const chapterProgress = chapterProgressMap.get(chapter.id);
@@ -1098,28 +1112,50 @@ const CourseLearning: React.FC = () => {
             智能AI助手为您提供24小时在线答疑服务，随时解答您的学习问题
           </Alert>
           
-          <Box sx={{ 
-            width: '100%', 
-            height: '700px', 
-            minHeight: '700px',
-            border: '1px solid #e0e0e0',
-            borderRadius: '8px',
-            overflow: 'hidden',
-            position: 'relative'
-          }}>
-            <iframe
-              src="http://localhost:3000/chatbot/RkKEUDRs2ZJHrStZ"
-              style={{
-                width: '100%',
-                height: '100%',
-                border: 'none',
-                borderRadius: '8px'
+          {course?.agentAccessCode ? (
+            <Box sx={{ 
+              width: '100%', 
+              height: '700px', 
+              minHeight: '700px',
+              border: '1px solid #e0e0e0',
+              borderRadius: '8px',
+              overflow: 'hidden',
+              position: 'relative'
+            }}>
+              <iframe
+                src={`http://localhost:3000/chatbot/${course.agentAccessCode}`}
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  border: 'none',
+                  borderRadius: '8px'
+                }}
+                frameBorder="0"
+                allow="microphone"
+                title="课程答疑助手"
+              />
+            </Box>
+          ) : (
+            <Paper 
+              elevation={0} 
+              sx={{ 
+                p: 6, 
+                textAlign: 'center',
+                borderRadius: 3,
+                bgcolor: 'background.paper',
+                border: '2px dashed',
+                borderColor: 'divider'
               }}
-              frameBorder="0"
-              allow="microphone"
-              title="课程答疑助手"
-            />
-          </Box>
+            >
+              <SmartToy sx={{ fontSize: 48, color: 'text.disabled', mb: 2 }} />
+              <Typography variant="h6" color="text.secondary" sx={{ mb: 1 }}>
+                课程答疑助手暂未启用
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                教师还未为本课程创建AI助手，请联系教师创建
+              </Typography>
+            </Paper>
+          )}
         </Paper>
       )}
     </Box>

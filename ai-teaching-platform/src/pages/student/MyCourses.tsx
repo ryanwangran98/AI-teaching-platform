@@ -321,71 +321,121 @@ const MyCourses: React.FC = () => {
       <Grid container spacing={3}>
         {filteredCourses.map((course) => (
           <Grid size={{ xs: 12, sm: 6, md: 4, lg: 3 }} key={course.id}>
-            <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+            <Card sx={{ 
+              height: '100%', 
+              display: 'flex', 
+              flexDirection: 'column',
+              borderRadius: 3,
+              overflow: 'hidden',
+              boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
+              transition: 'all 0.3s ease',
+              '&:hover': {
+                transform: 'translateY(-5px)',
+                boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
+              }
+            }}>
               <CardMedia
                 component="img"
-                height="160"
+                height="180"
                 image={course.thumbnail}
                 alt={course.title}
+                sx={{ 
+                  objectFit: 'cover',
+                  transition: 'transform 0.3s ease',
+                  '&:hover': {
+                    transform: 'scale(1.03)',
+                  }
+                }}
               />
               
-              <CardContent sx={{ flexGrow: 1, pb: 1 }}>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+              <CardContent sx={{ 
+                flexGrow: 1, 
+                pb: 1,
+                px: 2.5,
+                pt: 2,
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 1.5
+              }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.5 }}>
                   <Chip 
                     label={getStatusLabel(course.status)} 
                     size="small" 
                     color={getStatusColor(course.status) as any}
+                    sx={{
+                      fontWeight: 600,
+                      borderRadius: 1,
+                      fontSize: '0.75rem'
+                    }}
                   />
                 </Box>
 
-                <Typography variant="h6" gutterBottom sx={{ fontSize: '1.1rem' }}>
+                <Typography variant="h6" gutterBottom sx={{ 
+                  fontSize: '1.15rem',
+                  fontWeight: 600,
+                  lineHeight: 1.3,
+                  mb: 0.5
+                }}>
                   {course.title}
                 </Typography>
                 
-                <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5 }}>
                   <Avatar
                     src={course.instructorAvatar}
                     sx={{ width: 24, height: 24, mr: 1 }}
                   />
-                  <Typography variant="body2" color="text.secondary">
+                  <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.875rem' }}>
                     {course.instructor}
                   </Typography>
                 </Box>
 
-                <Typography variant="body2" color="text.secondary" paragraph sx={{ fontSize: '0.875rem' }}>
+                <Typography variant="body2" color="text.secondary" paragraph sx={{ 
+                  fontSize: '0.875rem',
+                  lineHeight: 1.4,
+                  mb: 1,
+                  display: '-webkit-box',
+                  WebkitLineClamp: 2,
+                  WebkitBoxOrient: 'vertical',
+                  overflow: 'hidden'
+                }}>
                   {course.description}
                 </Typography>
 
-                
-
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                  <Typography variant="body2" color="text.secondary">
-                    <AccessTime sx={{ fontSize: 16, verticalAlign: 'middle', mr: 0.5 }} />
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                  <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.8rem', display: 'flex', alignItems: 'center' }}>
+                    <AccessTime sx={{ fontSize: 16, mr: 0.5 }} />
                     {course.duration}小时
                   </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    <People sx={{ fontSize: 16, verticalAlign: 'middle', mr: 0.5 }} />
+                  <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.8rem', display: 'flex', alignItems: 'center' }}>
+                    <People sx={{ fontSize: 16, mr: 0.5 }} />
                     {course.studentsCount}
                   </Typography>
                 </Box>
 
                 {course.status !== 'not-started' && (
-                  <Box sx={{ mb: 2 }}>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                      <Typography variant="body2">学习进度</Typography>
-                      <Typography variant="body2" color="primary">
+                  <Box sx={{ mb: 1 }}>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
+                      <Typography variant="body2" sx={{ fontSize: '0.875rem', fontWeight: 500 }}>学习进度</Typography>
+                      <Typography variant="body2" color="primary" sx={{ fontSize: '0.875rem', fontWeight: 600 }}>
                         {isNaN(Number(course.progress)) ? '0.0' : Math.max(0, Math.min(100, course.progress || 0)).toFixed(1)}%
                       </Typography>
                     </Box>
                     <LinearProgress 
                       variant="determinate" 
                       value={isNaN(Number(course.progress)) ? 0 : Math.max(0, Math.min(100, course.progress || 0))} 
-                      sx={{ height: 8, borderRadius: 5 }}
+                      sx={{ 
+                        height: 8, 
+                        borderRadius: 5,
+                        backgroundColor: 'rgba(0, 0, 0, 0.05)',
+                        '& .MuiLinearProgress-bar': {
+                          borderRadius: 5,
+                        }
+                      }}
                     />
                   </Box>
                 )}
 
-                <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mb: 1 }}>
+                <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mb: 0.5 }}>
                   {course.tags.slice(0, 2).map((tag) => (
                     <Chip 
                       key={tag} 
@@ -393,26 +443,44 @@ const MyCourses: React.FC = () => {
                       size="small" 
                       variant="outlined"
                       color="primary"
+                      sx={{
+                        fontSize: '0.7rem',
+                        height: 24,
+                        borderRadius: 1,
+                      }}
                     />
                   ))}
                 </Box>
               </CardContent>
               
-              <Box sx={{ p: 2, pt: 0 }}>
+              <Box sx={{ 
+                p: 2, 
+                pt: 0,
+                px: 2.5,
+                pb: 2.5
+              }}>
                 <Button
                   variant="contained"
                   fullWidth
                   startIcon={<PlayCircle />}
                   size="small"
                   onClick={() => navigate(`/student/course/${course.id}`)}
+                  sx={{
+                    borderRadius: 2,
+                    py: 1.2,
+                    fontWeight: 600,
+                    boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                    transition: 'all 0.2s',
+                    '&:hover': {
+                      transform: 'translateY(-2px)',
+                      boxShadow: '0 4px 8px rgba(0,0,0,0.15)',
+                    }
+                  }}
                 >
                   {course.status === 'not-started' ? '加入学习' :
                    course.status === 'completed' ? '复习课程' :
                    '继续学习'}
                 </Button>
-                <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block', textAlign: 'center' }}>
-                  上次学习: {course.lastAccess}
-                </Typography>
               </Box>
             </Card>
           </Grid>

@@ -28,6 +28,7 @@ import {
   LinearProgress,
   CircularProgress,
   Alert,
+  Snackbar,
   ToggleButton,
   ToggleButtonGroup,
   Avatar,
@@ -54,7 +55,11 @@ import {
   Assignment,    // 作业图标
   ViewList,
   MoreVert,
-  FilterList
+  FilterList,
+  SmartToy,      // AI助手图标
+  CheckCircle,   // 已创建图标
+  Error,         // 错误图标
+  Refresh        // 刷新图标
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { courseAPI } from '../../services/api';
@@ -77,6 +82,8 @@ interface Course {
   category: string;
   prerequisites: string[];
   tags: string[];
+  agentAppId?: string;      // Dify Agent应用ID
+  agentAccessToken?: string; // Dify Agent应用访问令牌
 }
 
 const TeacherCourseManagement: React.FC = () => {
@@ -130,6 +137,15 @@ const TeacherCourseManagement: React.FC = () => {
   const [departmentFilter, setDepartmentFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
   const [open, setOpen] = useState(false);
+  const [agentDialogOpen, setAgentDialogOpen] = useState(false);
+  const [agentAppInfo, setAgentAppInfo] = useState<any>(null);
+  const [agentLoading, setAgentLoading] = useState(false);
+  const [agentError, setAgentError] = useState<string | null>(null);
+  const [snackbar, setSnackbar] = useState({
+    open: false,
+    message: '',
+    severity: 'success' as 'success' | 'error' | 'warning' | 'info'
+  });
   
   // 添加编辑表单的state
   const [editForm, setEditForm] = useState({
@@ -179,6 +195,8 @@ const TeacherCourseManagement: React.FC = () => {
       // 转换后端数据格式到前端格式
       const convertBackendCourse = (course: any): Course => {
         console.log('转换单个课程:', course);
+        console.log('课程agentAppId:', course.agentAppId);
+        console.log('课程agentAccessToken:', course.agentAccessToken);
         return {
           id: course.id,
           name: course.title || course.name || '未命名课程',
@@ -196,12 +214,15 @@ const TeacherCourseManagement: React.FC = () => {
           endDate: new Date(new Date().getTime() + 16 * 7 * 24 * 60 * 60 * 1000).toISOString(),
           category: course.category || '其他',
           prerequisites: [],
-          tags: course.tags || []
+          tags: course.tags || [],
+          agentAppId: course.agentAppId,
+          agentAccessToken: course.agentAccessToken
         };
       };
 
       const convertedCourses = coursesData.map(convertBackendCourse);
       console.log('转换后的前端课程:', convertedCourses);
+      console.log('转换后的课程agentAppId:', convertedCourses.map(c => ({ id: c.id, name: c.name, agentAppId: c.agentAppId })));
       
       setCourses(convertedCourses);
       setError(null);
@@ -310,6 +331,108 @@ const TeacherCourseManagement: React.FC = () => {
       alert(`更新课程失败: ${error.response?.data?.error || error.message}`);
     } finally {
       handleClose();
+    }
+  };
+
+  // 处理打开Agent应用对话框
+  const handleOpenAgentDialog = async (course: Course) => {
+    setSelectedCourse(course);
+    setAgentDialogOpen(true);
+    setAgentLoading(true);
+    setAgentError(null);
+    
+    try {
+      // 获取Agent应用信息
+      const response = await courseAPI.getAgentAppInfo(course.id);
+      setAgentAppInfo(response.data || response);
+    } catch (error: any) {
+      console.error('获取Agent应用信息失败:', error);
+      setAgentError(error.response?.data?.message || '获取Agent应用信息失败');
+    } finally {
+      setAgentLoading(false);
+    }
+  };
+
+  // 处理关闭Agent应用对话框
+  const handleCloseAgentDialog = () => {
+    setAgentDialogOpen(false);
+    setSelectedCourse(null);
+    setAgentAppInfo(null);
+    setAgentError(null);
+  };
+
+  // 处理关闭Snackbar
+  const handleCloseSnackbar = () => {
+    setSnackbar(prev => ({ ...prev, open: false }));
+  };
+
+  // 处理创建或重新创建Agent应用
+  const handleCreateAgentApp = async () => {
+    if (!selectedCourse) return;
+    
+    setAgentLoading(true);
+    setAgentError(null);
+    
+    try {
+      // 根据接口文档，创建Agent应用需要两个步骤：
+      // 1. 创建应用（需要登录获取access_token）
+      // 2. 获取应用的访问令牌
+      
+      // 步骤1：创建应用
+      const appResponse = await courseAPI.createAgentApp(selectedCourse.id);
+      
+      // 根据接口文档，响应格式应该是：
+      // {
+      //   "success": true,
+      //   "data": {
+      //     "agentAppId": "应用ID",
+      //     "agentAccessToken": "访问令牌"
+      //   },
+      //   "message": "Agent应用创建成功"
+      // }
+      
+      if (appResponse.success && appResponse.data) {
+        setAgentAppInfo(appResponse.data);
+        
+        // 更新课程列表中的Agent应用信息
+        setCourses(prevCourses => 
+          prevCourses.map(course => 
+            course.id === selectedCourse.id 
+              ? { 
+                  ...course, 
+                  agentAppId: appResponse.data.agentAppId,
+                  agentAccessToken: appResponse.data.agentAccessToken
+                }
+              : course
+          )
+        );
+        
+        // 显示成功消息
+        setSnackbar({
+          open: true,
+          message: appResponse.message || 'Agent应用创建成功！',
+          severity: 'success'
+        });
+      } else {
+        throw new Error(appResponse.message || '创建Agent应用失败');
+      }
+      
+    } catch (error: any) {
+      console.error('创建Agent应用失败:', error);
+      const errorMessage = error.response?.data?.message || 
+                          error.response?.data?.error || 
+                          error.message || 
+                          '创建Agent应用失败';
+      setAgentError(errorMessage);
+      
+      // 显示错误消息
+      setSnackbar({
+        open: true,
+        message: errorMessage,
+        severity: 'error'
+      });
+    } finally {
+      setAgentLoading(false);
     }
   };
 
@@ -726,6 +849,24 @@ const TeacherCourseManagement: React.FC = () => {
                   >
                     资源
                   </Button>
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    startIcon={<SmartToy />}
+                    onClick={() => handleOpenAgentDialog(course)}
+                    color="primary"
+                    sx={{
+                      borderRadius: 2,
+                      textTransform: 'none',
+                      fontWeight: 500,
+                      px: 2,
+                      py: 0.75,
+                      minWidth: 'auto',
+                      fontSize: '0.8125rem'
+                    }}
+                  >
+                    AI助手
+                  </Button>
                 </Box>
                 <Button
                   variant="outlined"
@@ -823,6 +964,125 @@ const TeacherCourseManagement: React.FC = () => {
       </Dialog>
 
       {/* 资源管理对话框 - 已移除，改为跳转到新页面 */}
+
+      {/* Agent应用管理对话框 */}
+      <Dialog open={agentDialogOpen} onClose={handleCloseAgentDialog} maxWidth="md" fullWidth PaperProps={{ sx: { borderRadius: 3 } }}>
+        <DialogTitle sx={{ pb: 1 }}>
+          <Typography variant="h6" component="div" sx={{ fontWeight: 'bold' }}>
+            AI助手管理 - {selectedCourse?.name}
+          </Typography>
+        </DialogTitle>
+        <DialogContent>
+          <Box sx={{ pt: 2 }}>
+            {agentLoading ? (
+              <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', py: 4 }}>
+                <CircularProgress />
+                <Typography variant="body2" sx={{ ml: 2 }}>
+                  正在获取AI助手信息...
+                </Typography>
+              </Box>
+            ) : agentError ? (
+              <Alert severity="error" sx={{ mb: 2 }}>
+                {agentError}
+              </Alert>
+            ) : agentAppInfo && agentAppInfo.agentAppId ? (
+              <Box>
+                <Alert severity="success" sx={{ mb: 3 }}>
+                  AI助手已成功创建！
+                </Alert>
+                
+                <Grid container spacing={3}>
+                  <Grid size={{ xs: 12, sm: 6 }}>
+                    <TextField
+                      fullWidth
+                      label="AI助手ID"
+                      variant="outlined"
+                      value={agentAppInfo.agentAppId}
+                      InputProps={{ readOnly: true }}
+                      margin="normal"
+                    />
+                  </Grid>
+                  <Grid size={{ xs: 12, sm: 6 }}>
+                    <TextField
+                      fullWidth
+                      label="访问令牌"
+                      variant="outlined"
+                      value={agentAppInfo.agentAccessToken || "未生成"}
+                      InputProps={{ readOnly: true }}
+                      margin="normal"
+                    />
+                  </Grid>
+                  <Grid size={{ xs: 12 }}>
+                    <TextField
+                      fullWidth
+                      label="嵌入代码"
+                      variant="outlined"
+                      multiline
+                      rows={4}
+                      value={agentAppInfo.iframeCode || "暂无嵌入代码"}
+                      InputProps={{ readOnly: true }}
+                      margin="normal"
+                    />
+                  </Grid>
+                </Grid>
+                
+                <Box sx={{ mt: 3, p: 2, bgcolor: alpha(theme.palette.info.main, 0.1), borderRadius: 2 }}>
+                  <Typography variant="body2" color="info.main">
+                    提示：您可以将上述嵌入代码添加到课程页面中，让学生可以直接与AI助手互动。
+                  </Typography>
+                </Box>
+              </Box>
+            ) : (
+              <Box sx={{ textAlign: 'center', py: 4 }}>
+                <SmartToy sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
+                <Typography variant="h6" sx={{ mb: 2 }}>
+                  尚未创建AI助手
+                </Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+                  为本课程创建AI助手，可以帮助学生解答问题、提供学习指导等。
+                </Typography>
+              </Box>
+            )}
+          </Box>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 3 }}>
+          <Button onClick={handleCloseAgentDialog} variant="outlined">
+            关闭
+          </Button>
+          {!agentAppInfo?.agentAppId && (
+            <Button 
+              onClick={handleCreateAgentApp} 
+              variant="contained" 
+              startIcon={agentLoading ? <CircularProgress size={20} /> : <SmartToy />}
+              disabled={agentLoading}
+            >
+              {agentLoading ? '创建中...' : '创建AI助手'}
+            </Button>
+          )}
+          {agentAppInfo?.agentAppId && (
+            <Button 
+              onClick={handleCreateAgentApp} 
+              variant="outlined" 
+              startIcon={agentLoading ? <CircularProgress size={20} /> : <Refresh />}
+              disabled={agentLoading}
+            >
+              {agentLoading ? '重新创建中...' : '重新创建'}
+            </Button>
+          )}
+        </DialogActions>
+      </Dialog>
+
+      {/* Snackbar消息提示 */}
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={6000}
+        onClose={handleCloseSnackbar}
+        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+      >
+        <Alert onClose={handleCloseSnackbar} severity={snackbar.severity as any} sx={{ width: '100%' }}>
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
 
     </Box>
   );
