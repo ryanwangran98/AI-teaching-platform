@@ -19,6 +19,10 @@ import {
   Avatar,
   IconButton,
   Tooltip,
+  AppBar,
+  Toolbar,
+  useTheme,
+  Container
 } from '@mui/material';
 import School from '@mui/icons-material/School';
 import Star from '@mui/icons-material/Star';
@@ -86,6 +90,7 @@ const StudentDashboard: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const { logout, user } = useAuth();
   const navigate = useNavigate();
+  const theme = useTheme();
 
   useEffect(() => {
     fetchDashboardData();
@@ -439,34 +444,34 @@ const StudentDashboard: React.FC = () => {
   };
 
   const statCards = [
-    {
-      title: '在学课程',
-      value: stats.enrolledCourses.toString(),
-      icon: <School />,
-      color: 'primary',
-    },
-    {
-      title: '获得学分',
-      value: stats.earnedCredits.toString(),
-      icon: <Star />,
-      color: 'success',
-    },
-    {
-      title: '学习进度',
-      value: `${isNaN(Number(stats.learningProgress)) ? '0.0' : Math.max(0, Math.min(100, stats.learningProgress || 0)).toFixed(1)}%`,
-      icon: <TrendingUp />,
-      color: 'info',
-    },
-    {
-      title: '本周学时',
-      value: `${stats.weeklyHours}h`,
-      icon: <AccessTime />,
-      color: 'warning',
-    },
-  ];
-
+      {
+        title: '在学课程',
+        value: stats.enrolledCourses.toString(),
+        icon: <School />,
+        color: theme.palette.primary.main,
+      },
+      {
+        title: '获得学分',
+        value: stats.earnedCredits.toString(),
+        icon: <Star />,
+        color: theme.palette.secondary.main,
+      },
+      {
+        title: '学习进度',
+        value: `${isNaN(Number(stats.learningProgress)) ? '0.0' : Math.max(0, Math.min(100, stats.learningProgress || 0)).toFixed(1)}%`,
+        icon: <TrendingUp />,
+        color: theme.palette.success.main,
+      },
+      {
+        title: '本周学时',
+        value: `${stats.weeklyHours}h`,
+        icon: <AccessTime />,
+        color: theme.palette.warning.main,
+      },
+    ];
+  
   // 图表颜色配置
-  const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042'];
+  const COLORS = [theme.palette.primary.main, theme.palette.secondary.main, theme.palette.success.main, theme.palette.warning.main];
 
   const handleLogout = async () => {
     try {
@@ -478,182 +483,467 @@ const StudentDashboard: React.FC = () => {
   };
 
   return (
-    <Box>
-      <Box sx={{ display: 'flex', alignItems: 'center', mb: 4 }}>
-        <Typography variant="h4" gutterBottom>
-          欢迎，{(user?.firstName && user?.lastName) ? `${user.firstName}${user.lastName}` : user?.username || '学生'}!
-        </Typography>
-        <Button
-          onClick={handleLogout}
-          color="error"
-          size="large"
-          startIcon={<ExitToApp />}
-          sx={{ ml: 2 }}
-        >
-          退出登录
-        </Button>
-      </Box>
-      
-      {loading ? (
-        <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
-          <CircularProgress />
+    <Box sx={{ flexGrow: 1 }}>
+      {/* Header */}
+      <AppBar 
+        position="static" 
+        elevation={0} 
+        sx={{ 
+          bgcolor: 'background.paper', 
+          color: 'text.primary',
+          boxShadow: '0 2px 10px rgba(0,0,0,0.05)',
+          py: 1,
+          mb: 4
+        }}
+      >
+        <Toolbar>
+          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+            <School sx={{ 
+              mr: 2, 
+              color: theme.palette.primary.main,
+              fontSize: 32
+            }} />
+            <Typography 
+              variant="h6" 
+              component="div" 
+              sx={{ 
+                fontWeight: 'bold',
+                background: `linear-gradient(45deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+              }}
+            >
+              AI融合教学平台 - 学生端
+            </Typography>
+          </Box>
+          <Box sx={{ flexGrow: 1 }} />
+          <Button
+            onClick={handleLogout}
+            color="error"
+            size="medium"
+            startIcon={<ExitToApp />}
+            sx={{
+              borderRadius: 20,
+              px: 3,
+              fontWeight: 'bold',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+              '&:hover': {
+                boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+              },
+            }}
+          >
+            退出登录
+          </Button>
+        </Toolbar>
+      </AppBar>
+
+      {/* Welcome Section */}
+      <Container maxWidth="lg" sx={{ px: { xs: 3, md: 4 }, mb: 6 }}>
+        <Box sx={{ textAlign: 'center', mb: 6 }}>
+          <Typography 
+            variant="h3" 
+            component="h1" 
+            gutterBottom 
+            fontWeight="bold"
+            sx={{
+              background: `linear-gradient(45deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              mb: 2
+            }}
+          >
+            欢迎，{(user?.firstName && user?.lastName) ? `${user.firstName}${user.lastName}` : user?.username || '学生'}!
+          </Typography>
+          <Typography 
+            variant="h6" 
+            component="p" 
+            color="text.secondary" 
+            sx={{ 
+              mb: 2, 
+              maxWidth: '700px', 
+              mx: 'auto',
+              lineHeight: 1.6
+            }}
+          >
+            今天是 {new Date().toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' })}
+          </Typography>
         </Box>
-      ) : (
-        <>
-          {/* Stats Cards */}
-          <Grid container spacing={3} sx={{ mb: 4 }}>
-            {statCards.map((stat, index) => (
-              <Grid size={{ xs: 12, sm: 6, md: 3 }} key={index}>
-                <Card>
-                  <CardContent>
-                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                      <Box>
-                        <Typography color="textSecondary" gutterBottom>
-                          {stat.title}
-                        </Typography>
-                        <Typography variant="h4" component="h2">
-                          {stat.value}
-                        </Typography>
-                      </Box>
-                      <Box sx={{ color: `${stat.color}.main` }}>
+        
+        {loading ? (
+          <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', mt: 8, mb: 8 }}>
+            <Box sx={{ textAlign: 'center' }}>
+              <CircularProgress 
+                size={60} 
+                thickness={4}
+                sx={{
+                  color: theme.palette.primary.main,
+                  mb: 3,
+                }}
+              />
+              <Typography variant="h6" color="text.secondary">
+                正在加载您的学习数据...
+              </Typography>
+            </Box>
+          </Box>
+        ) : (
+          <>
+            {/* Stats Cards */}
+            <Grid container spacing={4} sx={{ mb: 6 }}>
+              {statCards.map((stat, index) => (
+                <Grid size={{ xs: 12, sm: 6, md: 3 }} key={index}>
+                  <Card 
+                    sx={{ 
+                      height: '100%', 
+                      display: 'flex', 
+                      flexDirection: 'column',
+                      transition: 'transform 0.3s, box-shadow 0.3s',
+                      '&:hover': {
+                        transform: 'translateY(-8px)',
+                        boxShadow: '0 12px 24px rgba(0,0,0,0.12)',
+                      },
+                      borderRadius: 3,
+                      overflow: 'hidden',
+                      border: '1px solid rgba(0,0,0,0.06)',
+                      position: 'relative'
+                    }}
+                  >
+                    <Box sx={{ 
+                      p: 4, 
+                      display: 'flex', 
+                      justifyContent: 'center',
+                      bgcolor: `${stat.color}08`,
+                      position: 'relative',
+                      '&::before': {
+                        content: '""',
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        height: 4,
+                        background: stat.color,
+                      }
+                    }}>
+                      <Avatar sx={{ 
+                        width: 70, 
+                        height: 70, 
+                        bgcolor: stat.color,
+                        color: 'white',
+                        boxShadow: '0 4px 10px rgba(0,0,0,0.1)'
+                      }}>
                         {stat.icon}
-                      </Box>
+                      </Avatar>
+                    </Box>
+                    <CardContent sx={{ flexGrow: 1, p: 3, textAlign: 'center' }}>
+                      <Typography 
+                        gutterBottom 
+                        variant="h5" 
+                        component="h2" 
+                        fontWeight="bold"
+                        sx={{ mb: 2 }}
+                      >
+                        {stat.title}
+                      </Typography>
+                      <Typography 
+                        variant="h4" 
+                        component="p" 
+                        fontWeight="bold"
+                        sx={{ color: stat.color }}
+                      >
+                        {stat.value}
+                      </Typography>
+                    </CardContent>
+                  </Card>
+                </Grid>
+              ))}
+            </Grid>
+
+            <Grid container spacing={4} sx={{ mb: 6 }}>
+              {/* 视频学习折线图 */}
+              <Grid size={{ xs: 12, md: 6 }}>
+                <Card 
+                  sx={{ 
+                    height: '100%',
+                    transition: 'transform 0.3s, box-shadow 0.3s',
+                    '&:hover': {
+                      transform: 'translateY(-8px)',
+                      boxShadow: '0 12px 24px rgba(0,0,0,0.12)',
+                    },
+                    borderRadius: 3,
+                    overflow: 'hidden',
+                    border: '1px solid rgba(0,0,0,0.06)',
+                    position: 'relative'
+                  }}
+                >
+                  <Box sx={{ 
+                    p: 3, 
+                    display: 'flex', 
+                    alignItems: 'center',
+                    bgcolor: `${theme.palette.primary.main}08`,
+                    position: 'relative',
+                    '&::before': {
+                      content: '""',
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      height: 4,
+                      background: theme.palette.primary.main,
+                    }
+                  }}>
+                    <Typography variant="h6" fontWeight="bold">
+                      视频学习时间
+                    </Typography>
+                  </Box>
+                  <CardContent sx={{ pt: 2 }}>
+                    <Box sx={{ height: 300 }}>
+                      <ResponsiveContainer width="100%" height="100%">
+                        <LineChart
+                          data={videoLearningData}
+                          margin={{
+                            top: 20,
+                            right: 30,
+                            left: 20,
+                            bottom: 5,
+                          }}
+                        >
+                          <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                          <XAxis 
+                            dataKey="name" 
+                            angle={-45} 
+                            textAnchor="end"
+                            height={60}
+                            interval={Math.floor(videoLearningData.length / 15)} // 显示约15个刻度
+                            tick={{ fontSize: 12 }}
+                          />
+                          <YAxis 
+                            label={{ value: '学习时间(分钟)', angle: -90, position: 'insideLeft', style: { textAnchor: 'middle' } }} 
+                            domain={[0, Math.max(10, 'dataMax + 2')]} 
+                            tick={{ fontSize: 12 }}
+                          />
+                          <RechartsTooltip 
+                            contentStyle={{ 
+                              borderRadius: 8, 
+                              border: 'none', 
+                              boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                            }}
+                          />
+                          <Legend />
+                          <Line 
+                            type="monotone" 
+                            dataKey="学习时间" 
+                            stroke={theme.palette.primary.main} 
+                            strokeWidth={2}
+                            dot={{ r: 4, fill: theme.palette.primary.main }}
+                            activeDot={{ r: 6, stroke: '#fff', strokeWidth: 2 }}
+                          />
+                        </LineChart>
+                      </ResponsiveContainer>
                     </Box>
                   </CardContent>
                 </Card>
               </Grid>
-            ))}
-          </Grid>
 
-          <Grid container spacing={3} sx={{ mb: 4 }}>
-            {/* 视频学习折线图 */}
-            <Grid size={{ xs: 12, md: 6 }}>
-              <Card>
-                <CardContent>
-                  <Typography variant="h6" gutterBottom>
-                    视频学习时间
-                  </Typography>
-                  <Box sx={{ height: 300 }}>
-                    <ResponsiveContainer width="100%" height="100%">
-                      <LineChart
-                        data={videoLearningData}
-                        margin={{
-                          top: 20,
-                          right: 30,
-                          left: 20,
-                          bottom: 5,
-                        }}
-                      >
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis 
-                          dataKey="name" 
-                          angle={-45} 
-                          textAnchor="end"
-                          height={60}
-                          interval={Math.floor(videoLearningData.length / 15)} // 显示约15个刻度
-                        />
-                        <YAxis label={{ value: '学习时间(分钟)', angle: -90, position: 'insideLeft' }} domain={[0, Math.max(10, 'dataMax + 2')]} />
-                        <RechartsTooltip />
-                        <Legend />
-                        <Line type="monotone" dataKey="学习时间" stroke="#0088FE" activeDot={{ r: 8 }} />
-                      </LineChart>
-                    </ResponsiveContainer>
+              {/* 作业完成折线图 */}
+              <Grid size={{ xs: 12, md: 6 }}>
+                <Card 
+                  sx={{ 
+                    height: '100%',
+                    transition: 'transform 0.3s, box-shadow 0.3s',
+                    '&:hover': {
+                      transform: 'translateY(-8px)',
+                      boxShadow: '0 12px 24px rgba(0,0,0,0.12)',
+                    },
+                    borderRadius: 3,
+                    overflow: 'hidden',
+                    border: '1px solid rgba(0,0,0,0.06)',
+                    position: 'relative'
+                  }}
+                >
+                  <Box sx={{ 
+                    p: 3, 
+                    display: 'flex', 
+                    alignItems: 'center',
+                    bgcolor: `${theme.palette.secondary.main}08`,
+                    position: 'relative',
+                    '&::before': {
+                      content: '""',
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      height: 4,
+                      background: theme.palette.secondary.main,
+                    }
+                  }}>
+                    <Typography variant="h6" fontWeight="bold">
+                      作业完成时间
+                    </Typography>
                   </Box>
-                </CardContent>
-              </Card>
-            </Grid>
-
-            {/* 作业完成折线图 */}
-            <Grid size={{ xs: 12, md: 6 }}>
-              <Card>
-                <CardContent>
-                  <Typography variant="h6" gutterBottom>
-                    作业完成时间
-                  </Typography>
-                  <Box sx={{ height: 300 }}>
-                    <ResponsiveContainer width="100%" height="100%">
-                      <LineChart
-                        data={assignmentData}
-                        margin={{
-                          top: 20,
-                          right: 30,
-                          left: 20,
-                          bottom: 5,
-                        }}
-                      >
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis 
-                          dataKey="name" 
-                          angle={-45} 
-                          textAnchor="end"
-                          height={60}
-                          interval={Math.floor(assignmentData.length / 15)} // 显示约15个刻度
-                        />
-                        <YAxis label={{ value: '学习时间(分钟)', angle: -90, position: 'insideLeft' }} domain={[0, Math.max(10, 'dataMax + 2')]} />
-                        <RechartsTooltip />
-                        <Legend />
-                        <Line type="monotone" dataKey="学习时间" stroke="#00C49F" activeDot={{ r: 8 }} />
-                      </LineChart>
-                    </ResponsiveContainer>
-                  </Box>
-                </CardContent>
-              </Card>
-            </Grid>
-
-            
-          </Grid>
-
-        <Grid container spacing={3}>
-          {/* Recent Activities - 占据全宽 */}
-          <Grid size={{ xs: 12, md: 12 }}>
-            <Card>
-              <CardContent>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                  <Typography variant="h6" gutterBottom>
-                    最近活动
-                  </Typography>
-                  <Button 
-                    size="small" 
-                    variant="outlined" 
-                    component={Link}
-                    to="/student/notifications"
-                  >
-                    查看全部
-                  </Button>
-                </Box>
-                <Box sx={{ mt: 2 }}>
-                  {recentActivities.map((activity) => (
-                    <Box key={activity.id} sx={{ display: 'flex', alignItems: 'flex-start', mb: 2 }}>
-                      <Box sx={{ mr: 2, mt: 0.5 }}>
-                        {activity.icon}
-                      </Box>
-                      <Box sx={{ flexGrow: 1 }}>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
-                          <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
-                            {activity.content}
-                          </Typography>
-                          {activity.relatedCourse && (
-                            <Chip 
-                              label={activity.relatedCourse.title} 
-                              size="small" 
-                              variant="outlined" 
-                              sx={{ height: 18 }}
-                            />
-                          )}
-                        </Box>
-                        <Typography variant="caption" color="textSecondary">
-                          {activity.time}
-                        </Typography>
-                      </Box>
+                  <CardContent sx={{ pt: 2 }}>
+                    <Box sx={{ height: 300 }}>
+                      <ResponsiveContainer width="100%" height="100%">
+                        <LineChart
+                          data={assignmentData}
+                          margin={{
+                            top: 20,
+                            right: 30,
+                            left: 20,
+                            bottom: 5,
+                          }}
+                        >
+                          <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                          <XAxis 
+                            dataKey="name" 
+                            angle={-45} 
+                            textAnchor="end"
+                            height={60}
+                            interval={Math.floor(assignmentData.length / 15)} // 显示约15个刻度
+                            tick={{ fontSize: 12 }}
+                          />
+                          <YAxis 
+                            label={{ value: '学习时间(分钟)', angle: -90, position: 'insideLeft', style: { textAnchor: 'middle' } }} 
+                            domain={[0, Math.max(10, 'dataMax + 2')]} 
+                            tick={{ fontSize: 12 }}
+                          />
+                          <RechartsTooltip 
+                            contentStyle={{ 
+                              borderRadius: 8, 
+                              border: 'none', 
+                              boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                            }}
+                          />
+                          <Legend />
+                          <Line 
+                            type="monotone" 
+                            dataKey="学习时间" 
+                            stroke={theme.palette.secondary.main} 
+                            strokeWidth={2}
+                            dot={{ r: 4, fill: theme.palette.secondary.main }}
+                            activeDot={{ r: 6, stroke: '#fff', strokeWidth: 2 }}
+                          />
+                        </LineChart>
+                      </ResponsiveContainer>
                     </Box>
-                  ))}
-                </Box>
-              </CardContent>
-            </Card>
-          </Grid>
-        </Grid>
-      </>
-    )}
+                  </CardContent>
+                </Card>
+              </Grid>
+            </Grid>
+
+            <Grid container spacing={4}>
+              {/* Recent Activities - 占据全宽 */}
+              <Grid size={{ xs: 12 }}>
+                <Card 
+                  sx={{ 
+                    transition: 'transform 0.3s, box-shadow 0.3s',
+                    '&:hover': {
+                      transform: 'translateY(-8px)',
+                      boxShadow: '0 12px 24px rgba(0,0,0,0.12)',
+                    },
+                    borderRadius: 3,
+                    overflow: 'hidden',
+                    border: '1px solid rgba(0,0,0,0.06)',
+                    position: 'relative'
+                  }}
+                >
+                  <Box sx={{ 
+                    p: 3, 
+                    display: 'flex', 
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    bgcolor: `${theme.palette.primary.main}08`,
+                    position: 'relative',
+                    '&::before': {
+                      content: '""',
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      height: 4,
+                      background: theme.palette.primary.main,
+                    }
+                  }}>
+                    <Typography variant="h6" fontWeight="bold">
+                      最近活动
+                    </Typography>
+                    <Button 
+                      size="small" 
+                      variant="outlined" 
+                      component={Link}
+                      to="/student/notifications"
+                      sx={{
+                        borderRadius: 20,
+                        px: 3,
+                        fontWeight: 'bold',
+                        '&:hover': {
+                          transform: 'translateY(-2px)',
+                        },
+                        transition: 'all 0.3s ease',
+                      }}
+                    >
+                      查看全部
+                    </Button>
+                  </Box>
+                  <CardContent sx={{ pt: 2 }}>
+                    <Box sx={{ mt: 2 }}>
+                      {recentActivities.map((activity, index) => (
+                        <Box 
+                          key={activity.id} 
+                          sx={{ 
+                            display: 'flex', 
+                            alignItems: 'flex-start', 
+                            mb: index < recentActivities.length - 1 ? 3 : 0,
+                            pb: index < recentActivities.length - 1 ? 3 : 0,
+                            borderBottom: index < recentActivities.length - 1 ? '1px solid rgba(0,0,0,0.06)' : 'none',
+                            transition: 'transform 0.2s',
+                            '&:hover': {
+                              transform: 'translateX(5px)',
+                            }
+                          }}
+                        >
+                          <Avatar 
+                            sx={{ 
+                              mr: 2, 
+                              mt: 0.5,
+                              width: 40,
+                              height: 40,
+                              background: 'linear-gradient(135deg, #6a11cb 0%, #2575fc 100%)',
+                              boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                            }}
+                          >
+                            {activity.icon}
+                          </Avatar>
+                          <Box sx={{ flexGrow: 1 }}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
+                              <Typography variant="body1" sx={{ fontWeight: 'bold' }}>
+                                {activity.content}
+                              </Typography>
+                              {activity.relatedCourse && (
+                                <Chip 
+                                  label={activity.relatedCourse.title} 
+                                  size="small" 
+                                  variant="outlined" 
+                                  sx={{ 
+                                    height: 20,
+                                    fontSize: '0.7rem',
+                                    borderRadius: 10,
+                                  }}
+                                />
+                              )}
+                            </Box>
+                            <Typography variant="caption" color="textSecondary" sx={{ opacity: 0.8 }}>
+                              {activity.time}
+                            </Typography>
+                          </Box>
+                        </Box>
+                      ))}
+                    </Box>
+                  </CardContent>
+                </Card>
+              </Grid>
+            </Grid>
+          </>
+        )}
+      </Container>
     </Box>
   );
 };

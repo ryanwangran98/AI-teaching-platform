@@ -1423,55 +1423,67 @@ const Materials: React.FC<MaterialsProps> = ({ courseId: propCourseId }) => {
                   )}
                   <TableCell>{formatDate(material.createdAt)}</TableCell>
                   <TableCell>
-                    <IconButton 
-                      color="primary" 
-                      size="small"
-                      onClick={() => handlePreview(material)}
-                      title="预览资料"
-                    >
-                      <Visibility />
-                    </IconButton>
-                    <IconButton 
-                      color="primary" 
-                      size="small"
-                      onClick={() => handleDownload(material)}
-                      title="下载资料"
-                    >
-                      <Download />
-                    </IconButton>
-                    {/* "创建知识库"按钮一直存在 */}
-                    <IconButton 
-                      color="secondary" 
-                      size="small"
-                      onClick={() => handleCreateKnowledgeBase(material)}
-                      title="创建知识库"
-                    >
-                      <CloudUpload />
-                    </IconButton>
-                    {/* 只有当资料有知识库信息时才显示关联/取消关联按钮 */}
-                    {material.datasetId && material.documentId && (
-                      <>
-                        {associationStatus[material.id] ? (
-                          <IconButton 
-                            color="error" 
-                            size="small"
-                            onClick={() => handleDisassociateFromAssistant(material)}
-                            title="取消关联到课程答疑助手"
-                          >
-                            <LinkOff />
-                          </IconButton>
-                        ) : (
-                          <IconButton 
-                            color="success" 
-                            size="small"
-                            onClick={() => handleAssociateToAssistant(material)}
-                            title="关联到课程答疑助手"
-                          >
-                            <SmartToy />
-                          </IconButton>
-                        )}
-                      </>
-                    )}
+                    <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                      <Button 
+                        color="primary" 
+                        size="small"
+                        variant="outlined"
+                        startIcon={<Visibility />}
+                        onClick={() => handlePreview(material)}
+                        sx={{ minWidth: 'auto', px: 1, py: 0.5 }}
+                      >
+                        预览
+                      </Button>
+                      <Button 
+                        color="primary" 
+                        size="small"
+                        variant="outlined"
+                        startIcon={<Download />}
+                        onClick={() => handleDownload(material)}
+                        sx={{ minWidth: 'auto', px: 1, py: 0.5 }}
+                      >
+                        下载
+                      </Button>
+                      {/* "创建知识库"按钮一直存在 */}
+                      <Button 
+                        color="primary" 
+                        size="small"
+                        variant="outlined"
+                        startIcon={<CloudUpload />}
+                        onClick={() => handleCreateKnowledgeBase(material)}
+                        sx={{ minWidth: 'auto', px: 1, py: 0.5 }}
+                      >
+                        创建知识库
+                      </Button>
+                      {/* 只有当资料有知识库信息时才显示关联/取消关联按钮 */}
+                      {material.datasetId && material.documentId && (
+                        <>
+                          {associationStatus[material.id] ? (
+                            <Button 
+                              color="primary" 
+                              size="small"
+                              variant="outlined"
+                              startIcon={<LinkOff />}
+                              onClick={() => handleDisassociateFromAssistant(material)}
+                              sx={{ minWidth: 'auto', px: 1, py: 0.5 }}
+                            >
+                              取消关联
+                            </Button>
+                          ) : (
+                            <Button 
+                              color="primary" 
+                              size="small"
+                              variant="outlined"
+                              startIcon={<SmartToy />}
+                              onClick={() => handleAssociateToAssistant(material)}
+                              sx={{ minWidth: 'auto', px: 1, py: 0.5 }}
+                            >
+                              关联助手
+                            </Button>
+                          )}
+                        </>
+                      )}
+                    </Box>
                   </TableCell>
                 </TableRow>
               ))}

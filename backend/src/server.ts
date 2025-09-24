@@ -201,10 +201,10 @@ app.use(errorHandler);
 // 启动服务器
 app.listen(PORT, () => {
   console.log(`\n🚀 服务器启动成功!`);
-  console.log(`📍 端口: ${PORT}`);
+  console.log(`� 端口: ${PORT}`);
   console.log(`📚 环境: ${process.env.NODE_ENV || 'development'}`);
-  console.log(`🔗 API文档: http://localhost:${PORT}/api-docs`);
-  console.log(`🔍 健康检查: http://localhost:${PORT}/health`);
+  console.log(`� API文档: http://localhost:${PORT}/api-docs`);
+  console.log(`� 健康检查: http://localhost:${PORT}/health`);
   
   if (process.env.NODE_ENV === 'development') {
     console.log(`\n🔧 开发模式启用 - 错误日志已开启`);
