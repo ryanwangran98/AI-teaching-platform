@@ -15,6 +15,7 @@ export interface Course {
   tags?: string[];
   agentAppId?: string;      // Dify Agent应用ID
   agentAccessToken?: string; // Dify Agent应用访问令牌
+  agentAccessCode?: string;  // Dify Agent应用访问代码
   chapters: CourseChapter[];
   materials: CourseMaterial[];
   createdAt: string;

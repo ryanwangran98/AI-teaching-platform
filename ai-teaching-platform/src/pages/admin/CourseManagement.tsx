@@ -42,7 +42,6 @@ interface Course {
   code: string;
   name: string;
   description: string;
-  department: string;
   teacher: string;
   credits: number;
   semester: string;
@@ -72,7 +71,6 @@ const CourseManagement: React.FC = () => {
       code: 'MATH101',
       name: '高等数学',
       description: '本课程涵盖微积分的基本概念和应用，包括极限、导数、积分等内容。',
-      department: '数学学院',
       teacher: '李教授',
       credits: 4,
       semester: '2023-2024学年第一学期',
@@ -91,7 +89,6 @@ const CourseManagement: React.FC = () => {
       code: 'CS101',
       name: '程序设计基础',
       description: '介绍程序设计的基本概念和方法，使用Python语言进行实践。',
-      department: '计算机学院',
       teacher: '王教授',
       credits: 3,
       semester: '2023-2024学年第一学期',
@@ -110,7 +107,6 @@ const CourseManagement: React.FC = () => {
       code: 'ENG101',
       name: '大学英语',
       description: '培养学生的英语听说读写能力，提高综合语言运用水平。',
-      department: '外国语学院',
       teacher: '张教授',
       credits: 2,
       semester: '2023-2024学年第一学期',
@@ -129,7 +125,6 @@ const CourseManagement: React.FC = () => {
       code: 'PHYS101',
       name: '大学物理',
       description: '介绍物理学基本概念和原理，包括力学、热学、电磁学等内容。',
-      department: '物理学院',
       teacher: '赵教授',
       credits: 3,
       semester: '2023-2024学年第一学期',
@@ -148,7 +143,6 @@ const CourseManagement: React.FC = () => {
   const [open, setOpen] = useState(false);
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [departmentFilter, setDepartmentFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<string>('all');
 
   const handleCreate = () => {
@@ -194,27 +188,13 @@ const CourseManagement: React.FC = () => {
     }
   };
 
-  const getDepartmentColor = (department: string) => {
-    const colors = {
-      '数学学院': 'primary',
-      '计算机学院': 'secondary',
-      '外国语学院': 'success',
-      '物理学院': 'warning',
-      '化学学院': 'error',
-    };
-    return colors[department as keyof typeof colors] || 'default';
-  };
-
   const filteredCourses = courses.filter(course => {
     const matchesSearch = course.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          course.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          course.teacher.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesDepartment = departmentFilter === 'all' || course.department === departmentFilter;
     const matchesStatus = statusFilter === 'all' || course.status === statusFilter;
-    return matchesSearch && matchesDepartment && matchesStatus;
+    return matchesSearch && matchesStatus;
   });
-
-  const departments = Array.from(new Set(courses.map(course => course.department)));
 
   return (
     <Box>
@@ -310,19 +290,6 @@ const CourseManagement: React.FC = () => {
           sx={{ flex: 1 }}
         />
         <FormControl size="small" sx={{ minWidth: 120 }}>
-          <InputLabel>学院</InputLabel>
-          <Select
-            value={departmentFilter}
-            onChange={(e) => setDepartmentFilter(e.target.value)}
-            label="学院"
-          >
-            <MenuItem value="all">全部学院</MenuItem>
-            {departments.map(dept => (
-              <MenuItem key={dept} value={dept}>{dept}</MenuItem>
-            ))}
-          </Select>
-        </FormControl>
-        <FormControl size="small" sx={{ minWidth: 120 }}>
           <InputLabel>状态</InputLabel>
           <Select
             value={statusFilter}
@@ -343,7 +310,6 @@ const CourseManagement: React.FC = () => {
           <TableHead>
             <TableRow>
               <TableCell>课程信息</TableCell>
-              <TableCell>学院</TableCell>
               <TableCell>教师</TableCell>
               <TableCell>学分</TableCell>
               <TableCell>学生数</TableCell>
@@ -367,13 +333,6 @@ const CourseManagement: React.FC = () => {
                       {course.description.substring(0, 50)}...
                     </Typography>
                   </Box>
-                </TableCell>
-                <TableCell>
-                  <Chip
-                    label={course.department}
-                    color={getDepartmentColor(course.department) as any}
-                    size="small"
-                  />
                 </TableCell>
                 <TableCell>
                   <Typography variant="body2">{course.teacher}</Typography>
@@ -461,20 +420,6 @@ const CourseManagement: React.FC = () => {
                   variant="outlined"
                   defaultValue={selectedCourse?.description || ''}
                 />
-              </Grid>
-              <Grid size={{ xs: 12, sm: 6 }}>
-                <FormControl fullWidth>
-                  <InputLabel>学院</InputLabel>
-                  <Select
-                    defaultValue={selectedCourse?.department || ''}
-                  >
-                    <MenuItem value="数学学院">数学学院</MenuItem>
-                    <MenuItem value="计算机学院">计算机学院</MenuItem>
-                    <MenuItem value="外国语学院">外国语学院</MenuItem>
-                    <MenuItem value="物理学院">物理学院</MenuItem>
-                    <MenuItem value="化学学院">化学学院</MenuItem>
-                  </Select>
-                </FormControl>
               </Grid>
               <Grid size={{ xs: 12, sm: 6 }}>
                 <TextField

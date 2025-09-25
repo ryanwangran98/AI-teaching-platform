@@ -39,11 +39,10 @@ model Course {
   name        String
   description String?
   credits     Int          @default(3)
-  department  String
-  category    String
   difficulty  String       @default("MEDIUM")
   coverImage  String?
   status      String       @default("DRAFT")
+  tags        String?      // JSON格式的标签数组
   teacherId   String
   agentAppId  String?      // Dify Agent应用ID
   agentAccessToken String? // Dify Agent应用访问令牌

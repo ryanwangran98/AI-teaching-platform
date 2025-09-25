@@ -24,7 +24,6 @@ import {
   Notifications,
   Map,
   SmartToy,
-  Logout,
 } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -65,7 +64,7 @@ const menuItems = [
 
 const StudentLayout: React.FC = () => {
   const [mobileOpen, setMobileOpen] = useState(false);
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -76,15 +75,6 @@ const StudentLayout: React.FC = () => {
   const handleNavigation = (path: string) => {
     navigate(path);
     setMobileOpen(false);
-  };
-
-  const handleLogout = async () => {
-    try {
-      await logout();
-      navigate('/login');
-    } catch (error) {
-      console.error('登出失败:', error);
-    }
   };
 
   const drawer = (
@@ -116,20 +106,18 @@ const StudentLayout: React.FC = () => {
             <ListItemButton 
               onClick={() => handleNavigation(item.path)}
               sx={{
-                borderRadius: 2,
+                borderRadius: 1,
                 mx: 1,
                 py: 1.5,
-                backgroundColor: location.pathname === item.path ? 'rgba(0,0,0,0.04)' : 'transparent',
+                backgroundColor: location.pathname === item.path ? 'primary.main' : 'transparent',
                 '&:hover': {
                   backgroundColor: 'rgba(0,0,0,0.04)',
                 },
-                borderLeft: location.pathname === item.path ? `4px solid` : 'none',
-                borderLeftColor: item.color,
               }}
             >
               <ListItemIcon 
                 sx={{ 
-                  color: location.pathname === item.path ? 'primary.main' : 'text.secondary',
+                  color: location.pathname === item.path ? 'white' : 'text.secondary',
                   minWidth: 40,
                 }}
               >
@@ -138,44 +126,13 @@ const StudentLayout: React.FC = () => {
               <ListItemText 
                 primary={item.text} 
                 primaryTypographyProps={{ 
-                  fontWeight: location.pathname === item.path ? 'bold' : 'regular',
-                  color: location.pathname === item.path ? 'primary.main' : 'text.primary',
+                  fontWeight: location.pathname === item.path ? 'medium' : 'regular',
+                  color: location.pathname === item.path ? 'white' : 'text.primary',
                 }}
               />
             </ListItemButton>
           </ListItem>
         ))}
-      </List>
-      <Divider />
-      <List sx={{ py: 2 }}>
-        <ListItem disablePadding sx={{ mb: 1 }}>
-          <ListItemButton 
-            onClick={handleLogout}
-            sx={{
-              borderRadius: 2,
-              mx: 1,
-              py: 1.5,
-              '&:hover': {
-                backgroundColor: 'rgba(244, 67, 54, 0.08)',
-              },
-            }}
-          >
-            <ListItemIcon 
-              sx={{ 
-                color: 'error.main',
-                minWidth: 40,
-              }}
-            >
-              <Logout />
-            </ListItemIcon>
-            <ListItemText 
-              primary="退出登录" 
-              primaryTypographyProps={{ 
-                color: 'error.main',
-              }}
-            />
-          </ListItemButton>
-        </ListItem>
       </List>
     </div>
   );

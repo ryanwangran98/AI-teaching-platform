@@ -77,6 +77,7 @@ interface Course {
   assignments: Assignment[];
   agentAppId?: string;
   agentAccessToken?: string;
+  agentAccessCode?: string;
 }
 
 interface Assignment {
@@ -303,16 +304,16 @@ const CourseLearning: React.FC = () => {
             progress = Math.min(100, Math.max(0, chapterProgress.progress));
           }
           
-          // 处理章节标题，如果标题是数字则添加前缀
-          let title = chapter.title || `�?{chapter.order || index + 1}章`;
+          // 处理章节标题，如果标题是数字则直接显示
+          let title = chapter.title || `${chapter.order || index + 1}`;
           if (/^\d+$/.test(title)) {
-            title = `�?{title}章`;
+            title = `${title}`;
           }
           
           // 处理章节描述
           let description = chapter.description || chapter.content || '暂无描述';
           if (/^\d+$/.test(description) && description === chapter.title) {
-            description = `这是�?{description}章的内容`;
+            description = `这是${description}的内容`;
           }
           
           return {

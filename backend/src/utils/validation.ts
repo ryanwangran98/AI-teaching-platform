@@ -23,7 +23,6 @@ export const courseSchema = z.object({
   description: z.string().optional(),
   credits: z.number().int().min(1, '学分至少为1').max(10, '学分最多为10').optional(),
   department: z.string().min(1, '请输入所属院系'),
-  category: z.string().min(1, '请输入课程分类'),
   difficulty: z.enum(['EASY', 'MEDIUM', 'HARD']).optional(),
   coverImage: z.string().url().optional().or(z.literal('')),
 });

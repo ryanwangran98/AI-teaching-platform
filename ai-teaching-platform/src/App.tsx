@@ -7,7 +7,6 @@ import Home from './pages/Home';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import TestPage from './pages/TestPage';
-import CourseBrowser from './pages/CourseBrowser';
 
 // 教师端页面
 import TeacherDashboard from './pages/teacher/TeacherDashboard';
@@ -86,7 +85,6 @@ function App() {
       <Route path="/" element={<Home />} />
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
-      <Route path="/courses" element={<CourseBrowser />} />
 
       {/* 教师端路由 */}
       <Route

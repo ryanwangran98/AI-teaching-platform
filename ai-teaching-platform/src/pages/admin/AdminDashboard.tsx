@@ -55,7 +55,8 @@ const AdminDashboard: React.FC = () => {
       
       // 获取课程数据
       const coursesResponse = await courseAPI.getCourses();
-      const courses = coursesResponse.data || coursesResponse;
+      const courses = Array.isArray(coursesResponse.data) ? coursesResponse.data : 
+                     Array.isArray(coursesResponse) ? coursesResponse : [];
       
       // 获取用户数据
       const usersResponse = await authAPI.getUsers({ limit: 100 });

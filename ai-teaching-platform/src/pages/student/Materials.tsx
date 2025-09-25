@@ -521,8 +521,9 @@ const Materials: React.FC<MaterialsProps> = ({ courseId: propCourseId }) => {
           rules: {
             pre_processing_rules: [],
             segmentation: {
-              separator: "\\n",
-              max_tokens: 1000
+              separator: "\\n\\n\\n",
+              max_tokens: 1000,
+              chunk_overlap: 100
             }
           }
         },
@@ -769,6 +770,13 @@ const Materials: React.FC<MaterialsProps> = ({ courseId: propCourseId }) => {
       const updateAppUrl = `http://localhost:5001/console/api/apps/${currentCourse.agentAppId}/model-config`;
       
       const updateBody = {
+        "mode": "agent-chat",
+        "agent_mode": {
+          "max_iteration": 10,
+          "enabled": true,
+          "tools": [],
+          "strategy": "function_call"
+        },
         "model": {
           "provider": "axdlee/sophnet/sophnet",
           "name": "Kimi-K2",
@@ -990,6 +998,13 @@ const Materials: React.FC<MaterialsProps> = ({ courseId: propCourseId }) => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
+          "mode": "agent-chat",
+          "agent_mode": {
+            "max_iteration": 10,
+            "enabled": true,
+            "tools": [],
+            "strategy": "function_call"
+          },
           "model": {
             "provider": "axdlee/sophnet/sophnet",
             "name": "Kimi-K2",
@@ -1060,6 +1075,13 @@ const Materials: React.FC<MaterialsProps> = ({ courseId: propCourseId }) => {
       const updateAppUrl = `http://localhost:5001/console/api/apps/${currentCourse.agentAppId}/model-config`;
       
       const updateBody = {
+        "mode": "agent-chat",
+        "agent_mode": {
+          "max_iteration": 10,
+          "enabled": true,
+          "tools": [],
+          "strategy": "function_call"
+        },
         "model": {
           "provider": "axdlee/sophnet/sophnet",
           "name": "Kimi-K2",

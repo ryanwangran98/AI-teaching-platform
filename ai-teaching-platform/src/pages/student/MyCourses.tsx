@@ -17,7 +17,6 @@ import {
   MenuItem,
   IconButton,
   Avatar,
-  Rating,
   CircularProgress,
   Alert,
   Snackbar,
@@ -28,7 +27,6 @@ import {
   PlayCircle,
   AccessTime,
   People,
-  Star,
   ArrowBack,
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
@@ -71,7 +69,7 @@ const MyCourses: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [courses, setCourses] = useState<Course[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' as 'success' | 'error' });
+  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' as 'success' | 'error' | 'warning' });
 
   // 获取课程数据
   useEffect(() => {
@@ -228,23 +226,52 @@ const MyCourses: React.FC = () => {
   }
 
   return (
-    <Box sx={{ flexGrow: 1 }}>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+    <Box sx={{ 
+      flexGrow: 1, 
+      background: '#f5f7fa',
+      minHeight: '100vh',
+      p: 3
+    }}>
+      <Box sx={{ 
+        display: 'flex', 
+        justifyContent: 'space-between', 
+        alignItems: 'center', 
+        mb: 4,
+        background: 'white',
+        borderRadius: 3,
+        p: 3,
+        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.06)'
+      }}>
         <Button
           startIcon={<ArrowBack />}
           onClick={() => navigate('/student')}
-          sx={{ mb: 2 }}
+          sx={{ 
+            color: '#2c3e50',
+            fontWeight: 600,
+            '&:hover': {
+              backgroundColor: 'rgba(44, 62, 80, 0.08)'
+            }
+          }}
         >
           返回学生主页
         </Button>
-        <Typography variant="h4">我的课程</Typography>
-        <Box></Box> {/* 占位符，用于保持标题居中 */}
+        <Typography variant="h4" sx={{ 
+          fontWeight: 700,
+          color: '#2c3e50'
+        }}>
+          我的课程
+        </Typography>
+        <Box sx={{ width: 120 }}></Box> {/* 占位符，用于保持标题居中 */}
       </Box>
 
       {error && (
         <Alert 
           severity="error" 
-          sx={{ mb: 3 }}
+          sx={{ 
+            mb: 3,
+            borderRadius: 2,
+            boxShadow: '0 4px 12px rgba(211, 47, 47, 0.15)'
+          }}
           action={
             <Button color="inherit" size="small" onClick={fetchCourses}>
               重新加载
@@ -256,51 +283,117 @@ const MyCourses: React.FC = () => {
       )}
 
       {/* 统计卡片 */}
-      <Grid container spacing={3} sx={{ mb: 3 }}>
+      <Grid container spacing={3} sx={{ mb: 4 }}>
         <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-          <Card>
-            <CardContent>
-              <Typography color="textSecondary" gutterBottom>
+          <Card sx={{ 
+            borderRadius: 3,
+            background: 'white',
+            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.06)',
+            transition: 'all 0.3s ease',
+            '&:hover': {
+              transform: 'translateY(-4px)',
+              boxShadow: '0 4px 16px rgba(0, 0, 0, 0.1)'
+            }
+          }}>
+            <CardContent sx={{ p: 3 }}>
+              <Typography sx={{ 
+                color: '#64748b', 
+                fontSize: '0.875rem',
+                fontWeight: 500,
+                mb: 1
+              }}>
                 总课程数
               </Typography>
-              <Typography variant="h4">{stats.total}</Typography>
+              <Typography variant="h4" sx={{ fontWeight: 700, color: '#2c3e50' }}>{stats.total}</Typography>
             </CardContent>
           </Card>
         </Grid>
         <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-          <Card>
-            <CardContent>
-              <Typography color="textSecondary" gutterBottom>
+          <Card sx={{ 
+            borderRadius: 3,
+            background: 'white',
+            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.06)',
+            transition: 'all 0.3s ease',
+            '&:hover': {
+              transform: 'translateY(-4px)',
+              boxShadow: '0 4px 16px rgba(0, 0, 0, 0.1)'
+            }
+          }}>
+            <CardContent sx={{ p: 3 }}>
+              <Typography sx={{ 
+                color: '#64748b', 
+                fontSize: '0.875rem',
+                fontWeight: 500,
+                mb: 1
+              }}>
                 进行中
               </Typography>
-              <Typography variant="h4">{stats.inProgress}</Typography>
+              <Typography variant="h4" sx={{ fontWeight: 700, color: '#f59e0b' }}>{stats.inProgress}</Typography>
             </CardContent>
           </Card>
         </Grid>
         <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-          <Card>
-            <CardContent>
-              <Typography color="textSecondary" gutterBottom>
+          <Card sx={{ 
+            borderRadius: 3,
+            background: 'white',
+            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.06)',
+            transition: 'all 0.3s ease',
+            '&:hover': {
+              transform: 'translateY(-4px)',
+              boxShadow: '0 4px 16px rgba(0, 0, 0, 0.1)'
+            }
+          }}>
+            <CardContent sx={{ p: 3 }}>
+              <Typography sx={{ 
+                color: '#64748b', 
+                fontSize: '0.875rem',
+                fontWeight: 500,
+                mb: 1
+              }}>
                 已完成
               </Typography>
-              <Typography variant="h4">{stats.completed}</Typography>
+              <Typography variant="h4" sx={{ fontWeight: 700, color: '#10b981' }}>{stats.completed}</Typography>
             </CardContent>
           </Card>
         </Grid>
         <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-          <Card>
-            <CardContent>
-              <Typography color="textSecondary" gutterBottom>
+          <Card sx={{ 
+            borderRadius: 3,
+            background: 'white',
+            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.06)',
+            transition: 'all 0.3s ease',
+            '&:hover': {
+              transform: 'translateY(-4px)',
+              boxShadow: '0 4px 16px rgba(0, 0, 0, 0.1)'
+            }
+          }}>
+            <CardContent sx={{ p: 3 }}>
+              <Typography sx={{ 
+                color: '#64748b', 
+                fontSize: '0.875rem',
+                fontWeight: 500,
+                mb: 1
+              }}>
                 未开始
               </Typography>
-              <Typography variant="h4">{stats.notStarted}</Typography>
+              <Typography variant="h4" sx={{ fontWeight: 700, color: '#6b7280' }}>{stats.notStarted}</Typography>
             </CardContent>
           </Card>
         </Grid>
       </Grid>
 
       {/* 筛选区域 */}
-      <Box sx={{ display: 'flex', gap: 2, mb: 3, flexWrap: 'wrap', alignItems: 'center' }}>
+      <Box sx={{ 
+        display: 'flex', 
+        gap: 2, 
+        mb: 3, 
+        flexWrap: 'wrap', 
+        alignItems: 'center',
+        background: 'white',
+        borderRadius: 3,
+        p: 3,
+        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.06)'
+      }}>
         <TextField
           placeholder="搜索课程..."
           value={searchTerm}
@@ -308,12 +401,28 @@ const MyCourses: React.FC = () => {
           InputProps={{
             startAdornment: (
               <InputAdornment position="start">
-                <Search />
+                <Search sx={{ color: '#64748b' }} />
               </InputAdornment>
             ),
+            sx: {
+              borderRadius: 2,
+              backgroundColor: '#f8fafc',
+              '&:hover': {
+                backgroundColor: '#f1f5f9',
+              },
+              '&.Mui-focused': {
+                backgroundColor: '#f1f5f9',
+                boxShadow: '0 0 0 2px rgba(59, 130, 246, 0.2)',
+              }
+            }
           }}
           size="small"
-          sx={{ minWidth: 200 }}
+          sx={{ 
+            minWidth: 300,
+            '& .MuiOutlinedInput-root': {
+              borderRadius: 2,
+            }
+          }}
         />
       </Box>
 
@@ -408,7 +517,7 @@ const MyCourses: React.FC = () => {
                   </Typography>
                   <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.8rem', display: 'flex', alignItems: 'center' }}>
                     <People sx={{ fontSize: 16, mr: 0.5 }} />
-                    {course.studentsCount}
+                    {course.studentsCount}人
                   </Typography>
                 </Box>
 
@@ -467,19 +576,21 @@ const MyCourses: React.FC = () => {
                   onClick={() => navigate(`/student/course/${course.id}`)}
                   sx={{
                     borderRadius: 2,
-                    py: 1.2,
+                    textTransform: 'none',
                     fontWeight: 600,
-                    boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-                    transition: 'all 0.2s',
+                    px: 3,
+                    py: 1,
+                    background: '#10b981',
+                    boxShadow: '0 2px 4px rgba(16, 185, 129, 0.2)',
                     '&:hover': {
-                      transform: 'translateY(-2px)',
-                      boxShadow: '0 4px 8px rgba(0,0,0,0.15)',
-                    }
+                      background: '#059669',
+                      boxShadow: '0 4px 8px rgba(16, 185, 129, 0.3)',
+                      transform: 'translateY(-2px)'
+                    },
+                    transition: 'all 0.3s ease'
                   }}
                 >
-                  {course.status === 'not-started' ? '加入学习' :
-                   course.status === 'completed' ? '复习课程' :
-                   '继续学习'}
+                  进入学习
                 </Button>
               </Box>
             </Card>

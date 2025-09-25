@@ -5,8 +5,8 @@ import type { Chapter } from '../types/chapter';
 import type { Assignment } from '../types/assignment';
 import type { LearningRecord } from '../types/learning-record';
 
-// 使用绝对路径连接真实后端
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
+// 使用相对路径，利用Vite的代理配置
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api';
 
 const api = axios.create({
   baseURL: API_BASE_URL,

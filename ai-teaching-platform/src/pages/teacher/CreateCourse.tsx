@@ -29,7 +29,6 @@ interface CourseFormData {
   code: string;
   description: string;
   department: string;
-  category: string;
   credits: number;
   level: string;
   tags: string[];
@@ -43,8 +42,7 @@ const CreateCourse: React.FC = () => {
     name: '',
     code: '',
     description: '',
-    department: '计算机学院',
-    category: '计算机',
+    department: '',
     credits: 3,
     level: '本科',
     tags: []
@@ -59,17 +57,6 @@ const CreateCourse: React.FC = () => {
     '经济学院',
     '管理学院',
     '外国语学院'
-  ];
-
-  const categories = [
-    '计算机',
-    '数学',
-    '物理',
-    '化学',
-    '生物',
-    '经济',
-    '管理',
-    '语言'
   ];
 
   const levels = ['本科', '硕士', '博士'];
@@ -102,7 +89,6 @@ const CreateCourse: React.FC = () => {
         code: formData.code,
         description: formData.description,
         college: formData.department,
-        category: formData.category,
         credits: formData.credits,
         level: formData.level,
         tags: formData.tags
@@ -198,14 +184,14 @@ const CreateCourse: React.FC = () => {
 
             <Grid item xs={12} md={6}>
               <FormControl fullWidth>
-                <InputLabel>课程分类</InputLabel>
+                <InputLabel>课程级别</InputLabel>
                 <Select
-                  name="category"
-                  value={formData.category}
+                  name="level"
+                  value={formData.level}
                   onChange={handleSelectChange}
                 >
-                  {categories.map(cat => (
-                    <MenuItem key={cat} value={cat}>{cat}</MenuItem>
+                  {levels.map(level => (
+                    <MenuItem key={level} value={level}>{level}</MenuItem>
                   ))}
                 </Select>
               </FormControl>
@@ -224,22 +210,7 @@ const CreateCourse: React.FC = () => {
               />
             </Grid>
 
-            <Grid item xs={12} md={4}>
-              <FormControl fullWidth>
-                <InputLabel>课程级别</InputLabel>
-                <Select
-                  name="level"
-                  value={formData.level}
-                  onChange={handleSelectChange}
-                >
-                  {levels.map(level => (
-                    <MenuItem key={level} value={level}>{level}</MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Grid>
-
-            <Grid item xs={12} md={4}>
+            <Grid item xs={12} md={8}>
               <TextField
                 fullWidth
                 label="课程标签 (用逗号分隔)"

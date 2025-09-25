@@ -69,7 +69,6 @@ interface Course {
   code: string;
   name: string;
   description: string;
-  department: string;
   teacher: string;
   credits: number;
   semester: string;
@@ -79,7 +78,7 @@ interface Course {
   completedHours: number;
   startDate: string;
   endDate: string;
-  category: string;
+  difficulty: string;
   prerequisites: string[];
   tags: string[];
   agentAppId?: string;      // Dify Agent应用ID
@@ -134,7 +133,6 @@ const TeacherCourseManagement: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
-  const [departmentFilter, setDepartmentFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
   const [open, setOpen] = useState(false);
   const [agentDialogOpen, setAgentDialogOpen] = useState(false);
@@ -152,13 +150,16 @@ const TeacherCourseManagement: React.FC = () => {
     title: '',
     code: '',
     description: '',
-    status: 'draft' as 'active' | 'inactive' | 'draft'
+    status: 'draft' as 'active' | 'inactive' | 'draft',
+    credits: 3,
+    difficulty: 'MEDIUM' as 'EASY' | 'MEDIUM' | 'HARD',
+    tags: [] as string[]
   });
   
   const [viewMode, setViewMode] = useState<'table' | 'card'>('card');
   const [showFilters, setShowFilters] = useState(false);
 
-  const departments = ['数学学院', '计算机学院', '外国语学院', '物理学院', '化学学院'];
+  const difficulties = ['EASY', 'MEDIUM', 'HARD'] as const;
 
   useEffect(() => {
     fetchCourses();
@@ -213,6 +214,7 @@ const TeacherCourseManagement: React.FC = () => {
           startDate: course.createdAt || new Date().toISOString(),
           endDate: new Date(new Date().getTime() + 16 * 7 * 24 * 60 * 60 * 1000).toISOString(),
           category: course.category || '其他',
+          difficulty: course.difficulty || 'MEDIUM',
           prerequisites: [],
           tags: course.tags || [],
           agentAppId: course.agentAppId,
@@ -239,10 +241,9 @@ const TeacherCourseManagement: React.FC = () => {
     const matchesSearch = course.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          course.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          course.teacher.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesDepartment = departmentFilter === 'all' || course.department === departmentFilter;
     const matchesStatus = statusFilter === 'all' || course.status === statusFilter;
     
-    return matchesSearch && matchesDepartment && matchesStatus;
+    return matchesSearch && matchesStatus;
   });
 
   const handleCreateCourse = () => {
@@ -256,7 +257,10 @@ const TeacherCourseManagement: React.FC = () => {
       title: course.name,
       code: course.code,
       description: course.description,
-      status: course.status
+      status: course.status,
+      credits: course.credits,
+      difficulty: (course.difficulty || 'MEDIUM') as 'EASY' | 'MEDIUM' | 'HARD',
+      tags: Array.isArray(course.tags) ? course.tags : []
     });
     setOpen(true);
   };
@@ -264,7 +268,15 @@ const TeacherCourseManagement: React.FC = () => {
   const handleClose = () => {
     setOpen(false);
     setSelectedCourse(null);
-    setEditForm({ title: '', code: '', description: '', status: 'draft' });
+    setEditForm({ 
+      title: '', 
+      code: '', 
+      description: '', 
+      status: 'draft',
+      credits: 3,
+      difficulty: 'MEDIUM',
+      tags: []
+    });
   };
 
   const handleDeleteCourse = async (courseId: string) => {
@@ -278,7 +290,7 @@ const TeacherCourseManagement: React.FC = () => {
     }
   };
 
-  const handleEditFormChange = (field: string, value: string) => {
+  const handleEditFormChange = (field: string, value: string | number | string[]) => {
     setEditForm(prev => ({ ...prev, [field]: value }));
   };
 
@@ -300,7 +312,10 @@ const TeacherCourseManagement: React.FC = () => {
         name: editForm.title, // 将title改为name以匹配后端schema
         code: editForm.code,
         description: editForm.description,
-        status: editForm.status.toUpperCase() // 转换为大写以匹配数据库格式
+        status: editForm.status.toUpperCase(), // 转换为大写以匹配数据库格式
+        credits: editForm.credits,
+        difficulty: editForm.difficulty,
+        tags: editForm.tags
       };
 
       console.log('发送更新请求:', `/courses/${selectedCourse.id}`, updateData);
@@ -313,7 +328,15 @@ const TeacherCourseManagement: React.FC = () => {
       setCourses(prevCourses => 
         prevCourses.map(course => 
           course.id === selectedCourse.id 
-            ? { ...course, ...updateData, name: updateData.name, status: editForm.status }
+            ? { 
+                ...course, 
+                ...updateData, 
+                name: updateData.name, 
+                status: editForm.status,
+                credits: updateData.credits,
+                difficulty: updateData.difficulty,
+                tags: updateData.tags
+              }
             : course
         )
       );
@@ -658,19 +681,6 @@ const TeacherCourseManagement: React.FC = () => {
           {showFilters && (
             <Box sx={{ display: 'flex', gap: 2, mt: 2 }}>
               <FormControl size="small" sx={{ minWidth: 120 }}>
-                <InputLabel>学院</InputLabel>
-                <Select
-                  value={departmentFilter}
-                  onChange={(e) => setDepartmentFilter(e.target.value)}
-                  label="学院"
-                >
-                  <MenuItem value="all">全部学院</MenuItem>
-                  {departments.map(dept => (
-                    <MenuItem key={dept} value={dept}>{dept}</MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-              <FormControl size="small" sx={{ minWidth: 120 }}>
                 <InputLabel>状态</InputLabel>
                 <Select
                   value={statusFilter}
@@ -934,6 +944,46 @@ const TeacherCourseManagement: React.FC = () => {
                   variant="outlined"
                   value={editForm.description}
                   onChange={(e) => handleEditFormChange('description', e.target.value)}
+                />
+              </Grid>
+              <Grid size={{ xs: 12, sm: 6 }}>
+                <FormControl fullWidth>
+                  <InputLabel>难度级别</InputLabel>
+                  <Select
+                    value={editForm.difficulty}
+                    onChange={(e) => handleEditFormChange('difficulty', e.target.value)}
+                    label="难度级别"
+                  >
+                    {difficulties.map(diff => (
+                      <MenuItem key={diff} value={diff}>
+                        {diff === 'EASY' ? '简单' : diff === 'MEDIUM' ? '中等' : '困难'}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Grid>
+              <Grid size={{ xs: 12, sm: 4 }}>
+                <TextField
+                  fullWidth
+                  label="学分"
+                  type="number"
+                  variant="outlined"
+                  value={editForm.credits}
+                  onChange={(e) => handleEditFormChange('credits', Number(e.target.value))}
+                  inputProps={{ min: 1, max: 10 }}
+                />
+              </Grid>
+              <Grid size={{ xs: 12, sm: 8 }}>
+                <TextField
+                  fullWidth
+                  label="课程标签 (用逗号分隔)"
+                  variant="outlined"
+                  value={Array.isArray(editForm.tags) ? editForm.tags.join(', ') : ''}
+                  onChange={(e) => {
+                    const tags = e.target.value.split(',').map(tag => tag.trim()).filter(tag => tag);
+                    handleEditFormChange('tags', tags);
+                  }}
+                  helperText="例如：编程, 基础, 必修"
                 />
               </Grid>
               <Grid size={{ xs: 12 }}>

@@ -14,7 +14,6 @@ router.get('/', async (req, res) => {
       limit = 10,
       search,
       college,
-      category,
       sortBy = 'createdAt',
       sortOrder = 'desc'
     } = req.query;
@@ -31,7 +30,6 @@ router.get('/', async (req, res) => {
     }
     
     if (college) where.college = college;
-    if (category) where.category = category;
 
     const courses = await prisma.course.findMany({
       where,
@@ -138,16 +136,21 @@ router.post('/', authenticateToken, authorizeRoles('TEACHER', 'ADMIN'), async (r
       title,
       code,
       description,
-      college,
-      category,
       credits,
+      difficulty,
       coverImage,
-      tags,
-      level
+      status,
+      tags
     } = req.body;
 
-    if (!title || !description || !college || !category || !credits) {
-      return res.status(400).json({ error: 'Please provide all required fields' });
+    if (!title || !code) {
+      return res.status(400).json({ error: 'Please provide course title and code' });
+    }
+
+    // 处理tags字段，如果是数组则转换为JSON字符串
+    let processedTags = null;
+    if (tags && Array.isArray(tags)) {
+      processedTags = JSON.stringify(tags);
     }
 
     // 创建课程
@@ -155,14 +158,14 @@ router.post('/', authenticateToken, authorizeRoles('TEACHER', 'ADMIN'), async (r
       data: {
         code: String(code),
         name: String(title),
-        description: String(description),
-        department: String(college),
-        category: String(category),
-        credits: Number(credits),
-        coverImage: coverImage ? String(coverImage) : undefined,
-        teacherId: req.user!.id,
-        status: 'DRAFT'
-      } as any,
+        description: description ? String(description) : null,
+        credits: credits || 3,
+        difficulty: difficulty || 'MEDIUM',
+        coverImage: coverImage ? String(coverImage) : null,
+        status: status || 'DRAFT',
+        tags: processedTags,
+        teacherId: req.user!.id
+      },
       include: {
         teacher: {
           select: {
@@ -176,49 +179,21 @@ router.post('/', authenticateToken, authorizeRoles('TEACHER', 'ADMIN'), async (r
       }
     });
 
-    try {
-      // 创建Agent应用
-      const difyService = createDifyService();
-      const agentInfo = await difyService.createAgentAppWithToken(
-        `${title} - AI助手`,
-        `为课程"${title}"提供智能问答和学习辅助`
-      );
-
-      // 更新课程，添加Agent应用信息
-      const updatedCourse = await prisma.course.update({
-        where: { id: course.id },
-        data: {
-          agentAppId: agentInfo.appId,
-          agentAccessToken: agentInfo.accessToken
-        },
-        include: {
-          teacher: {
-            select: {
-              id: true,
-              firstName: true,
-              lastName: true,
-              email: true,
-              avatar: true
-            }
-          }
-        }
-      });
-
-      res.status(201).json({
-        success: true,
-        data: updatedCourse,
-        message: '课程创建成功，并已关联AI助手'
-      });
-    } catch (agentError) {
-      console.error('创建Agent应用失败:', agentError);
-      
-      // 即使Agent应用创建失败，也返回课程信息
-      res.status(201).json({
-        success: true,
-        data: course,
-        warning: '课程创建成功，但AI助手创建失败，请稍后在课程设置中重试'
-      });
+    // 解析tags字段为数组返回给前端
+    if (course.tags) {
+      try {
+        course.tags = JSON.parse(course.tags);
+      } catch (e) {
+        // 如果解析失败，保持原样
+        console.error('Failed to parse tags JSON:', e);
+      }
     }
+
+    res.status(201).json({
+      success: true,
+      data: course,
+      message: '课程创建成功'
+    });
   } catch (error: any) {
     console.error('创建课程错误:', error);
     res.status(500).json({ error: 'Server error', message: error.message });
@@ -243,6 +218,11 @@ router.put('/:id', authenticateToken, authorizeRoles('TEACHER', 'ADMIN'), async 
       return res.status(403).json({ error: 'Not authorized to update this course' });
     }
 
+    // 处理tags字段，如果是数组则转换为JSON字符串
+    if (updateData.tags && Array.isArray(updateData.tags)) {
+      updateData.tags = JSON.stringify(updateData.tags);
+    }
+
     const updatedCourse = await prisma.course.update({
       where: { id },
       data: updateData,
@@ -259,11 +239,22 @@ router.put('/:id', authenticateToken, authorizeRoles('TEACHER', 'ADMIN'), async 
       }
     });
 
+    // 解析tags字段为数组返回给前端
+    if (updatedCourse.tags) {
+      try {
+        updatedCourse.tags = JSON.parse(updatedCourse.tags);
+      } catch (e) {
+        // 如果解析失败，保持原样
+        console.error('Failed to parse tags JSON:', e);
+      }
+    }
+
     res.json({
       success: true,
       data: updatedCourse
     });
   } catch (error) {
+    console.error('Update course error:', error);
     res.status(500).json({ error: 'Server error' });
   }
 });
