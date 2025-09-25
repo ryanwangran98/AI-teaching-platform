@@ -646,7 +646,7 @@ const ChapterManagement: React.FC = () => {
           </Grid>
         ) : (
           filteredChapters.map((chapter) => (
-            <Grid item xs={12} sm={6} md={4} lg={3} key={chapter.id}>
+            <Grid size={{ xs: 12, sm: 6, md: 4 }} key={chapter.id}>
               <Card 
                 sx={{ 
                   height: '100%',
@@ -711,46 +711,122 @@ const ChapterManagement: React.FC = () => {
                     </Typography>
                   </Box>
                   
-                  {/* 统计信息 - 使用更宽松的布局 */}
+                  {/* 统计信息 - 调整为与知识点管理卡片一致的布局 */}
                   <Box sx={{ mb: 3 }}>
-                    <Grid container spacing={2}>
-                      <Grid item xs={12} sm={6} md={3}>
-                        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', p: 2, bgcolor: alpha(theme.palette.primary.main, 0.05), borderRadius: 1.5, border: '1px solid', borderColor: alpha(theme.palette.primary.main, 0.1) }}>
-                          <Psychology sx={{ fontSize: 28, color: 'primary.main', mb: 1 }} />
-                          <Typography variant="caption" color="textSecondary" sx={{ fontWeight: 500 }}>知识点</Typography>
-                          <Typography variant="h6" sx={{ fontWeight: 'bold', color: 'primary.main' }}>
-                            {chapter.knowledgePointsCount}
-                          </Typography>
+                    <Grid container spacing={1.5}>
+                      <Grid size={{ xs: 6, sm: 3 }}>
+                        <Box sx={{ 
+                          bgcolor: alpha(theme.palette.primary.main, 0.08),
+                          borderRadius: 1.5,
+                          p: 1.2,
+                          border: '1px solid rgba(0, 0, 0, 0.08)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between'
+                        }}>
+                          <Box sx={{ textAlign: 'left' }}>
+                            <Typography variant="h6" sx={{ fontWeight: 'bold', color: 'primary.main', mb: 0.3 }}>
+                              {chapter.knowledgePointsCount}
+                            </Typography>
+                            <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                              知识点
+                            </Typography>
+                          </Box>
+                          <Avatar sx={{ 
+                            bgcolor: alpha(theme.palette.primary.main, 0.1),
+                            color: theme.palette.primary.main,
+                            width: 32,
+                            height: 32
+                          }}>
+                            <Psychology fontSize="small" />
+                          </Avatar>
                         </Box>
                       </Grid>
                       
-                      <Grid item xs={12} sm={6} md={3}>
-                        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', p: 2, bgcolor: alpha(theme.palette.secondary.main, 0.05), borderRadius: 1.5, border: '1px solid', borderColor: alpha(theme.palette.secondary.main, 0.1) }}>
-                          <Folder sx={{ fontSize: 28, color: 'secondary.main', mb: 1 }} />
-                          <Typography variant="caption" color="textSecondary" sx={{ fontWeight: 500 }}>资料</Typography>
-                          <Typography variant="h6" sx={{ fontWeight: 'bold', color: 'secondary.main' }}>
-                            {chapter.materialsCount}
-                          </Typography>
+                      <Grid size={{ xs: 6, sm: 3 }}>
+                        <Box sx={{ 
+                          bgcolor: alpha(theme.palette.secondary.main, 0.08),
+                          borderRadius: 1.5,
+                          p: 1.2,
+                          border: '1px solid rgba(0, 0, 0, 0.08)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between'
+                        }}>
+                          <Box sx={{ textAlign: 'left' }}>
+                            <Typography variant="h6" sx={{ fontWeight: 'bold', color: 'secondary.main', mb: 0.3 }}>
+                              {chapter.materialsCount}
+                            </Typography>
+                            <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                              资料
+                            </Typography>
+                          </Box>
+                          <Avatar sx={{ 
+                            bgcolor: alpha(theme.palette.secondary.main, 0.1),
+                            color: theme.palette.secondary.main,
+                            width: 32,
+                            height: 32
+                          }}>
+                            <Folder fontSize="small" />
+                          </Avatar>
                         </Box>
                       </Grid>
                       
-                      <Grid item xs={12} sm={6} md={3}>
-                        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', p: 2, bgcolor: alpha(theme.palette.info.main, 0.05), borderRadius: 1.5, border: '1px solid', borderColor: alpha(theme.palette.info.main, 0.1) }}>
-                          <Slideshow sx={{ fontSize: 28, color: 'info.main', mb: 1 }} />
-                          <Typography variant="caption" color="textSecondary" sx={{ fontWeight: 500 }}>课件</Typography>
-                          <Typography variant="h6" sx={{ fontWeight: 'bold', color: 'info.main' }}>
-                            {chapter.coursewareCount}
-                          </Typography>
+                      <Grid size={{ xs: 6, sm: 3 }}>
+                        <Box sx={{ 
+                          bgcolor: alpha(theme.palette.info.main, 0.08),
+                          borderRadius: 1.5,
+                          p: 1.2,
+                          border: '1px solid rgba(0, 0, 0, 0.08)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between'
+                        }}>
+                          <Box sx={{ textAlign: 'left' }}>
+                            <Typography variant="h6" sx={{ fontWeight: 'bold', color: 'info.main', mb: 0.3 }}>
+                              {chapter.coursewareCount}
+                            </Typography>
+                            <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                              课件
+                            </Typography>
+                          </Box>
+                          <Avatar sx={{ 
+                            bgcolor: alpha(theme.palette.info.main, 0.1),
+                            color: theme.palette.info.main,
+                            width: 32,
+                            height: 32
+                          }}>
+                            <Slideshow fontSize="small" />
+                          </Avatar>
                         </Box>
                       </Grid>
                       
-                      <Grid item xs={12} sm={6} md={3}>
-                        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', p: 2, bgcolor: alpha(theme.palette.warning.main, 0.05), borderRadius: 1.5, border: '1px solid', borderColor: alpha(theme.palette.warning.main, 0.1) }}>
-                          <Assignment sx={{ fontSize: 28, color: 'warning.main', mb: 1 }} />
-                          <Typography variant="caption" color="textSecondary" sx={{ fontWeight: 500 }}>作业</Typography>
-                          <Typography variant="h6" sx={{ fontWeight: 'bold', color: 'warning.main' }}>
-                            {chapter.assignmentsCount}
-                          </Typography>
+                      <Grid size={{ xs: 6, sm: 3 }}>
+                        <Box sx={{ 
+                          bgcolor: alpha(theme.palette.warning.main, 0.08),
+                          borderRadius: 1.5,
+                          p: 1.2,
+                          border: '1px solid rgba(0, 0, 0, 0.08)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between'
+                        }}>
+                          <Box sx={{ textAlign: 'left' }}>
+                            <Typography variant="h6" sx={{ fontWeight: 'bold', color: 'warning.main', mb: 0.3 }}>
+                              {chapter.assignmentsCount}
+                            </Typography>
+                            <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                              作业
+                            </Typography>
+                          </Box>
+                          <Avatar sx={{ 
+                            bgcolor: alpha(theme.palette.warning.main, 0.1),
+                            color: theme.palette.warning.main,
+                            width: 32,
+                            height: 32
+                          }}>
+                            <Assignment fontSize="small" />
+                          </Avatar>
                         </Box>
                       </Grid>
                     </Grid>
@@ -777,61 +853,54 @@ const ChapterManagement: React.FC = () => {
                 
                 {/* 卡片操作区域 */}
                 <CardActions sx={{ p: 2, pt: 0, flexDirection: 'column', gap: 1.5 }}>
-                  {/* 主要操作按钮 */}
-                  <Box sx={{ display: 'flex', gap: 1, width: '100%' }}>
+                  {/* 操作按钮 */}
+                  <Box sx={{ display: 'flex', gap: 0.3, width: '100%', flexWrap: 'nowrap' }}>
                     <Button
+                      variant="outlined"
                       size="small"
-                      variant="contained"
-                      onClick={() => handleView(chapter)}
-                      startIcon={<Visibility />}
-                      sx={{ 
-                        flex: 1,
-                        py: 0.8,
-                        borderRadius: 1.5,
-                        boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-                        '&:hover': { 
-                          boxShadow: '0 4px 8px rgba(0,0,0,0.2)',
-                        }
-                      }}
-                    >
-                      查看
-                    </Button>
-                    <Button
-                      size="small"
-                      variant="contained"
-                      onClick={() => handleEdit(chapter)}
                       startIcon={<Edit />}
-                      sx={{ 
+                      onClick={() => handleEdit(chapter)}
+                      sx={{
                         flex: 1,
-                        py: 0.8,
                         borderRadius: 1.5,
-                        boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-                        '&:hover': { 
-                          boxShadow: '0 4px 8px rgba(0,0,0,0.2)',
+                        textTransform: 'none',
+                        fontWeight: 500,
+                        px: 1,
+                        py: 0.5,
+                        minWidth: 'auto',
+                        fontSize: '0.75rem',
+                        borderColor: alpha(theme.palette.primary.main, 0.5),
+                        whiteSpace: 'nowrap',
+                        '&:hover': {
+                          borderColor: theme.palette.primary.main,
+                          bgcolor: alpha(theme.palette.primary.main, 0.04)
                         }
                       }}
                     >
                       编辑
                     </Button>
-                  </Box>
-                  
-                  {/* 次要操作按钮 */}
-                  <Box sx={{ display: 'flex', gap: 1, width: '100%' }}>
+                    
                     {chapter.status === 'draft' ? (
                       <Button
-                        size="small"
                         variant="outlined"
+                        size="small"
                         onClick={() => handlePublish(chapter)}
                         startIcon={<Publish />}
-                        sx={{ 
+                        color="primary"
+                        sx={{
                           flex: 1,
-                          py: 0.8,
                           borderRadius: 1.5,
-                          borderColor: 'success.main',
-                          color: 'success.main',
-                          '&:hover': { 
-                            borderColor: 'success.dark',
-                            bgcolor: 'rgba(76, 175, 80, 0.04)',
+                          textTransform: 'none',
+                          fontWeight: 500,
+                          px: 1,
+                          py: 0.5,
+                          minWidth: 'auto',
+                          fontSize: '0.75rem',
+                          borderColor: alpha(theme.palette.primary.main, 0.5),
+                          whiteSpace: 'nowrap',
+                          '&:hover': {
+                            borderColor: theme.palette.primary.main,
+                            bgcolor: alpha(theme.palette.primary.main, 0.04)
                           }
                         }}
                       >
@@ -839,16 +908,25 @@ const ChapterManagement: React.FC = () => {
                       </Button>
                     ) : (
                       <Button
-                        size="small"
                         variant="outlined"
+                        size="small"
                         onClick={() => handleUnpublish(chapter)}
                         startIcon={<Cancel />}
-                        sx={{ 
+                        color="primary"
+                        sx={{
                           flex: 1,
-                          py: 0.8,
                           borderRadius: 1.5,
-                          '&:hover': { 
-                            bgcolor: 'rgba(0, 0, 0, 0.04)',
+                          textTransform: 'none',
+                          fontWeight: 500,
+                          px: 1,
+                          py: 0.5,
+                          minWidth: 'auto',
+                          fontSize: '0.75rem',
+                          borderColor: alpha(theme.palette.primary.main, 0.5),
+                          whiteSpace: 'nowrap',
+                          '&:hover': {
+                            borderColor: theme.palette.primary.main,
+                            bgcolor: alpha(theme.palette.primary.main, 0.04)
                           }
                         }}
                       >
@@ -857,16 +935,25 @@ const ChapterManagement: React.FC = () => {
                     )}
                     
                     <Button
-                      size="small"
                       variant="outlined"
+                      size="small"
                       onClick={() => handleVideoUploadOpen(chapter)}
                       startIcon={chapter.videoUrl ? <VideoFile /> : <Upload />}
-                      sx={{ 
+                      color="primary"
+                      sx={{
                         flex: 1,
-                        py: 0.8,
                         borderRadius: 1.5,
-                        '&:hover': { 
-                          bgcolor: 'rgba(0, 0, 0, 0.04)',
+                        textTransform: 'none',
+                        fontWeight: 500,
+                        px: 1,
+                        py: 0.5,
+                        minWidth: 'auto',
+                        fontSize: '0.75rem',
+                        borderColor: alpha(theme.palette.primary.main, 0.5),
+                        whiteSpace: 'nowrap',
+                        '&:hover': {
+                          borderColor: theme.palette.primary.main,
+                          bgcolor: alpha(theme.palette.primary.main, 0.04)
                         }
                       }}
                     >
@@ -874,19 +961,25 @@ const ChapterManagement: React.FC = () => {
                     </Button>
                     
                     <Button
-                      size="small"
                       variant="outlined"
+                      size="small"
                       onClick={() => handleDeleteClick(chapter)}
                       startIcon={<Delete />}
                       color="error"
-                      sx={{ 
+                      sx={{
                         flex: 1,
-                        py: 0.8,
                         borderRadius: 1.5,
-                        borderColor: 'error.main',
-                        '&:hover': { 
-                          borderColor: 'error.dark',
-                          bgcolor: 'rgba(211, 47, 47, 0.04)',
+                        textTransform: 'none',
+                        fontWeight: 500,
+                        px: 1,
+                        py: 0.5,
+                        minWidth: 'auto',
+                        fontSize: '0.75rem',
+                        borderColor: alpha(theme.palette.error.main, 0.5),
+                        whiteSpace: 'nowrap',
+                        '&:hover': {
+                          borderColor: theme.palette.error.main,
+                          bgcolor: alpha(theme.palette.error.main, 0.04)
                         }
                       }}
                     >

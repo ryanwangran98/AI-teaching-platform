@@ -72,7 +72,7 @@ interface Course {
   teacher: string;
   credits: number;
   semester: string;
-  status: 'active' | 'inactive' | 'draft';
+  status: 'draft' | 'published';
   studentCount: number;
   totalHours: number;
   completedHours: number;
@@ -150,7 +150,6 @@ const TeacherCourseManagement: React.FC = () => {
     title: '',
     code: '',
     description: '',
-    status: 'draft' as 'active' | 'inactive' | 'draft',
     credits: 3,
     difficulty: 'MEDIUM' as 'EASY' | 'MEDIUM' | 'HARD',
     tags: [] as string[]
@@ -209,7 +208,7 @@ const TeacherCourseManagement: React.FC = () => {
           studentCount: Number(course.enrollmentCount) || Number(course.studentCount) || 0,
           totalHours: Number(course.credits) ? Number(course.credits) * 16 : 48,
           completedHours: 0,
-          status: (course.status || 'draft').toLowerCase() as 'active' | 'inactive' | 'draft',
+          status: ((course.status || 'draft') === 'draft' ? 'draft' : 'published') as 'draft' | 'published',
           semester: '2024-2025学年',
           startDate: course.createdAt || new Date().toISOString(),
           endDate: new Date(new Date().getTime() + 16 * 7 * 24 * 60 * 60 * 1000).toISOString(),
@@ -257,7 +256,6 @@ const TeacherCourseManagement: React.FC = () => {
       title: course.name,
       code: course.code,
       description: course.description,
-      status: course.status,
       credits: course.credits,
       difficulty: (course.difficulty || 'MEDIUM') as 'EASY' | 'MEDIUM' | 'HARD',
       tags: Array.isArray(course.tags) ? course.tags : []
@@ -272,7 +270,6 @@ const TeacherCourseManagement: React.FC = () => {
       title: '', 
       code: '', 
       description: '', 
-      status: 'draft',
       credits: 3,
       difficulty: 'MEDIUM',
       tags: []
@@ -312,7 +309,6 @@ const TeacherCourseManagement: React.FC = () => {
         name: editForm.title, // 将title改为name以匹配后端schema
         code: editForm.code,
         description: editForm.description,
-        status: editForm.status.toUpperCase(), // 转换为大写以匹配数据库格式
         credits: editForm.credits,
         difficulty: editForm.difficulty,
         tags: editForm.tags
@@ -332,7 +328,6 @@ const TeacherCourseManagement: React.FC = () => {
                 ...course, 
                 ...updateData, 
                 name: updateData.name, 
-                status: editForm.status,
                 credits: updateData.credits,
                 difficulty: updateData.difficulty,
                 tags: updateData.tags
@@ -354,6 +349,57 @@ const TeacherCourseManagement: React.FC = () => {
       alert(`更新课程失败: ${error.response?.data?.error || error.message}`);
     } finally {
       handleClose();
+    }
+  };
+
+  // 处理课程状态变更（发布/取消发布）
+  const handleStatusChange = async (course: Course, newStatus: 'draft' | 'published') => {
+    try {
+      console.log('准备更新课程状态:', {
+        courseId: course.id,
+        courseName: course.name,
+        currentStatus: course.status,
+        newStatus: newStatus
+      });
+
+      // 准备要发送的数据
+      const updateData = {
+        status: newStatus === 'published' ? 'ACTIVE' : 'DRAFT' // 转换为大写以匹配数据库格式
+      };
+
+      console.log('发送状态更新请求:', `/courses/${course.id}`, updateData);
+
+      // 调用API更新课程状态
+      const response = await courseAPI.updateCourse(course.id, updateData);
+      console.log('状态更新响应:', response);
+
+      // 更新本地状态
+        setCourses(prevCourses => prevCourses.map(c => 
+          c.id === course.id 
+            ? { 
+                ...c, 
+                status: newStatus === 'published' ? 'published' : 'draft' // 更新为前端状态
+              } 
+            : c
+        ));
+
+      // 显示成功消息
+      const statusText = getStatusText(newStatus);
+      setSnackbar({
+        open: true,
+        message: `课程状态已更新为: ${statusText}`,
+        severity: 'success'
+      });
+      
+    } catch (error: any) {
+      console.error('更新课程状态失败详情:', {
+        error: error,
+        response: error.response,
+        status: error.response?.status,
+        message: error.response?.data?.error || error.message
+      });
+      
+      alert(`更新课程状态失败: ${error.response?.data?.error || error.message}`);
     }
   };
 
@@ -491,8 +537,7 @@ const TeacherCourseManagement: React.FC = () => {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'active': return 'success';
-      case 'inactive': return 'error';
+      case 'published': return 'success';
       case 'draft': return 'warning';
       default: return 'default';
     }
@@ -500,10 +545,27 @@ const TeacherCourseManagement: React.FC = () => {
 
   const getStatusText = (status: string) => {
     switch (status) {
-      case 'active': return '开课中';
-      case 'inactive': return '已结课';
-      case 'draft': return '草稿';
+      case 'published': return '已发布';
+      case 'draft': return '未发布';
       default: return status;
+    }
+  };
+
+  const getDifficultyColor = (difficulty: string) => {
+    switch (difficulty?.toLowerCase()) {
+      case 'easy': return 'success';
+      case 'medium': return 'warning';
+      case 'hard': return 'error';
+      default: return 'default';
+    }
+  };
+
+  const getDifficultyLabel = (difficulty: string) => {
+    switch (difficulty?.toLowerCase()) {
+      case 'easy': return '简单';
+      case 'medium': return '中等';
+      case 'hard': return '困难';
+      default: return '未知';
     }
   };
 
@@ -632,10 +694,10 @@ const TeacherCourseManagement: React.FC = () => {
                     课程状态
                   </Typography>
                   <Typography variant="h4" component="div" sx={{ fontWeight: 'bold' }}>
-                    {courses.filter(course => course.status === 'active').length}
+                    {courses.filter(course => course.status === 'published').length}
                   </Typography>
                   <Typography variant="body2" color="textSecondary" sx={{ mt: 0.5 }}>
-                    进行中课程
+                    已发布课程
                   </Typography>
                 </Box>
                 <Avatar sx={{ 
@@ -688,9 +750,8 @@ const TeacherCourseManagement: React.FC = () => {
                   label="状态"
                 >
                   <MenuItem value="all">全部状态</MenuItem>
-                  <MenuItem value="active">开课中</MenuItem>
-                  <MenuItem value="inactive">已结课</MenuItem>
-                  <MenuItem value="draft">草稿</MenuItem>
+                  <MenuItem value="published">已发布</MenuItem>
+                  <MenuItem value="draft">未发布</MenuItem>
                 </Select>
               </FormControl>
             </Box>
@@ -780,7 +841,7 @@ const TeacherCourseManagement: React.FC = () => {
                 
                 {/* 课程描述 */}
                 <Typography variant="body2" color="textSecondary" sx={{ 
-                  mb: 3, 
+                  mb: 2, 
                   lineHeight: 1.7,
                   fontSize: '0.875rem',
                   display: '-webkit-box',
@@ -791,11 +852,76 @@ const TeacherCourseManagement: React.FC = () => {
                   {course.description}
                 </Typography>
 
+                {/* 难度和标签 */}
+                <Box sx={{ mb: 3 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 1, mb: 1 }}>
+                    <Typography variant="body2" sx={{ fontWeight: 600, fontSize: '0.875rem' }}>
+                      难度:
+                    </Typography>
+                    <Chip 
+                      label={getDifficultyLabel(course.difficulty)} 
+                      size="small" 
+                      variant="outlined"
+                      color={getDifficultyColor(course.difficulty) as any}
+                      sx={{ 
+                        fontWeight: 600,
+                        fontSize: '0.75rem',
+                        height: 24,
+                        borderRadius: 1,
+                        borderColor: theme.palette.mode === 'light' 
+                          ? alpha(theme.palette[getDifficultyColor(course.difficulty) as keyof typeof theme.palette].main, 0.2)
+                          : alpha(theme.palette[getDifficultyColor(course.difficulty) as keyof typeof theme.palette].main, 0.3),
+                        color: theme.palette[getDifficultyColor(course.difficulty) as keyof typeof theme.palette].main
+                      }}
+                    />
+                    
+                    {Array.isArray(course.tags) && course.tags.length > 0 && (
+                      <>
+                        <Typography variant="body2" sx={{ fontWeight: 600, fontSize: '0.875rem', ml: 1 }}>
+                          标签:
+                        </Typography>
+                        {course.tags.slice(0, 2).map((tag) => (
+                          <Chip 
+                            key={tag} 
+                            label={tag} 
+                            size="small" 
+                            variant="outlined"
+                            sx={{
+                              fontSize: '0.7rem',
+                              height: 24,
+                              borderRadius: 1,
+                              borderColor: 'rgba(59, 130, 246, 0.2)',
+                              color: '#3b82f6'
+                            }}
+                          />
+                        ))}
+                        {course.tags.length > 2 && (
+                          <Chip 
+                            label={`+${course.tags.length - 2}`} 
+                            size="small" 
+                            variant="outlined"
+                            sx={{
+                              fontSize: '0.7rem',
+                              height: 24,
+                              borderRadius: 1,
+                              borderColor: 'rgba(59, 130, 246, 0.2)',
+                              color: '#3b82f6'
+                            }}
+                          />
+                        )}
+                      </>
+                    )}
+                  </Box>
+                </Box>
+
                 {/* 统计信息 */}
                 <Box sx={{ 
                   display: 'flex', 
                   justifyContent: 'space-around', 
-                  mb: 3
+                  mb: 2,
+                  py: 1.5,
+                  backgroundColor: alpha(theme.palette.primary.main, 0.04),
+                  borderRadius: 2
                 }}>
                   <Box sx={{ textAlign: 'center', px: 1 }}>
                     <Typography variant="h6" sx={{ fontWeight: 700, color: theme.palette.primary.main }}>
@@ -836,11 +962,63 @@ const TeacherCourseManagement: React.FC = () => {
                       px: 2,
                       py: 0.75,
                       minWidth: 'auto',
-                      fontSize: '0.8125rem'
+                      fontSize: '0.8125rem',
+                      borderColor: alpha(theme.palette.primary.main, 0.5),
+                      '&:hover': {
+                        borderColor: theme.palette.primary.main,
+                        bgcolor: alpha(theme.palette.primary.main, 0.04)
+                      }
                     }}
                   >
                     编辑
                   </Button>
+                  {course.status === 'draft' ? (
+                    <Button
+                      variant="outlined"
+                      size="small"
+                      onClick={() => handleStatusChange(course, 'published')}
+                      color="primary"
+                      sx={{
+                        borderRadius: 2,
+                        textTransform: 'none',
+                        fontWeight: 500,
+                        px: 2,
+                        py: 0.75,
+                        minWidth: 'auto',
+                        fontSize: '0.8125rem',
+                        borderColor: alpha(theme.palette.primary.main, 0.5),
+                        '&:hover': {
+                          borderColor: theme.palette.primary.main,
+                          bgcolor: alpha(theme.palette.primary.main, 0.04)
+                        }
+                      }}
+                    >
+                      发布
+                    </Button>
+                  ) : (
+                    <Button
+                      variant="outlined"
+                      size="small"
+                      onClick={() => handleStatusChange(course, 'draft')}
+                      color="primary"
+                      sx={{
+                        borderRadius: 2,
+                        textTransform: 'none',
+                        fontWeight: 500,
+                        px: 2,
+                        py: 0.75,
+                        minWidth: 'auto',
+                        fontSize: '0.8125rem',
+                        borderColor: alpha(theme.palette.primary.main, 0.5),
+                        '&:hover': {
+                          borderColor: theme.palette.primary.main,
+                          bgcolor: alpha(theme.palette.primary.main, 0.04)
+                        }
+                      }}
+                    >
+                      取消发布
+                    </Button>
+                  )}
                   <Button
                     variant="outlined"
                     size="small"
@@ -985,20 +1163,6 @@ const TeacherCourseManagement: React.FC = () => {
                   }}
                   helperText="例如：编程, 基础, 必修"
                 />
-              </Grid>
-              <Grid size={{ xs: 12 }}>
-                <FormControl fullWidth>
-                  <InputLabel>课程状态</InputLabel>
-                  <Select
-                    value={editForm.status}
-                    onChange={(e) => handleEditFormChange('status', e.target.value)}
-                    label="课程状态"
-                  >
-                    <MenuItem value="draft">草稿</MenuItem>
-                    <MenuItem value="active">开课中</MenuItem>
-                    <MenuItem value="inactive">已结课</MenuItem>
-                  </Select>
-                </FormControl>
               </Grid>
             </Grid>
           </Box>

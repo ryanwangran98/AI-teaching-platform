@@ -465,9 +465,23 @@ router.get('/teacher/my-courses', authenticateToken, authorizeRoles('TEACHER'), 
       orderBy: { createdAt: 'desc' }
     });
 
+    // 解析tags字段为数组返回给前端
+    const processedCourses = courses.map(course => {
+      const processedCourse = { ...course };
+      if (processedCourse.tags) {
+        try {
+          processedCourse.tags = JSON.parse(processedCourse.tags);
+        } catch (e) {
+          // 如果解析失败，保持原样
+          console.error('Failed to parse tags JSON:', e);
+        }
+      }
+      return processedCourse;
+    });
+
     res.json({
       success: true,
-      data: courses
+      data: processedCourses
     });
   } catch (error) {
     res.status(500).json({ error: 'Server error' });

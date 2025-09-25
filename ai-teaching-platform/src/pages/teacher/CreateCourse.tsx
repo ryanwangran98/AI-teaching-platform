@@ -94,7 +94,8 @@ const CreateCourse: React.FC = () => {
         tags: formData.tags
       };
       
-      console.log('发送课程创建请求:', courseData);
+      console.log('formData.tags:', formData.tags);
+      console.log('发送课程创建请求:', JSON.stringify(courseData, null, 2));
       
       await courseAPI.createCourse(courseData);
       navigate('/teacher/courses');

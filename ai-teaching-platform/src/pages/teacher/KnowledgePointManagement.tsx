@@ -797,33 +797,26 @@ const KnowledgePointManagement: React.FC = () => {
                 </CardContent>
                 
                 <CardActions sx={{ px: 2, pb: 2, pt: 1.5 }}>
-                  <Box sx={{ display: 'flex', flexDirection: 'row', flexWrap: 'wrap', gap: 0.5, width: '100%' }}>
+                  <Box sx={{ display: 'flex', gap: 0.3, width: '100%', flexWrap: 'nowrap' }}>
                     <Button
+                      variant="outlined"
                       size="small"
-                      variant="contained"
-                      startIcon={<Visibility />}
-                      sx={{ 
-                        flex: 1,
-                        py: 0.8,
-                        borderRadius: 1,
-                        '&:hover': { 
-                          bgcolor: 'rgba(0, 0, 0, 0.04)',
-                        }
-                      }}
-                    >
-                      查看
-                    </Button>
-                    <Button
-                      size="small"
-                      variant="contained"
                       onClick={() => handleEdit(kp)}
                       startIcon={<Edit />}
-                      sx={{ 
+                      sx={{
                         flex: 1,
-                        py: 0.8,
-                        borderRadius: 1,
-                        '&:hover': { 
-                          bgcolor: 'rgba(0, 0, 0, 0.04)',
+                        borderRadius: 1.5,
+                        textTransform: 'none',
+                        fontWeight: 500,
+                        px: 1,
+                        py: 0.5,
+                        minWidth: 'auto',
+                        fontSize: '0.75rem',
+                        borderColor: alpha(theme.palette.primary.main, 0.5),
+                        whiteSpace: 'nowrap',
+                        '&:hover': {
+                          borderColor: theme.palette.primary.main,
+                          bgcolor: alpha(theme.palette.primary.main, 0.04)
                         }
                       }}
                     >
@@ -831,19 +824,25 @@ const KnowledgePointManagement: React.FC = () => {
                     </Button>
                     {kp.status === 'draft' ? (
                       <Button
-                        size="small"
                         variant="outlined"
+                        size="small"
                         onClick={() => handlePublish(kp)}
                         startIcon={<Publish />}
-                        sx={{ 
+                        color="primary"
+                        sx={{
                           flex: 1,
-                          py: 0.8,
-                          borderRadius: 1,
-                          borderColor: 'success.main',
-                          color: 'success.main',
-                          '&:hover': { 
-                            borderColor: 'success.dark',
-                            bgcolor: 'rgba(76, 175, 80, 0.04)',
+                          borderRadius: 1.5,
+                          textTransform: 'none',
+                          fontWeight: 500,
+                          px: 1,
+                          py: 0.5,
+                          minWidth: 'auto',
+                          fontSize: '0.75rem',
+                          borderColor: alpha(theme.palette.primary.main, 0.5),
+                          whiteSpace: 'nowrap',
+                          '&:hover': {
+                            borderColor: theme.palette.primary.main,
+                            bgcolor: alpha(theme.palette.primary.main, 0.04)
                           }
                         }}
                       >
@@ -851,16 +850,25 @@ const KnowledgePointManagement: React.FC = () => {
                       </Button>
                     ) : (
                       <Button
-                        size="small"
                         variant="outlined"
+                        size="small"
                         onClick={() => handleUnpublish(kp)}
                         startIcon={<Cancel />}
-                        sx={{ 
+                        color="primary"
+                        sx={{
                           flex: 1,
-                          py: 0.8,
-                          borderRadius: 1,
-                          '&:hover': { 
-                            bgcolor: 'rgba(0, 0, 0, 0.04)',
+                          borderRadius: 1.5,
+                          textTransform: 'none',
+                          fontWeight: 500,
+                          px: 1,
+                          py: 0.5,
+                          minWidth: 'auto',
+                          fontSize: '0.75rem',
+                          borderColor: alpha(theme.palette.primary.main, 0.5),
+                          whiteSpace: 'nowrap',
+                          '&:hover': {
+                            borderColor: theme.palette.primary.main,
+                            bgcolor: alpha(theme.palette.primary.main, 0.04)
                           }
                         }}
                       >
@@ -868,19 +876,25 @@ const KnowledgePointManagement: React.FC = () => {
                       </Button>
                     )}
                     <Button
-                      size="small"
                       variant="outlined"
+                      size="small"
                       onClick={() => handleDelete(kp.id)}
                       startIcon={<Delete />}
-                      color="error"
-                      sx={{ 
+                      sx={{
                         flex: 1,
-                        py: 0.8,
-                        borderRadius: 1,
-                        borderColor: 'error.main',
-                        '&:hover': { 
-                          borderColor: 'error.dark',
-                          bgcolor: 'rgba(211, 47, 47, 0.04)',
+                        borderRadius: 1.5,
+                        textTransform: 'none',
+                        fontWeight: 500,
+                        px: 1,
+                        py: 0.5,
+                        minWidth: 'auto',
+                        fontSize: '0.75rem',
+                        borderColor: alpha(theme.palette.error.main, 0.5),
+                        color: theme.palette.error.main,
+                        whiteSpace: 'nowrap',
+                        '&:hover': {
+                          borderColor: theme.palette.error.main,
+                          bgcolor: alpha(theme.palette.error.main, 0.04)
                         }
                       }}
                     >

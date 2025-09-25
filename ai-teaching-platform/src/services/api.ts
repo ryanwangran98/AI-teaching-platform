@@ -118,7 +118,7 @@ export const courseAPI = {
   },
 
   createCourse: async (courseData: any) => {
-    console.log('发送创建课程请求:', courseData);
+    console.log('发送创建课程请求:', JSON.stringify(courseData, null, 2));
     const response = await api.post('/courses', courseData);
     console.log('创建课程响应:', response.data);
     return response.data;
