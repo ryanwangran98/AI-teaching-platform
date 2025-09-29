@@ -58,7 +58,7 @@ import { coursewareAPI, chapterAPI, courseAPI } from '../../services/api';
 import api from '../../services/api';
 
 
-// 修改课件类型定义以匹配数据库
+// 修改课件类型定义以匹配数据库状态	
 interface Courseware {
   id: string;
   title: string;
@@ -467,22 +467,9 @@ const CoursewareManagement: React.FC = () => {
 
   return (
     <Box sx={{ p: 3 }}>
-      {/* 页面标题和返回按钮 */}
+      {/* 页面标题 */}
       <Card sx={{ mb: 3, borderRadius: 2, boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
         <CardContent sx={{ display: 'flex', alignItems: 'center', py: 2 }}>
-          <Button
-            startIcon={<ArrowBack />}
-            onClick={() => navigate('/teacher/courses')}
-            sx={{ 
-              mr: 2,
-              backgroundColor: alpha(theme.palette.primary.main, 0.1),
-              '&:hover': {
-                backgroundColor: alpha(theme.palette.primary.main, 0.2),
-              }
-            }}
-          >
-            返回课程列表
-          </Button>
           <Avatar 
             sx={{ 
               width: 48, 
@@ -587,7 +574,7 @@ const CoursewareManagement: React.FC = () => {
       <Card sx={{ borderRadius: 2, boxShadow: '0 2px 8px rgba(0,0,0,0.1)', overflow: 'hidden' }}>
         <TableContainer>
           <Table>
-            <TableHead sx={{ bgcolor: alpha(theme.palette.primary.main, 0.05) }}>
+            <TableHead>
               <TableRow>
                 <TableCell sx={{ fontWeight: 'bold', py: 2 }}>课件信息</TableCell>
                 <TableCell sx={{ fontWeight: 'bold', py: 2 }}>类型</TableCell>
@@ -611,25 +598,12 @@ const CoursewareManagement: React.FC = () => {
                   >
                     <TableCell>
                       <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                        <Avatar 
-                          sx={{ 
-                            width: 40, 
-                            height: 40, 
-                            mr: 2,
-                            bgcolor: courseware.type === 'SLIDES' ? 
-                              theme.palette.primary.main : 
-                              courseware.type === 'DOCUMENT' ?
-                              theme.palette.info.main :
-                              courseware.type === 'VIDEO' ?
-                              theme.palette.warning.main :
-                              theme.palette.success.main
-                          }}
-                        >
-                          {courseware.type === 'SLIDES' ? <Slideshow /> : 
-                           courseware.type === 'DOCUMENT' ? <PictureAsPdf /> :
-                           courseware.type === 'VIDEO' ? <VideoLibrary /> :
-                           <Apps />}
-                        </Avatar>
+                        <Box sx={{ mr: 2, display: 'flex', alignItems: 'center' }}>
+                          {courseware.type === 'SLIDES' && <Slideshow color="primary" />}
+                          {courseware.type === 'DOCUMENT' && <PictureAsPdf color="error" />}
+                          {courseware.type === 'VIDEO' && <VideoLibrary color="warning" />}
+                          {courseware.type === 'INTERACTIVE' && <Apps color="success" />}
+                        </Box>
                         <Box>
                           <Typography variant="body1" sx={{ fontWeight: 'bold' }}>
                             {courseware.title}
@@ -649,20 +623,42 @@ const CoursewareManagement: React.FC = () => {
                       </Box>
                     </TableCell>
                     <TableCell>
-                      <Chip 
-                        label={getTypeText(courseware.type)} 
-                        color={getTypeColor(courseware.type)}
+                      <Button 
+                        variant="outlined"
                         size="small"
-                        sx={{ fontWeight: 'bold' }}
-                      />
+                        sx={{ 
+                          minWidth: 'auto',
+                          px: 1,
+                          py: 0.5,
+                          fontWeight: 'bold',
+                          color: theme.palette.primary.main,
+                          borderColor: theme.palette.primary.main,
+                          '&:hover': { 
+                            bgcolor: alpha(theme.palette.primary.main, 0.04)
+                          } 
+                        }}
+                      >
+                        {getTypeText(courseware.type)}
+                      </Button>
                     </TableCell>
                     <TableCell>
-                      <Chip 
-                        label={getStatusLabel(courseware.status)} 
-                        color={getStatusColor(courseware.status)}
+                      <Button 
+                        variant="outlined"
                         size="small"
-                        sx={{ fontWeight: 'bold' }}
-                      />
+                        sx={{ 
+                          minWidth: 'auto',
+                          px: 1,
+                          py: 0.5,
+                          fontWeight: 'bold',
+                          color: theme.palette.primary.main,
+                          borderColor: theme.palette.primary.main,
+                          '&:hover': { 
+                            bgcolor: alpha(theme.palette.primary.main, 0.04)
+                          } 
+                        }}
+                      >
+                        {getStatusLabel(courseware.status)}
+                      </Button>
                     </TableCell>
                     <TableCell>
                       <Typography variant="body2" fontWeight="medium">

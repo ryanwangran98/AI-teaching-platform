@@ -120,7 +120,6 @@ const ResourceManagement: React.FC = () => {
         display: 'flex', 
         flexDirection: 'column', 
         alignItems: 'center',
-        bgcolor: alpha(theme.palette.primary.main, 0.05),
         borderBottom: `1px solid ${theme.palette.divider}`
       }}>
         <Avatar sx={{ 
@@ -140,7 +139,7 @@ const ResourceManagement: React.FC = () => {
         </Typography>
       </Box>
       <Divider />
-      <List sx={{ py: 1 }}>
+    <List sx={{ py: 1 }}>
         {navigationItems.map((item) => (
           <ListItemButton 
             key={item.text} 
@@ -185,6 +184,21 @@ const ResourceManagement: React.FC = () => {
           </ListItemButton>
         ))}
       </List>
+      <Button
+      startIcon={<ArrowBack />}
+      onClick={() => navigate('/teacher/courses')}
+      sx={{ 
+        m: 1,
+        width: 'calc(100% - 16px)',
+        justifyContent: 'flex-start',
+        backgroundColor: alpha(theme.palette.primary.main, 0.1),
+        '&:hover': {
+          backgroundColor: alpha(theme.palette.primary.main, 0.2),
+        }
+      }}
+    >
+      返回课程列表
+    </Button>
     </div>
   );
 

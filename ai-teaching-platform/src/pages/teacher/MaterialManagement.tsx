@@ -53,6 +53,7 @@ import {
   MusicNote,
   Folder,
   FolderOpen,
+  SmartToy,
 } from '@mui/icons-material';
 import { useNavigate, useParams } from 'react-router-dom';
 import { materialAPI, chapterAPI, courseAPI } from '../../services/api';
@@ -117,9 +118,13 @@ const MaterialManagement: React.FC = () => {
   const [submitting, setSubmitting] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [chapters, setChapters] = useState<any[]>([]);
-  const [currentCourse, setCurrentCourse] = useState<{id: string, name: string} | null>(null);
+  const [currentCourse, setCurrentCourse] = useState<{id: string, name: string, agentAppId?: string} | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const fileInputId = useId(); // 生成唯一ID
+
+  // 知识库和答疑助手相关状态
+  const [knowledgeBaseLoading, setKnowledgeBaseLoading] = useState<Record<string, boolean>>({});
+  const [associationStatus, setAssociationStatus] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     console.log('MaterialManagement useEffect triggered, courseId:', courseId);
@@ -133,6 +138,17 @@ const MaterialManagement: React.FC = () => {
       setLoading(false);
     }
   }, [courseId]); // 添加 courseId 作为依赖项
+
+  // 检查所有资料的关联状态
+  useEffect(() => {
+    if (materials.length > 0 && currentCourse?.agentAppId) {
+      materials.forEach(material => {
+        if (material.datasetId) {
+          isAssociatedToAssistant(material);
+        }
+      });
+    }
+  }, [materials, currentCourse?.agentAppId]);
 
   const fetchMaterials = async () => {
     if (!courseId) return;
@@ -189,7 +205,8 @@ const MaterialManagement: React.FC = () => {
       
       setCurrentCourse({
         id: courseData.id,
-        name: courseData.name || courseData.title || '未命名课程'
+        name: courseData.name || courseData.title || '未命名课程',
+        agentAppId: courseData.agentAppId
       });
     } catch (error: any) {
       console.error('获取课程信息失败:', error);
@@ -335,6 +352,785 @@ const MaterialManagement: React.FC = () => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
+  // 创建知识库
+  const handleCreateKnowledgeBase = async (material: Material) => {
+    try {
+      setKnowledgeBaseLoading(prev => ({ ...prev, [material.id]: true }));
+      setError(null);
+
+      // 1. 检查课程是否有答疑助手
+      if (!currentCourse?.agentAppId) {
+        alert('该课程尚未创建课程答疑助手，请先创建答疑助手');
+        return;
+      }
+
+      // 2. 获取资料详细信息（包含知识库信息）
+      console.log('获取资料详细信息...');
+      const materialResponse = await materialAPI.getMaterial(material.id);
+      const materialInfo = materialResponse.data || materialResponse;
+
+      // 1. 登录获取访问令牌
+      console.log('正在登录 Dify...');
+      const loginResponse = await fetch('http://localhost:5001/console/api/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: "3325127454@qq.com",
+          password: "wangran1998"
+        })
+      });
+      
+      console.log('登录响应状态:', loginResponse.status);
+      
+      if (!loginResponse.ok) {
+        const errorText = await loginResponse.text();
+        console.error('登录失败:', errorText);
+        throw new Error(`登录失败，状态码: ${loginResponse.status}, 错误信息: ${errorText}`);
+      }
+      
+      const loginData = await loginResponse.json();
+      console.log('登录响应数据:', loginData);
+      
+      const accessToken = loginData.access_token || loginData.data?.access_token;
+      
+      if (!accessToken) {
+        console.error('访问令牌未找到，响应数据:', loginData);
+        throw new Error('获取访问令牌失败');
+      }
+      
+      console.log('成功获取访问令牌');
+
+      // 2. 如果资料已经有知识库信息，询问用户是否重新创建
+      if (materialInfo.datasetId) {
+        if (!confirm(`该资料已经创建过知识库，是否重新创建知识库？\n注意：重新创建将覆盖现有的知识库信息。`)) {
+          setKnowledgeBaseLoading(prev => ({ ...prev, [material.id]: false }));
+          return;
+        }
+        
+        console.log('删除原有的知识库...');
+        console.log('知识库ID:', materialInfo.datasetId);
+        
+        const deleteDatasetResponse = await fetch(`http://localhost:5001/console/api/datasets/${materialInfo.datasetId}`, {
+          method: 'DELETE',
+          headers: {
+            'Authorization': `Bearer ${accessToken}`,
+            'Content-Type': 'application/json',
+          }
+        });
+        
+        console.log('删除知识库响应状态:', deleteDatasetResponse.status);
+        
+        if (!deleteDatasetResponse.ok && deleteDatasetResponse.status !== 204) {
+          const errorText = await deleteDatasetResponse.text();
+          console.error('删除知识库失败:', errorText);
+          // 不抛出错误，继续创建新知识库
+        } else {
+          console.log('原有知识库删除成功');
+          // 等待一秒，确保删除操作完成
+          await new Promise(resolve => setTimeout(resolve, 1000));
+        }
+      }
+
+      // 3. 创建新的知识库
+      console.log('创建新的知识库...');
+      // 直接使用资料名称作为知识库名称，确保不超过40字符限制
+      const datasetName = material.title.length > 40 ? material.title.slice(0, 40) : material.title;
+      console.log('知识库名称:', datasetName);
+      
+      const createDatasetResponse = await fetch('http://localhost:5001/console/api/datasets', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${accessToken}`
+        },
+        body: JSON.stringify({
+          name: datasetName,
+          indexing_technique: "high_quality",
+          embedding_model: "embeddings",
+          embedding_model_provider: "axdlee/sophnet/sophnet"
+        })
+      });
+
+      if (!createDatasetResponse.ok) {
+        const errorText = await createDatasetResponse.text();
+        throw new Error(`创建知识库失败: ${errorText}`);
+      }
+
+      const datasetData = await createDatasetResponse.json();
+      const datasetId = datasetData.id;
+      console.log('知识库创建成功，ID:', datasetId);
+
+      // 5. 上传文件获取文件ID
+      console.log('准备上传文件...');
+      const fileUrl = material.fileUrl.startsWith('http') 
+        ? material.fileUrl 
+        : `http://localhost:3001${material.fileUrl}`;
+      
+      console.log('文件URL:', fileUrl);
+      
+      // 获取文件内容
+      const fileResponse = await fetch(fileUrl);
+      console.log('文件响应状态:', fileResponse.status);
+      
+      if (!fileResponse.ok) {
+        throw new Error('获取文件内容失败');
+      }
+      
+      const fileBlob = await fileResponse.blob();
+      console.log('文件Blob类型:', fileBlob.type);
+      console.log('文件Blob大小:', fileBlob.size);
+      
+      // 根据文件URL和类型确定正确的文件名和扩展名
+      let fileName = material.title;
+      let fileType = fileBlob.type;
+      
+      // 如果material.title中没有扩展名，根据文件类型添加合适的扩展名
+      if (!material.title.includes('.')) {
+        // 根据MIME类型添加扩展名
+        const mimeToExt: Record<string, string> = {
+          'text/plain': '.txt',
+          'text/markdown': '.md',
+          'text/html': '.html',
+          'application/xml': '.xml',
+          'application/epub+zip': '.epub',
+          'application/pdf': '.pdf',
+          'application/msword': '.doc',
+          'application/vnd.openxmlformats-officedocument.wordprocessingml.document': '.docx',
+          'application/vnd.ms-excel': '.xls',
+          'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': '.xlsx',
+          'text/csv': '.csv',
+          'application/vnd.ms-powerpoint': '.ppt',
+          'application/vnd.openxmlformats-officedocument.presentationml.presentation': '.pptx',
+          'message/rfc822': '.eml',
+          'application/vnd.ms-outlook': '.msg',
+          'image/jpeg': '.jpg',
+          'image/png': '.png',
+          'image/gif': '.gif',
+          'image/webp': '.webp',
+          'image/svg+xml': '.svg',
+          'audio/mpeg': '.mp3',
+          'audio/mp4': '.m4a',
+          'audio/wav': '.wav',
+          'audio/amr': '.amr',
+          'audio/mpeg3': '.mpga',
+          'video/mp4': '.mp4',
+          'video/quicktime': '.mov',
+          'video/mpeg': '.mpeg',
+          'video/webm': '.webm'
+        };
+        
+        const ext = mimeToExt[fileBlob.type] || '.txt';
+        fileName = `${material.title}${ext}`;
+      }
+      
+      const file = new File([fileBlob], fileName, { type: fileType });
+      
+      // 上传文件获取文件ID
+      console.log('上传文件获取文件ID...');
+      const uploadFormData = new FormData();
+      uploadFormData.append('file', file);
+      uploadFormData.append('user', '3325127454@qq.com');
+      
+      const uploadFileResponse = await fetch('http://localhost:5001/console/api/files/upload', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+        },
+        body: uploadFormData
+      });
+      
+      console.log('上传文件响应状态:', uploadFileResponse.status);
+      
+      if (!uploadFileResponse.ok) {
+        const errorText = await uploadFileResponse.text();
+        console.error('上传文件失败:', errorText);
+        throw new Error(`上传文件失败，状态码: ${uploadFileResponse.status}, 错误信息: ${errorText}`);
+      }
+      
+      const uploadFileData = await uploadFileResponse.json();
+      const fileId = uploadFileData.id;
+      
+      if (!fileId) {
+        throw new Error('获取文件ID失败');
+      }
+      
+      console.log('文件上传成功，文件ID:', fileId);
+      
+      // 6. 使用文件ID创建知识库文档
+      console.log('使用文件ID创建知识库文档...');
+      
+      // 根据文件类型确定文档格式
+      let docForm = "text_model";
+      const ext = fileName.toLowerCase().substring(fileName.lastIndexOf('.'));
+      if (['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg'].includes(ext)) {
+        docForm = "image_model";
+      }
+      
+      // 使用文件ID创建知识库文档
+      // 步骤1：创建知识库文档（不包含检索配置）
+      const createDocumentData = {
+        data_source: {
+          type: "upload_file",
+          info_list: {
+            data_source_type: "upload_file",
+            file_info_list: {
+              file_ids: [fileId]
+            }
+          }
+        },
+        indexing_technique: "high_quality",
+        process_rule: {
+          mode: "custom",
+          rules: {
+            pre_processing_rules: [],
+            segmentation: {
+              separator: "\\n\\n\\n",
+              max_tokens: 1000,
+              chunk_overlap: 100
+            }
+          }
+        },
+        doc_form: docForm,
+        doc_language: "zh",
+        embedding_model: "embeddings",
+        embedding_model_provider: "axdlee/sophnet/sophnet"
+      };
+      
+      console.log('创建文档请求数据:', JSON.stringify(createDocumentData, null, 2));
+      
+      const createDocumentResponse = await fetch(`http://localhost:5001/console/api/datasets/${datasetId}/documents`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(createDocumentData)
+      });
+
+      if (!createDocumentResponse.ok) {
+        const errorText = await createDocumentResponse.text();
+        throw new Error(`上传文档失败: ${errorText}`);
+      }
+
+      const documentData = await createDocumentResponse.json();
+      const documentId = documentData.documents?.[0]?.id;
+      
+      if (!documentId) {
+        throw new Error('获取文档ID失败');
+      }
+
+      console.log('文档创建成功，文档ID:', documentId);
+
+      // 步骤2：更新知识库检索设置
+      console.log('更新知识库检索设置...');
+      const retrievalConfig = {
+        retrieval_model: {
+          search_method: "hybrid_search",
+          reranking_enable: true,
+          reranking_mode: "weighted_score",
+          reranking_model: {
+            reranking_provider_name: "",
+            reranking_model_name: ""
+          },
+          weights: {
+            weight_type: "custom",
+            keyword_setting: {
+              keyword_weight: 0.3
+            },
+            vector_setting: {
+              vector_weight: 0.7,
+              embedding_model_name: "embeddings",
+              embedding_provider_name: "axdlee/sophnet/sophnet"
+            }
+          },
+          top_k: 5,
+          score_threshold_enabled: false,
+          score_threshold: 0.0
+        }
+      };
+      
+      const updateRetrievalResponse = await fetch(`http://localhost:5001/console/api/datasets/${datasetId}`, {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(retrievalConfig)
+      });
+      
+      if (!updateRetrievalResponse.ok) {
+        const errorText = await updateRetrievalResponse.text();
+        console.warn('更新检索设置失败:', errorText);
+        // 不抛出错误，继续执行，因为文档已经创建成功
+      } else {
+        console.log('知识库检索设置更新成功');
+      }
+
+      // 6. 保存知识库信息到数据库
+      console.log('保存知识库信息到数据库...');
+      const updateResponse = await fetch(`http://localhost:3001/api/materials/${material.id}/knowledge-base`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify({
+          datasetId: datasetId,
+          documentId: documentId
+        })
+      });
+
+      if (!updateResponse.ok) {
+        const errorText = await updateResponse.text();
+        throw new Error(`保存知识库信息失败: ${errorText}`);
+      }
+
+      // 7. 更新本地状态
+      setMaterials(prevMaterials => 
+        prevMaterials.map(m => 
+          m.id === material.id 
+            ? { ...m, datasetId: datasetId, documentId: documentId } 
+            : m
+        )
+      );
+
+      alert(`知识库创建成功！\n知识库ID: ${datasetId}`);
+    } catch (error) {
+      console.error('创建知识库失败:', error);
+      setError(`创建知识库失败: ${error instanceof Error ? error.message : '未知错误'}`);
+    } finally {
+      setKnowledgeBaseLoading(prev => ({ ...prev, [material.id]: false }));
+    }
+  };
+
+  // 关联到课程答疑助手（如果知识库不存在，则先创建知识库）
+  const handleAssociateToAssistant = async (material: Material) => {
+    try {
+      setKnowledgeBaseLoading(prev => ({ ...prev, [material.id]: true }));
+      setError(null);
+
+      // 1. 检查课程是否有答疑助手
+      if (!currentCourse?.agentAppId) {
+        alert('该课程尚未创建课程答疑助手，请先创建答疑助手');
+        return;
+      }
+
+      // 2. 获取资料详细信息
+      console.log('获取资料详细信息...');
+      const materialResponse = await materialAPI.getMaterial(material.id);
+      const materialInfo = materialResponse.data || materialResponse;
+
+      // 3. 检查是否已经创建知识库，如果没有则创建
+      let datasetId = materialInfo.datasetId;
+      let documentId = materialInfo.documentId;
+
+      if (!datasetId || !documentId) {
+        console.log('知识库不存在，开始创建知识库...');
+        
+        // 3.1 登录获取访问令牌
+        console.log('正在登录 Dify...');
+        const loginResponse = await fetch('http://localhost:5001/console/api/login', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            email: "3325127454@qq.com",
+            password: "wangran1998"
+          })
+        });
+        
+        console.log('登录响应状态:', loginResponse.status);
+        
+        if (!loginResponse.ok) {
+          const errorText = await loginResponse.text();
+          console.error('登录失败:', errorText);
+          throw new Error(`登录失败，状态码: ${loginResponse.status}, 错误信息: ${errorText}`);
+        }
+        
+        const loginData = await loginResponse.json();
+        console.log('登录响应数据:', loginData);
+        
+        const accessToken = loginData.access_token || loginData.data?.access_token;
+        
+        if (!accessToken) {
+          console.error('访问令牌未找到，响应数据:', loginData);
+          throw new Error('获取访问令牌失败');
+        }
+        
+        console.log('成功获取访问令牌');
+
+        // 3.2 创建新的知识库
+        console.log('创建新的知识库...');
+        // 直接使用资料名称作为知识库名称，确保不超过40字符限制
+        const datasetName = material.title.length > 40 ? material.title.slice(0, 40) : material.title;
+        console.log('知识库名称:', datasetName);
+        
+        const createDatasetResponse = await fetch('http://localhost:5001/console/api/datasets', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${accessToken}`
+          },
+          body: JSON.stringify({
+            name: datasetName,
+            indexing_technique: "high_quality",
+            embedding_model: "embeddings",
+            embedding_model_provider: "axdlee/sophnet/sophnet"
+          })
+        });
+
+        if (!createDatasetResponse.ok) {
+          const errorText = await createDatasetResponse.text();
+          throw new Error(`创建知识库失败: ${errorText}`);
+        }
+
+        const datasetData = await createDatasetResponse.json();
+        datasetId = datasetData.id;
+        console.log('知识库创建成功，ID:', datasetId);
+
+        // 3.3 上传文件获取文件ID
+        console.log('准备上传文件...');
+        const fileUrl = material.fileUrl.startsWith('http') 
+          ? material.fileUrl 
+          : `http://localhost:3001${material.fileUrl}`;
+        
+        console.log('文件URL:', fileUrl);
+        
+        // 获取文件内容
+        const fileResponse = await fetch(fileUrl);
+        console.log('文件响应状态:', fileResponse.status);
+        
+        if (!fileResponse.ok) {
+          throw new Error('获取文件内容失败');
+        }
+        
+        const fileBlob = await fileResponse.blob();
+        console.log('文件Blob类型:', fileBlob.type);
+        console.log('文件Blob大小:', fileBlob.size);
+        
+        // 根据文件URL和类型确定正确的文件名和扩展名
+        let fileName = material.title;
+        let fileType = fileBlob.type;
+        
+        // 如果material.title中没有扩展名，根据文件类型添加合适的扩展名
+        if (!material.title.includes('.')) {
+          // 根据MIME类型添加扩展名
+          const mimeToExt: Record<string, string> = {
+            'text/plain': '.txt',
+            'text/markdown': '.md',
+            'text/html': '.html',
+            'application/xml': '.xml',
+            'application/epub+zip': '.epub',
+            'application/pdf': '.pdf',
+            'application/msword': '.doc',
+            'application/vnd.openxmlformats-officedocument.wordprocessingml.document': '.docx',
+            'application/vnd.ms-excel': '.xls',
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': '.xlsx',
+            'text/csv': '.csv',
+            'application/vnd.ms-powerpoint': '.ppt',
+            'application/vnd.openxmlformats-officedocument.presentationml.presentation': '.pptx',
+            'message/rfc822': '.eml',
+            'application/vnd.ms-outlook': '.msg',
+            'image/jpeg': '.jpg',
+            'image/png': '.png',
+            'image/gif': '.gif',
+            'image/webp': '.webp',
+            'image/svg+xml': '.svg',
+            'audio/mpeg': '.mp3',
+            'audio/mp4': '.m4a',
+            'audio/wav': '.wav',
+            'audio/amr': '.amr',
+            'audio/mpeg3': '.mpga',
+            'video/mp4': '.mp4',
+            'video/quicktime': '.mov',
+            'video/mpeg': '.mpeg',
+            'video/webm': '.webm'
+          };
+          
+          const ext = mimeToExt[fileBlob.type] || '.txt';
+          fileName = `${material.title}${ext}`;
+        }
+        
+        const file = new File([fileBlob], fileName, { type: fileType });
+        
+        // 上传文件获取文件ID
+        console.log('上传文件获取文件ID...');
+        const uploadFormData = new FormData();
+        uploadFormData.append('file', file);
+        uploadFormData.append('user', '3325127454@qq.com');
+        
+        const uploadFileResponse = await fetch('http://localhost:5001/console/api/files/upload', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${accessToken}`,
+          },
+          body: uploadFormData
+        });
+        
+        console.log('上传文件响应状态:', uploadFileResponse.status);
+        
+        if (!uploadFileResponse.ok) {
+          const errorText = await uploadFileResponse.text();
+          console.error('上传文件失败:', errorText);
+          throw new Error(`上传文件失败，状态码: ${uploadFileResponse.status}, 错误信息: ${errorText}`);
+        }
+        
+        const uploadFileData = await uploadFileResponse.json();
+        const fileId = uploadFileData.id;
+        
+        if (!fileId) {
+          throw new Error('获取文件ID失败');
+        }
+        
+        console.log('文件上传成功，文件ID:', fileId);
+        
+        // 3.4 使用文件ID创建知识库文档
+        console.log('使用文件ID创建知识库文档...');
+        
+        // 根据文件类型确定文档格式
+        let docForm = "text_model";
+        const ext = fileName.toLowerCase().substring(fileName.lastIndexOf('.'));
+        if (['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg'].includes(ext)) {
+          docForm = "image_model";
+        }
+        
+        // 使用文件ID创建知识库文档
+        // 步骤1：创建知识库文档（不包含检索配置）
+        const createDocumentData = {
+          data_source: {
+            type: "upload_file",
+            info_list: {
+              data_source_type: "upload_file",
+              file_info_list: {
+                file_ids: [fileId]
+              }
+            }
+          },
+          indexing_technique: "high_quality",
+          process_rule: {
+            mode: "custom",
+            rules: {
+              pre_processing_rules: [],
+              segmentation: {
+                separator: "\\n\\n\\n",
+                max_tokens: 1000,
+                chunk_overlap: 100
+              }
+            }
+          },
+          doc_form: docForm,
+          doc_language: "zh",
+          embedding_model: "embeddings",
+          embedding_model_provider: "axdlee/sophnet/sophnet"
+        };
+        
+        console.log('创建文档请求数据:', JSON.stringify(createDocumentData, null, 2));
+        
+        const createDocumentResponse = await fetch(`http://localhost:5001/console/api/datasets/${datasetId}/documents`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${accessToken}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(createDocumentData)
+        });
+
+        if (!createDocumentResponse.ok) {
+          const errorText = await createDocumentResponse.text();
+          throw new Error(`上传文档失败: ${errorText}`);
+        }
+
+        const documentData = await createDocumentResponse.json();
+        documentId = documentData.documents?.[0]?.id;
+        
+        if (!documentId) {
+          throw new Error('获取文档ID失败');
+        }
+
+        console.log('文档创建成功，文档ID:', documentId);
+
+        // 3.5 更新知识库检索设置
+        console.log('更新知识库检索设置...');
+        const retrievalConfig = {
+          retrieval_model: {
+            search_method: "hybrid_search",
+            reranking_enable: true,
+            reranking_mode: "weighted_score",
+            reranking_model: {
+              reranking_provider_name: "",
+              reranking_model_name: ""
+            },
+            weights: {
+              weight_type: "custom",
+              keyword_setting: {
+                keyword_weight: 0.3
+              },
+              vector_setting: {
+                vector_weight: 0.7,
+                embedding_model_name: "embeddings",
+                embedding_provider_name: "axdlee/sophnet/sophnet"
+              }
+            },
+            top_k: 5,
+            score_threshold_enabled: false,
+            score_threshold: 0.0
+          }
+        };
+        
+        const updateRetrievalResponse = await fetch(`http://localhost:5001/console/api/datasets/${datasetId}`, {
+          method: 'PATCH',
+          headers: {
+            'Authorization': `Bearer ${accessToken}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(retrievalConfig)
+        });
+        
+        if (!updateRetrievalResponse.ok) {
+          const errorText = await updateRetrievalResponse.text();
+          console.warn('更新检索设置失败:', errorText);
+          // 不抛出错误，继续执行，因为文档已经创建成功
+        } else {
+          console.log('知识库检索设置更新成功');
+        }
+
+        // 3.6 保存知识库信息到数据库
+        console.log('保存知识库信息到数据库...');
+        const updateResponse = await fetch(`http://localhost:3001/api/materials/${material.id}/knowledge-base`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          },
+          body: JSON.stringify({
+            datasetId: datasetId,
+            documentId: documentId
+          })
+        });
+
+        if (!updateResponse.ok) {
+          const errorText = await updateResponse.text();
+          throw new Error(`保存知识库信息失败: ${errorText}`);
+        }
+
+        // 3.7 更新本地状态
+        setMaterials(prevMaterials => 
+          prevMaterials.map(m => 
+            m.id === material.id 
+              ? { ...m, datasetId: datasetId, documentId: documentId } 
+              : m
+          )
+        );
+
+        console.log('知识库创建成功！');
+      }
+
+      console.log('获取到知识库信息:', datasetId);
+      console.log('使用教师创建的助手应用ID:', currentCourse.agentAppId);
+
+      // 4. 使用后端API关联知识库到课程的Agent应用
+      console.log('使用后端API关联知识库到课程的Agent应用...');
+      const token = localStorage.getItem('token');
+      if (!token) {
+        throw new Error('未找到用户认证令牌');
+      }
+
+      const associateResponse = await fetch(`http://localhost:3001/api/courses/${currentCourse.id}/agent-app/datasets/${datasetId}`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        }
+      });
+
+      if (!associateResponse.ok) {
+        const errorData = await associateResponse.json();
+        throw new Error(errorData.message || '关联知识库失败');
+      }
+
+      const associateData = await associateResponse.json();
+      console.log('知识库关联成功:', associateData);
+
+      alert(`已成功将《${material.title}》的知识库创建并关联到《${currentCourse.name}》的课程答疑助手！`);
+
+      // 5. 更新关联状态
+      setAssociationStatus(prevStatus => ({
+        ...prevStatus,
+        [material.id]: true
+      }));
+
+    } catch (error) {
+      console.error('创建知识库并关联到课程答疑助手失败:', error);
+      setError(`创建知识库并关联到课程答疑助手失败: ${error instanceof Error ? error.message : '未知错误'}`);
+    } finally {
+      setKnowledgeBaseLoading(prev => ({ ...prev, [material.id]: false }));
+    }
+  };
+
+  // 取消关联到课程答疑助手
+  const handleDisassociateFromAssistant = async (material: Material) => {
+    try {
+      setKnowledgeBaseLoading(prev => ({ ...prev, [material.id]: true }));
+      setError(null);
+
+      // 1. 检查课程是否有答疑助手
+      if (!currentCourse?.agentAppId) {
+        alert('该课程尚未创建课程答疑助手');
+        return;
+      }
+
+      // 2. 确认取消关联
+      if (!confirm(`确定要取消《${material.title}》与《${currentCourse.name}》课程答疑助手的关联吗？`)) {
+        return;
+      }
+
+      // 3. 获取资料详细信息
+      console.log('从数据库获取资料知识库信息...');
+      const materialResponse = await materialAPI.getMaterial(material.id);
+      const materialInfo = materialResponse.data || materialResponse;
+
+      if (!materialInfo.datasetId || !materialInfo.documentId) {
+        alert('该资料尚未创建知识库');
+        return;
+      }
+
+      // 4. 使用后端API取消关联知识库
+      console.log('使用后端API取消关联知识库...');
+      const response = await fetch(`http://localhost:3001/api/courses/${currentCourse.id}/agent-app/datasets/${materialInfo.datasetId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json',
+        }
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`取消关联失败: ${errorText}`);
+      }
+
+      const result = await response.json();
+      console.log('知识库取消关联成功:', result);
+
+      alert(`已成功取消《${material.title}》与《${currentCourse.name}》课程答疑助手的关联！`);
+
+      // 5. 更新关联状态
+      setAssociationStatus(prevStatus => ({
+        ...prevStatus,
+        [material.id]: false
+      }));
+
+    } catch (error) {
+      console.error('取消关联失败:', error);
+      setError(`取消关联失败: ${error instanceof Error ? error.message : '未知错误'}`);
+    } finally {
+      setKnowledgeBaseLoading(prev => ({ ...prev, [material.id]: false }));
+    }
+  };
+
   // 构建完整的文件URL用于预览
   const getFullFileUrl = (fileUrl: string): string => {
     if (!fileUrl) return '';
@@ -427,6 +1223,55 @@ const MaterialManagement: React.FC = () => {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
 
+  // 检查资料是否关联到课程答疑助手
+  const isAssociatedToAssistant = async (material: Material) => {
+    if (!currentCourse?.agentAppId) {
+      return false;
+    }
+
+    if (associationStatus[material.id] !== undefined) {
+      return associationStatus[material.id];
+    }
+
+    try {
+      // 1. 获取资料详细信息
+      const materialResponse = await materialAPI.getMaterial(material.id);
+      const materialInfo = materialResponse.data || materialResponse;
+
+      if (!materialInfo.datasetId || !materialInfo.documentId) {
+        setAssociationStatus(prev => ({ ...prev, [material.id]: false }));
+        return false;
+      }
+
+      // 2. 使用后端API获取课程关联的知识库列表
+      const response = await fetch(`http://localhost:3001/api/courses/${currentCourse.id}/agent-app/datasets`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json',
+        }
+      });
+
+      if (!response.ok) {
+        setAssociationStatus(prev => ({ ...prev, [material.id]: false }));
+        return false;
+      }
+
+      const result = await response.json();
+      
+      // 3. 检查资料的知识库是否在关联列表中
+      const isAssociated = result.datasets?.some((dataset: any) => dataset.id === materialInfo.datasetId);
+      
+      setAssociationStatus(prev => ({ ...prev, [material.id]: isAssociated }));
+      return isAssociated;
+
+    } catch (error) {
+      console.error('检查关联状态失败:', error);
+      setAssociationStatus(prev => ({ ...prev, [material.id]: false }));
+      return false;
+    }
+  };
+
   if (loading) {
     return (
       <Box sx={{ p: 3, display: 'flex', justifyContent: 'center', alignItems: 'center', height: '400px' }}>
@@ -462,23 +1307,9 @@ const MaterialManagement: React.FC = () => {
 
   return (
     <Box sx={{ p: 3 }}>
-      {/* 页面标题和返回按钮 */}
+      {/* 页面标题 */}
       <Card sx={{ mb: 3, boxShadow: '0 4px 12px rgba(0,0,0,0.05)', borderRadius: 2 }}>
         <CardContent sx={{ display: 'flex', alignItems: 'center', py: 2 }}>
-          <Button
-            startIcon={<ArrowBack />}
-            onClick={() => navigate('/teacher/courses')}
-            sx={{ 
-              mr: 2, 
-              borderRadius: 1,
-              backgroundColor: alpha(theme.palette.primary.main, 0.1),
-              '&:hover': {
-                backgroundColor: alpha(theme.palette.primary.main, 0.2),
-              }
-            }}
-          >
-            返回课程列表
-          </Button>
           <Box sx={{ display: 'flex', alignItems: 'center', flexGrow: 1 }}>
             <Avatar sx={{ mr: 2, bgcolor: theme.palette.primary.main }}>
               <FolderOpen />
@@ -563,7 +1394,7 @@ const MaterialManagement: React.FC = () => {
       <Card sx={{ boxShadow: '0 4px 12px rgba(0,0,0,0.05)', borderRadius: 2 }}>
         <TableContainer>
           <Table>
-            <TableHead sx={{ bgcolor: alpha(theme.palette.primary.main, 0.05) }}>
+            <TableHead>
               <TableRow>
                 <TableCell sx={{ fontWeight: 'bold' }}>资料信息</TableCell>
                 <TableCell sx={{ fontWeight: 'bold' }}>类型</TableCell>
@@ -583,25 +1414,15 @@ const MaterialManagement: React.FC = () => {
                   >
                     <TableCell>
                       <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                        <Avatar 
-                          sx={{ 
-                            mr: 2, 
-                            bgcolor: getTypeColor(material.type) === 'primary' ? theme.palette.primary.main : 
-                                      getTypeColor(material.type) === 'error' ? theme.palette.error.main :
-                                      getTypeColor(material.type) === 'success' ? theme.palette.success.main :
-                                      getTypeColor(material.type) === 'warning' ? theme.palette.warning.main :
-                                      getTypeColor(material.type) === 'info' ? theme.palette.info.main :
-                                      theme.palette.secondary.main
-                          }}
-                        >
-                          {material.type === 'VIDEO' && <VideoLibrary />}
-                          {material.type === 'PDF' && <PictureAsPdf />}
-                          {material.type === 'DOC' && <Description />}
-                          {material.type === 'IMAGE' && <Image />}
-                          {material.type === 'AUDIO' && <MusicNote />}
-                          {material.type === 'ZIP' && <Folder />}
-                          {material.type === 'OTHER' && <Folder />}
-                        </Avatar>
+                        <Box sx={{ mr: 2, display: 'flex', alignItems: 'center' }}>
+                          {material.type === 'VIDEO' && <VideoLibrary color="primary" />}
+                          {material.type === 'PDF' && <PictureAsPdf color="error" />}
+                          {material.type === 'DOC' && <Description color="primary" />}
+                          {material.type === 'IMAGE' && <Image color="success" />}
+                          {material.type === 'AUDIO' && <MusicNote color="info" />}
+                          {material.type === 'ZIP' && <Folder color="warning" />}
+                          {material.type === 'OTHER' && <Folder color="action" />}
+                        </Box>
                         <Box>
                           <Typography variant="body1" sx={{ fontWeight: 'bold' }}>
                             {material.title}
@@ -621,20 +1442,42 @@ const MaterialManagement: React.FC = () => {
                       </Box>
                     </TableCell>
                     <TableCell>
-                      <Chip 
-                        label={getTypeText(material.type)} 
-                        color={getTypeColor(material.type)}
-                        size="small"
-                        sx={{ fontWeight: 'bold' }}
-                      />
+                      <Button 
+                        size="small" 
+                        variant="outlined"
+                        sx={{ 
+                          minWidth: 'auto',
+                          px: 1,
+                          py: 0.5,
+                          fontWeight: 'bold',
+                          color: theme.palette.primary.main,
+                          borderColor: theme.palette.primary.main,
+                          '&:hover': { 
+                            bgcolor: alpha(theme.palette.primary.main, 0.04)
+                          } 
+                        }}
+                      >
+                        {getTypeText(material.type)}
+                      </Button>
                     </TableCell>
                     <TableCell>
-                      <Chip 
-                        label={getStatusLabel(material.status)} 
-                        color={getStatusColor(material.status)}
-                        size="small"
-                        sx={{ fontWeight: 'bold' }}
-                      />
+                      <Button 
+                        size="small" 
+                        variant="outlined"
+                        sx={{ 
+                          minWidth: 'auto',
+                          px: 1,
+                          py: 0.5,
+                          fontWeight: 'bold',
+                          color: theme.palette.primary.main,
+                          borderColor: theme.palette.primary.main,
+                          '&:hover': { 
+                            bgcolor: alpha(theme.palette.primary.main, 0.04)
+                          } 
+                        }}
+                      >
+                        {getStatusLabel(material.status)}
+                      </Button>
                     </TableCell>
                     <TableCell>
                       <Typography variant="body2">
@@ -718,6 +1561,65 @@ const MaterialManagement: React.FC = () => {
                           }}
                         >
                           取消发布
+                        </Button>
+                      )}
+                      {/* 知识库相关按钮 */}
+                      {material.datasetId ? (
+                        <>
+                          {!associationStatus[material.id] ? (
+                            <Button 
+                              size="small" 
+                              onClick={() => handleAssociateToAssistant(material)}
+                              variant="outlined"
+                              startIcon={<SmartToy />}
+                              disabled={knowledgeBaseLoading[material.id] || !currentCourse?.agentAppId}
+                              sx={{ 
+                                minWidth: 'auto',
+                                px: 1,
+                                py: 0.5,
+                                '&:hover': { 
+                                  bgcolor: 'rgba(0, 0, 0, 0.04)' 
+                                } 
+                              }}
+                            >
+                              {knowledgeBaseLoading[material.id] ? '关联中...' : '关联AI助手'}
+                            </Button>
+                          ) : (
+                            <Button 
+                              size="small" 
+                              onClick={() => handleDisassociateFromAssistant(material)}
+                              variant="outlined"
+                              disabled={knowledgeBaseLoading[material.id]}
+                              sx={{ 
+                                minWidth: 'auto',
+                                px: 1,
+                                py: 0.5,
+                                '&:hover': { 
+                                  bgcolor: 'rgba(0, 0, 0, 0.04)' 
+                                } 
+                              }}
+                            >
+                              {knowledgeBaseLoading[material.id] ? '取消中...' : '取消关联'}
+                            </Button>
+                          )}
+                        </>
+                      ) : (
+                        <Button 
+                          size="small" 
+                          onClick={() => handleAssociateToAssistant(material)}
+                          variant="outlined"
+                          startIcon={<SmartToy />}
+                          disabled={knowledgeBaseLoading[material.id] || !currentCourse?.agentAppId}
+                          sx={{ 
+                            minWidth: 'auto',
+                            px: 1,
+                            py: 0.5,
+                            '&:hover': { 
+                              bgcolor: 'rgba(0, 0, 0, 0.04)' 
+                            } 
+                          }}
+                        >
+                          {knowledgeBaseLoading[material.id] ? '创建中...' : '创建知识库并关联AI助手'}
                         </Button>
                       )}
                       <Button 

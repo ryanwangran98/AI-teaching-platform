@@ -516,22 +516,9 @@ const ChapterManagement: React.FC = () => {
 
   return (
     <Box sx={{ p: 3 }}>
-      {/* 页面标题和返回按钮 */}
+      {/* 页面标题 */}
       <Card sx={{ mb: 3, borderRadius: 2, boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
         <CardContent sx={{ display: 'flex', alignItems: 'center', py: 2 }}>
-          <Button
-            startIcon={<ArrowBack />}
-            onClick={() => navigate('/teacher/courses')}
-            sx={{ 
-              mr: 2,
-              backgroundColor: alpha(theme.palette.primary.main, 0.1),
-              '&:hover': {
-                backgroundColor: alpha(theme.palette.primary.main, 0.2),
-              }
-            }}
-          >
-            返回课程列表
-          </Button>
           <Avatar 
             sx={{ 
               width: 48, 

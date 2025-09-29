@@ -975,4 +975,182 @@ router.get('/student/my-courses', authenticateToken, authorizeRoles('STUDENT'), 
   }
 });
 
+// 将知识库关联到课程的Agent应用
+router.post('/:id/agent-app/datasets/:datasetId', authenticateToken, authorizeRoles('TEACHER', 'ADMIN'), async (req: AuthRequest, res) => {
+  try {
+    const { id, datasetId } = req.params;
+
+    // 检查课程是否存在
+    const course = await prisma.course.findUnique({
+      where: { id }
+    });
+
+    if (!course) {
+      return res.status(404).json({ error: 'Course not found' });
+    }
+
+    // 检查权限
+    if (req.user!.role !== 'ADMIN' && course.teacherId !== req.user!.id) {
+      return res.status(403).json({ error: 'Not authorized to manage agent for this course' });
+    }
+
+    // 检查课程是否有Agent应用
+    if (!course.agentAppId) {
+      return res.status(400).json({ error: '该课程尚未创建Agent应用' });
+    }
+
+    // 检查资料是否存在且属于该课程
+    const material = await prisma.material.findFirst({
+      where: {
+        datasetId: datasetId,
+        chapter: {
+          courseId: id
+        }
+      }
+    });
+
+    if (!material) {
+      return res.status(404).json({ error: '未找到该知识库关联的资料' });
+    }
+
+    // 使用Dify服务关联知识库
+    const difyService = createDifyService();
+    await difyService.addDatasetToApp(course.agentAppId, datasetId);
+
+    res.json({
+      success: true,
+      message: '知识库关联成功'
+    });
+  } catch (error) {
+    console.error('关联知识库失败:', error);
+    res.status(500).json({ 
+      error: '关联知识库失败', 
+      message: error instanceof Error ? error.message : '未知错误' 
+    });
+  }
+});
+
+// 从课程的Agent应用中移除知识库
+router.delete('/:id/agent-app/datasets/:datasetId', authenticateToken, authorizeRoles('TEACHER', 'ADMIN'), async (req: AuthRequest, res) => {
+  try {
+    const { id, datasetId } = req.params;
+
+    // 检查课程是否存在
+    const course = await prisma.course.findUnique({
+      where: { id }
+    });
+
+    if (!course) {
+      return res.status(404).json({ error: 'Course not found' });
+    }
+
+    // 检查权限
+    if (req.user!.role !== 'ADMIN' && course.teacherId !== req.user!.id) {
+      return res.status(403).json({ error: 'Not authorized to manage agent for this course' });
+    }
+
+    // 检查课程是否有Agent应用
+    if (!course.agentAppId) {
+      return res.status(400).json({ error: '该课程尚未创建Agent应用' });
+    }
+
+    // 使用Dify服务移除知识库
+    const difyService = createDifyService();
+    await difyService.removeDatasetFromApp(course.agentAppId, datasetId);
+
+    res.json({
+      success: true,
+      message: '知识库移除成功'
+    });
+  } catch (error) {
+    console.error('移除知识库失败:', error);
+    res.status(500).json({ 
+      error: '移除知识库失败', 
+      message: error instanceof Error ? error.message : '未知错误' 
+    });
+  }
+});
+
+// 获取课程的Agent应用关联的知识库列表
+router.get('/:id/agent-app/datasets', authenticateToken, async (req: AuthRequest, res) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user!.id;
+
+    // 检查课程是否存在
+    const course = await prisma.course.findUnique({
+      where: { id }
+    });
+
+    if (!course) {
+      return res.status(404).json({ error: 'Course not found' });
+    }
+
+    // 检查权限（学生需要已加入课程，教师需要是课程创建者）
+    if (req.user!.role === 'STUDENT') {
+      const enrollment = await prisma.enrollment.findUnique({
+        where: {
+          userId_courseId: {
+            userId,
+            courseId: id
+          }
+        }
+      });
+
+      if (!enrollment) {
+        return res.status(403).json({ error: 'Not enrolled in this course' });
+      }
+    } else if (req.user!.role === 'TEACHER' && course.teacherId !== userId) {
+      return res.status(403).json({ error: 'Not authorized to access this course' });
+    }
+
+    // 检查课程是否有Agent应用
+    if (!course.agentAppId) {
+      return res.json({
+        success: true,
+        data: []
+      });
+    }
+
+    // 获取课程的所有资料及其知识库信息
+    const materials = await prisma.material.findMany({
+      where: {
+        chapter: {
+          courseId: id
+        },
+        datasetId: {
+          not: null
+        }
+      },
+      include: {
+        chapter: {
+          select: {
+            id: true,
+            title: true
+          }
+        }
+      }
+    });
+
+    res.json({
+      success: true,
+      data: materials.map(material => ({
+        id: material.id,
+        title: material.title,
+        datasetId: material.datasetId,
+        documentId: material.documentId,
+        chapter: material.chapter,
+        createdAt: material.createdAt,
+        updatedAt: material.updatedAt
+      }))
+    });
+  } catch (error) {
+    console.error('获取知识库列表失败:', error);
+    res.status(500).json({ 
+      error: '获取知识库列表失败', 
+      message: error instanceof Error ? error.message : '未知错误' 
+    });
+  }
+});
+
 export default router;

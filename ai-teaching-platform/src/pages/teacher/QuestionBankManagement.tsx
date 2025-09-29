@@ -656,13 +656,14 @@ const QuestionBankManagement: React.FC = () => {
   return (
     <Box sx={{ p: 3 }}>
       {/* 页面标题和返回按钮 */}
-      <Card sx={{ mb: 3, borderRadius: 2, boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
+      <Card sx={{ mb: 3, boxShadow: '0 4px 12px rgba(0,0,0,0.05)', borderRadius: 2 }}>
         <CardContent sx={{ display: 'flex', alignItems: 'center', py: 2 }}>
           <Button
             startIcon={<ArrowBack />}
             onClick={() => navigate('/teacher/courses')}
             sx={{ 
-              mr: 2,
+              mr: 2, 
+              borderRadius: 1,
               backgroundColor: alpha(theme.palette.primary.main, 0.1),
               '&:hover': {
                 backgroundColor: alpha(theme.palette.primary.main, 0.2),
@@ -671,53 +672,45 @@ const QuestionBankManagement: React.FC = () => {
           >
             返回课程列表
           </Button>
-          <Avatar 
-            sx={{ 
-              width: 48, 
-              height: 48, 
-              mr: 2,
-              bgcolor: theme.palette.primary.main,
-              color: theme.palette.primary.contrastText
-            }}
-          >
-            <Quiz />
-          </Avatar>
-          <Box>
-            <Typography variant="h4" component="h1" fontWeight="bold">
-              题库管理
-            </Typography>
-            <Typography variant="body2" color="textSecondary">
-              {currentCourse?.name || '未知课程'}
-            </Typography>
+          <Box sx={{ display: 'flex', alignItems: 'center', flexGrow: 1 }}>
+            <Avatar sx={{ mr: 2, bgcolor: theme.palette.primary.main }}>
+              <Quiz />
+            </Avatar>
+            <Box>
+              <Typography variant="h4" component="h1" sx={{ fontWeight: 'bold' }}>
+                题库管理
+              </Typography>
+              <Typography variant="body2" color="textSecondary">
+                {currentCourse?.name || '未知课程'}
+              </Typography>
+            </Box>
           </Box>
+          <Chip 
+            label={`${filteredQuestions.length} 个题目`} 
+            color="primary" 
+            variant="outlined"
+            size="small"
+          />
         </CardContent>
       </Card>
 
       {/* 操作按钮和搜索筛选 */}
-      <Card sx={{ mb: 3, borderRadius: 2, boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
+      <Card sx={{ mb: 3, boxShadow: '0 4px 12px rgba(0,0,0,0.05)', borderRadius: 2 }}>
         <CardContent sx={{ py: 2 }}>
           <Grid container spacing={2} alignItems="center">
-            <Grid item xs={12} sm={6} md={3}>
+            <Grid item>
               <Button
                 variant="contained"
                 startIcon={<Add />}
                 onClick={handleCreate}
-                fullWidth
-                sx={{ 
-                  py: 1.2,
-                  borderRadius: 1.5,
-                  boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-                  '&:hover': {
-                    boxShadow: '0 4px 8px rgba(0,0,0,0.2)',
-                  }
-                }}
+                sx={{ borderRadius: 1, boxShadow: 'none' }}
               >
                 创建题目
               </Button>
             </Grid>
             
             {/* 搜索和筛选 */}
-            <Grid item xs={12} sm={6} md={3}>
+            <Grid item xs={12} sm={6} md={4} sx={{ ml: 'auto' }}>
               <TextField
                 placeholder="搜索题目"
                 variant="outlined"
@@ -728,14 +721,8 @@ const QuestionBankManagement: React.FC = () => {
                   startAdornment: <Search sx={{ mr: 1, color: 'action.active' }} />,
                 }}
                 fullWidth
-                sx={{
-                  '& .MuiOutlinedInput-root': {
-                    borderRadius: 1.5,
-                  }
-                }}
               />
             </Grid>
-            
             <Grid item xs={12} sm={6} md={3}>
               <FormControl size="small" fullWidth>
                 <InputLabel>题型</InputLabel>
@@ -760,21 +747,12 @@ const QuestionBankManagement: React.FC = () => {
                 </Select>
               </FormControl>
             </Grid>
-            
-            <Grid item xs={12} sm={6} md={3}>
-              <Chip 
-                label={`${filteredQuestions.length} 个题目`}
-                color="primary"
-                variant="outlined"
-                sx={{ height: 36, width: '100%' }}
-              />
-            </Grid>
           </Grid>
         </CardContent>
       </Card>
 
       {/* 额外的筛选条件 */}
-      <Card sx={{ mb: 3, borderRadius: 2, boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
+      <Card sx={{ mb: 3, boxShadow: '0 4px 12px rgba(0,0,0,0.05)', borderRadius: 2 }}>
         <CardContent sx={{ py: 2 }}>
           <Grid container spacing={2} alignItems="center">
             <Grid item xs={12} sm={6} md={4}>
@@ -814,9 +792,11 @@ const QuestionBankManagement: React.FC = () => {
                   }}
                 >
                   <MenuItem value="">全部章节</MenuItem>
-                  <MenuItem value="1">第一章 函数与极限</MenuItem>
-                  <MenuItem value="2">第二章 导数与微分</MenuItem>
-                  <MenuItem value="3">第三章 积分学</MenuItem>
+                  {chapters.map((chapter) => (
+                    <MenuItem key={chapter.id} value={chapter.id}>
+                      {chapter.title}
+                    </MenuItem>
+                  ))}
                 </Select>
               </FormControl>
             </Grid>
@@ -855,7 +835,6 @@ const QuestionBankManagement: React.FC = () => {
         <Table>
           <TableHead>
             <TableRow sx={{ 
-              bgcolor: alpha(theme.palette.primary.main, 0.05),
               '& th': {
                 fontWeight: 'bold',
                 py: 2
@@ -867,7 +846,6 @@ const QuestionBankManagement: React.FC = () => {
               <TableCell>所属章节</TableCell>
               <TableCell>关联知识点</TableCell>
               <TableCell>分值</TableCell>
-              <TableCell>预估时间</TableCell>
               <TableCell>状态</TableCell>
               <TableCell>使用次数</TableCell>
               <TableCell>关联作业</TableCell> {/* 添加这一列 */}
@@ -879,7 +857,7 @@ const QuestionBankManagement: React.FC = () => {
           <TableBody>
             {filteredQuestions.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={12} align="center" sx={{ py: 4 }}>
+                <TableCell colSpan={11} align="center" sx={{ py: 4 }}>
                   <Typography variant="body2" color="text.secondary">
                     暂无题目数据
                   </Typography>
@@ -907,37 +885,46 @@ const QuestionBankManagement: React.FC = () => {
                     </Box>
                   </TableCell>
                   <TableCell>
-                    <Chip
-                      label={getTypeLabel(question.type)}
-                      color={getTypeColor(question.type) as any}
+                    <Button 
                       size="small"
+                      variant="outlined"
                       sx={{ 
                         borderRadius: 1,
-                        fontWeight: 'medium',
-                        '&:hover': {
-                          bgcolor: `${getTypeColor(question.type).main}20`,
+                        minWidth: 'auto',
+                        px: 1,
+                        color: getTypeColor(question.type).main,
+                        borderColor: getTypeColor(question.type).main,
+                        '&:hover': { 
+                          backgroundColor: `${getTypeColor(question.type).main}20`,
+                          borderColor: getTypeColor(question.type).main
                         }
                       }}
-                    />
+                    >
+                      {getTypeLabel(question.type)}
+                    </Button>
                   </TableCell>
                   <TableCell>
-                    <Chip
-                      label={getDifficultyLabel(question.difficulty)}
-                      color={getDifficultyColor(question.difficulty) as any}
+                    <Button 
                       size="small"
+                      variant="outlined"
                       sx={{ 
                         borderRadius: 1,
-                        fontWeight: 'medium',
-                        '&:hover': {
-                          bgcolor: `${getDifficultyColor(question.difficulty).main}20`,
+                        minWidth: 'auto',
+                        px: 1,
+                        color: getDifficultyColor(question.difficulty).main,
+                        borderColor: getDifficultyColor(question.difficulty).main,
+                        '&:hover': { 
+                          backgroundColor: `${getDifficultyColor(question.difficulty).main}20`,
+                          borderColor: getDifficultyColor(question.difficulty).main
                         }
                       }}
-                    />
+                    >
+                      {getDifficultyLabel(question.difficulty)}
+                    </Button>
                   </TableCell>
                   <TableCell>{question.knowledgePoint?.chapter?.title || '-'}</TableCell>
                   <TableCell>{question.knowledgePoint?.title || '-'}</TableCell>
                   <TableCell>{question.points}</TableCell>
-                  <TableCell>{question.estimatedTime}分钟</TableCell>
                   <TableCell>
                     {editingStatusQuestionId === question.id ? (
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -986,10 +973,9 @@ const QuestionBankManagement: React.FC = () => {
                         </IconButton>
                       </Box>
                     ) : (
-                      <Chip
-                        label={getStatusLabel(question.status)}
-                        color={getStatusColor(question.status) as any}
+                      <Button 
                         size="small"
+                        variant="outlined"
                         onClick={() => {
                           setEditingStatusQuestionId(question.id);
                           setNewStatus(question.status);
@@ -997,12 +983,18 @@ const QuestionBankManagement: React.FC = () => {
                         sx={{ 
                           cursor: 'pointer',
                           borderRadius: 1,
-                          fontWeight: 'medium',
-                          '&:hover': {
-                            bgcolor: `${getStatusColor(question.status).main}20`,
+                          minWidth: 'auto',
+                          px: 1,
+                          color: getStatusColor(question.status).main,
+                          borderColor: getStatusColor(question.status).main,
+                          '&:hover': { 
+                            backgroundColor: `${getStatusColor(question.status).main}20`,
+                            borderColor: getStatusColor(question.status).main
                           }
                         }}
-                      />
+                      >
+                        {getStatusLabel(question.status)}
+                      </Button>
                     )}
                   </TableCell>
                   <TableCell>{question.usageCount || 0}</TableCell>

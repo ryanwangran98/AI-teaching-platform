@@ -7,7 +7,7 @@
 6.测试账号
 teacher@example.com   密码 teacher123
 student@example.com   密码 student123
-7。前后端的启动端口固定为5173和3001
+7。前后端的启动端口固定为5173和3001，启动命令均为npm run dev，以热重载方式启动
 8.使用中文回答
 9.修改代码后需要检查有没有语法问题
 10.需要进行网页访问或者网络搜索时使用playwright的mcp工具访问网页或者访问https://www.google.com.hk/然后进行搜索
