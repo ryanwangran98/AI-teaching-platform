@@ -405,6 +405,35 @@ class DifyService {
   }
 
   /**
+   * 获取知识库列表
+   * GET /console/api/datasets
+   */
+  async getDatasets(): Promise<any[]> {
+    await this.ensureAuthenticated();
+
+    try {
+      const response = await axios.get(
+        `${DIFY_BASE_URL}/console/api/datasets`,
+        {
+          headers: {
+            'Authorization': `Bearer ${this.accessToken}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+
+      console.log('获取知识库列表成功:', response.data);
+      return response.data.data || [];
+    } catch (error) {
+      console.error('获取知识库列表失败:', error);
+      if (axios.isAxiosError(error)) {
+        console.error('获取知识库列表错误详情:', error.response?.data);
+      }
+      throw new Error('获取知识库列表失败');
+    }
+  }
+
+  /**
    * 创建知识库
    * POST /console/api/datasets
    */
@@ -443,6 +472,27 @@ class DifyService {
       console.error('创建知识库失败:', error);
       if (axios.isAxiosError(error)) {
         console.error('创建知识库错误详情:', error.response?.data);
+        
+        // 检查是否是数据集名称重复错误
+        const errorData = error.response?.data;
+        if (errorData?.code === 'dataset_name_duplicate' || 
+            errorData?.message?.includes('already exists') ||
+            errorData?.message?.includes('数据集名称已存在')) {
+          // 抛出包含原始错误信息的异常
+          const duplicateError = new Error('数据集名称已存在');
+          (duplicateError as any).code = 'dataset_name_duplicate';
+          (duplicateError as any).status = error.response?.status || 409;
+          (duplicateError as any).originalData = errorData;
+          throw duplicateError;
+        }
+        
+        // 对于其他错误，也尝试保留原始错误信息
+        if (errorData?.message) {
+          const customError = new Error(errorData.message);
+          (customError as any).code = errorData.code;
+          (customError as any).status = error.response?.status;
+          throw customError;
+        }
       }
       throw new Error('创建知识库失败');
     }
@@ -645,153 +695,81 @@ class DifyService {
     await this.ensureAuthenticated();
 
     try {
-      const prePrompt = "1.当用户要求生成ppt时，先查询知识库有没有和ppt内容相关的部分，当做ppt内容的参考\n2.生成ppt后要保存并提供给用户下载数据";
+      console.log(`正在获取应用 ${appId} 的当前配置...`);
       
-      // 按照文档要求构建完整的配置
+      // 步骤1：获取当前应用的完整配置
+      const currentAppResponse = await axios.get(
+        `${DIFY_BASE_URL}/console/api/apps/${appId}`,
+        {
+          headers: {
+            'Authorization': `Bearer ${this.accessToken}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+
+      const currentConfig = currentAppResponse.data;
+      console.log('成功获取当前应用配置');
+
+      // 步骤2：在现有知识库列表基础上，只添加新知识库
+      const existingDatasets = currentConfig.model_config?.dataset_configs?.datasets?.datasets || [];
+      
+      // 检查要关联的知识库ID是否已存在
+      const datasetExists = existingDatasets.some((dataset: any) => 
+        dataset.dataset?.id === datasetId
+      );
+
+      if (datasetExists) {
+        console.log(`知识库 ${datasetId} 已经关联到应用，无需重复关联`);
+        return;
+      }
+
+      // 构建新的知识库列表（保持现有知识库，添加新的）
+      const updatedDatasets = [
+        ...existingDatasets,
+        {
+          dataset: {
+            id: datasetId,
+            enabled: true
+          }
+        }
+      ];
+
+      // 步骤3：构建更新配置（保持其他所有配置不变，只修改知识库部分）
       const updateConfig = {
-        mode: "agent-chat",
-        pre_prompt: prePrompt, // 根级别pre_prompt需与model.pre_prompt保持一致
-        agent_mode: {
+        mode: currentConfig.mode || "agent-chat",
+        pre_prompt: currentConfig.pre_prompt || currentConfig.model_config?.pre_prompt || "1.当用户要求生成ppt时，先查询知识库有没有和ppt内容相关的部分，当做ppt内容的参考\n2.生成ppt后要保存并提供给用户下载数据",
+        agent_mode: currentConfig.model_config?.agent_mode || {
           max_iteration: 30,
           enabled: true,
-          strategy: "function_call",
-          tools: [
-            {
-              provider_id: "123",
-              provider_type: "mcp",
-              provider_name: "123",
-              tool_name: "list_available_templates",
-              tool_label: "list_available_templates",
-              tool_parameters: {},
-              notAuthor: false,
-              enabled: true
-            },
-            {
-              provider_id: "123",
-              provider_type: "mcp",
-              provider_name: "123",
-              tool_name: "set_template",
-              tool_label: "set_template",
-              tool_parameters: {
-                template_name: ""
-              },
-              notAuthor: false,
-              enabled: true
-            },
-            {
-              provider_id: "123",
-              provider_type: "mcp",
-              provider_name: "123",
-              tool_name: "set_layout",
-              tool_label: "set_layout",
-              tool_parameters: {
-                layout: ""
-              },
-              notAuthor: false,
-              enabled: true
-            },
-            {
-              provider_id: "123",
-              provider_type: "mcp",
-              provider_name: "123",
-              tool_name: "set_slide_content",
-              tool_label: "set_slide_content",
-              tool_parameters: {
-                structured_slide_elements: ""
-              },
-              notAuthor: false,
-              enabled: true
-            },
-            {
-              provider_id: "123",
-              provider_type: "mcp",
-              provider_name: "123",
-              tool_name: "generate_slide",
-              tool_label: "generate_slide",
-              tool_parameters: {},
-              notAuthor: false,
-              enabled: true
-            },
-            {
-              provider_id: "123",
-              provider_type: "mcp",
-              provider_name: "123",
-              tool_name: "save_generated_slides",
-              tool_label: "save_generated_slides",
-              tool_parameters: {
-                pptx_path: ""
-              },
-              notAuthor: false,
-              enabled: true
-            },
-            {
-              provider_id: "123",
-              provider_type: "mcp",
-              provider_name: "123",
-              tool_name: "create_download_link",
-              tool_label: "create_download_link",
-              tool_parameters: {
-                file_path: ""
-              },
-              notAuthor: false,
-              enabled: true
-            },
-            {
-              provider_id: "123",
-              provider_type: "mcp",
-              provider_name: "123",
-              tool_name: "list_downloadable_files",
-              tool_label: "list_downloadable_files",
-              tool_parameters: {},
-              notAuthor: false,
-              enabled: true
-            },
-            {
-              provider_id: "123",
-              provider_type: "mcp",
-              provider_name: "123",
-              tool_name: "remove_download_link",
-              tool_label: "remove_download_link",
-              tool_parameters: {
-                token: ""
-              },
-              notAuthor: false,
-              enabled: true
-            }
-          ]
+          strategy: "react",
+          tools: currentConfig.model_config?.agent_mode?.tools || []
         },
-        model: {
+        model: currentConfig.model_config?.model || {
           provider: "axdlee/sophnet/sophnet",
-          name: "GLM-4.5",
+          name: "Kimi-K2-0905",
           mode: "chat",
           completion_params: {
             temperature: 0.3,
             stop: []
           },
-          pre_prompt: prePrompt // 与根级别pre_prompt保持一致
+          pre_prompt: currentConfig.pre_prompt || currentConfig.model_config?.pre_prompt || "1.当用户要求生成ppt时，先查询知识库有没有和ppt内容相关的部分，当做ppt内容的参考\n2.生成ppt后要保存并提供给用户下载数据"
         },
         dataset_configs: {
           datasets: {
-            strategy: "router",
-            datasets: [
-              {
-                dataset: {
-                  id: datasetId,
-                  enabled: true
-                }
-              }
-            ]
+            strategy: currentConfig.model_config?.dataset_configs?.datasets?.strategy || "router",
+            datasets: updatedDatasets
           },
-          retrieval_model: "multiple",
-          top_k: 5,
-          score_threshold: 0.0,
-          score_threshold_enabled: false,
-          reranking_enable: true,
-          reranking_model: {
+          retrieval_model: currentConfig.model_config?.dataset_configs?.retrieval_model || "multiple",
+          top_k: currentConfig.model_config?.dataset_configs?.top_k || 5,
+          score_threshold: currentConfig.model_config?.dataset_configs?.score_threshold || 0.0,
+          score_threshold_enabled: currentConfig.model_config?.dataset_configs?.score_threshold_enabled || false,
+          reranking_enable: currentConfig.model_config?.dataset_configs?.reranking_enable || true,
+          reranking_model: currentConfig.model_config?.dataset_configs?.reranking_model || {
             reranking_provider_name: "",
             reranking_model_name: ""
           },
-          weights: {
+          weights: currentConfig.model_config?.dataset_configs?.weights || {
             weight_type: "custom",
             keyword_setting: {
               keyword_weight: 0.3
@@ -815,7 +793,7 @@ class DifyService {
         }
       );
 
-      console.log('知识库添加到应用成功');
+      console.log(`知识库 ${datasetId} 成功添加到应用`);
     } catch (error) {
       console.error('将知识库添加到应用失败:', error);
       if (axios.isAxiosError(error)) {
@@ -833,146 +811,71 @@ class DifyService {
     await this.ensureAuthenticated();
 
     try {
-      const prePrompt = "1.当用户要求生成ppt时，先查询知识库有没有和ppt内容相关的部分，当做ppt内容的参考\n2.生成ppt后要保存并提供给用户下载数据";
+      console.log(`正在获取应用 ${appId} 的当前配置...`);
       
-      // 按照文档要求构建完整的配置
+      // 步骤1：获取当前应用的完整配置
+      const currentAppResponse = await axios.get(
+        `${DIFY_BASE_URL}/console/api/apps/${appId}`,
+        {
+          headers: {
+            'Authorization': `Bearer ${this.accessToken}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+
+      const currentConfig = currentAppResponse.data;
+      console.log('成功获取当前应用配置');
+
+      // 步骤2：在现有知识库列表基础上，只移除指定的知识库
+      const existingDatasets = currentConfig.model_config?.dataset_configs?.datasets?.datasets || [];
+      
+      // 过滤掉要取消关联的知识库ID
+      const updatedDatasets = existingDatasets.filter((dataset: any) => 
+        dataset.dataset?.id !== datasetId
+      );
+
+      // 检查是否真的要移除知识库
+      if (existingDatasets.length === updatedDatasets.length) {
+        console.log(`知识库 ${datasetId} 未关联到应用，无需移除`);
+        return;
+      }
+
+      // 步骤3：构建更新配置（保持其他所有配置不变，只修改知识库部分）
       const updateConfig = {
-        mode: "agent-chat",
-        pre_prompt: prePrompt, // 根级别pre_prompt需与model.pre_prompt保持一致
-        agent_mode: {
+        mode: currentConfig.mode || "agent-chat",
+        pre_prompt: currentConfig.pre_prompt || currentConfig.model_config?.pre_prompt || "1.当用户要求生成ppt时，先查询知识库有没有和ppt内容相关的部分，当做ppt内容的参考\n2.生成ppt后要保存并提供给用户下载数据",
+        agent_mode: currentConfig.model_config?.agent_mode || {
           max_iteration: 30,
           enabled: true,
-          strategy: "function_call",
-          tools: [
-            {
-              provider_id: "123",
-              provider_type: "mcp",
-              provider_name: "123",
-              tool_name: "list_available_templates",
-              tool_label: "list_available_templates",
-              tool_parameters: {},
-              notAuthor: false,
-              enabled: true
-            },
-            {
-              provider_id: "123",
-              provider_type: "mcp",
-              provider_name: "123",
-              tool_name: "set_template",
-              tool_label: "set_template",
-              tool_parameters: {
-                template_name: ""
-              },
-              notAuthor: false,
-              enabled: true
-            },
-            {
-              provider_id: "123",
-              provider_type: "mcp",
-              provider_name: "123",
-              tool_name: "set_layout",
-              tool_label: "set_layout",
-              tool_parameters: {
-                layout: ""
-              },
-              notAuthor: false,
-              enabled: true
-            },
-            {
-              provider_id: "123",
-              provider_type: "mcp",
-              provider_name: "123",
-              tool_name: "set_slide_content",
-              tool_label: "set_slide_content",
-              tool_parameters: {
-                structured_slide_elements: ""
-              },
-              notAuthor: false,
-              enabled: true
-            },
-            {
-              provider_id: "123",
-              provider_type: "mcp",
-              provider_name: "123",
-              tool_name: "generate_slide",
-              tool_label: "generate_slide",
-              tool_parameters: {},
-              notAuthor: false,
-              enabled: true
-            },
-            {
-              provider_id: "123",
-              provider_type: "mcp",
-              provider_name: "123",
-              tool_name: "save_generated_slides",
-              tool_label: "save_generated_slides",
-              tool_parameters: {
-                pptx_path: ""
-              },
-              notAuthor: false,
-              enabled: true
-            },
-            {
-              provider_id: "123",
-              provider_type: "mcp",
-              provider_name: "123",
-              tool_name: "create_download_link",
-              tool_label: "create_download_link",
-              tool_parameters: {
-                file_path: ""
-              },
-              notAuthor: false,
-              enabled: true
-            },
-            {
-              provider_id: "123",
-              provider_type: "mcp",
-              provider_name: "123",
-              tool_name: "list_downloadable_files",
-              tool_label: "list_downloadable_files",
-              tool_parameters: {},
-              notAuthor: false,
-              enabled: true
-            },
-            {
-              provider_id: "123",
-              provider_type: "mcp",
-              provider_name: "123",
-              tool_name: "remove_download_link",
-              tool_label: "remove_download_link",
-              tool_parameters: {
-                token: ""
-              },
-              notAuthor: false,
-              enabled: true
-            }
-          ]
+          strategy: "react",
+          tools: currentConfig.model_config?.agent_mode?.tools || []
         },
-        model: {
+        model: currentConfig.model_config?.model || {
           provider: "axdlee/sophnet/sophnet",
-          name: "GLM-4.5",
+          name: "Kimi-K2-0905",
           mode: "chat",
           completion_params: {
             temperature: 0.3,
             stop: []
           },
-          pre_prompt: prePrompt // 与根级别pre_prompt保持一致
+          pre_prompt: currentConfig.pre_prompt || currentConfig.model_config?.pre_prompt || "1.当用户要求生成ppt时，先查询知识库有没有和ppt内容相关的部分，当做ppt内容的参考\n2.生成ppt后要保存并提供给用户下载数据"
         },
         dataset_configs: {
           datasets: {
-            strategy: "router",
-            datasets: [] // 取消关联知识库时设置为空数组
+            strategy: currentConfig.model_config?.dataset_configs?.datasets?.strategy || "router",
+            datasets: updatedDatasets
           },
-          retrieval_model: "multiple",
-          top_k: 5,
-          score_threshold: 0.0,
-          score_threshold_enabled: false,
-          reranking_enable: true,
-          reranking_model: {
+          retrieval_model: currentConfig.model_config?.dataset_configs?.retrieval_model || "multiple",
+          top_k: currentConfig.model_config?.dataset_configs?.top_k || 5,
+          score_threshold: currentConfig.model_config?.dataset_configs?.score_threshold || 0.0,
+          score_threshold_enabled: currentConfig.model_config?.dataset_configs?.score_threshold_enabled || false,
+          reranking_enable: currentConfig.model_config?.dataset_configs?.reranking_enable || true,
+          reranking_model: currentConfig.model_config?.dataset_configs?.reranking_model || {
             reranking_provider_name: "",
             reranking_model_name: ""
           },
-          weights: {
+          weights: currentConfig.model_config?.dataset_configs?.weights || {
             weight_type: "custom",
             keyword_setting: {
               keyword_weight: 0.3
@@ -996,7 +899,7 @@ class DifyService {
         }
       );
 
-      console.log('知识库从应用移除成功');
+      console.log(`知识库 ${datasetId} 从应用移除成功`);
     } catch (error) {
       console.error('从应用移除知识库失败:', error);
       if (axios.isAxiosError(error)) {

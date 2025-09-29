@@ -178,6 +178,24 @@ export const courseAPI = {
     return response.data;
   },
 
+  // 获取课程的AI助手关联信息
+  getAssistantAssociations: async (courseId: string) => {
+    const response = await api.get(`/courses/${courseId}/assistant-associations`);
+    return response.data;
+  },
+
+  // 获取课程材料
+  getCourseMaterials: async (courseId: string) => {
+    const response = await api.get(`/materials?courseId=${courseId}`);
+    return response.data;
+  },
+
+  // 获取课程详情
+  getCourseById: async (courseId: string) => {
+    const response = await api.get(`/courses/${courseId}`);
+    return response.data;
+  },
+
 };
 
 // 章节相关

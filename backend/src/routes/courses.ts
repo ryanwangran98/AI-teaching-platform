@@ -846,9 +846,9 @@ router.get('/:id/agent-app', authenticateToken, authorizeRoles('TEACHER', 'ADMIN
       res.json({
         success: true,
         data: {
-          agentAppId: course.agentAppId,
+          appId: course.agentAppId,
+          accessCode: course.agentAccessCode,
           agentAccessToken: course.agentAccessToken,
-          agentAccessCode: course.agentAccessCode,
           iframeCode: iframeCode
         }
       });
@@ -900,9 +900,9 @@ router.get('/:id/agent-app-info', authenticateToken, async (req: AuthRequest, re
       res.json({
         success: true,
         data: {
-          agentAppId: course.agentAppId,
-          agentAccessToken: course.agentAccessToken,
-          agentAccessCode: course.agentAccessCode
+          appId: course.agentAppId,
+          accessCode: course.agentAccessCode,
+          agentAccessToken: course.agentAccessToken
         }
       });
     } else {
@@ -1058,6 +1058,20 @@ router.delete('/:id/agent-app/datasets/:datasetId', authenticateToken, authorize
     const difyService = createDifyService();
     await difyService.removeDatasetFromApp(course.agentAppId, datasetId);
 
+    // 更新资料的知识库信息（清空datasetId和documentId）
+    await prisma.material.updateMany({
+      where: {
+        datasetId: datasetId,
+        chapter: {
+          courseId: id
+        }
+      },
+      data: {
+        datasetId: null,
+        documentId: null
+      }
+    });
+
     res.json({
       success: true,
       message: '知识库移除成功'
@@ -1148,6 +1162,104 @@ router.get('/:id/agent-app/datasets', authenticateToken, async (req: AuthRequest
     console.error('获取知识库列表失败:', error);
     res.status(500).json({ 
       error: '获取知识库列表失败', 
+      message: error instanceof Error ? error.message : '未知错误' 
+    });
+  }
+});
+
+// 获取Dify知识库列表
+router.get('/dify/datasets', authenticateToken, async (req: AuthRequest, res) => {
+  try {
+    // 使用Dify服务获取知识库列表
+    const difyService = createDifyService();
+    const datasets = await difyService.getDatasets();
+
+    res.json({
+      success: true,
+      data: datasets
+    });
+  } catch (error) {
+    console.error('获取Dify知识库列表失败:', error);
+    res.status(500).json({ 
+      error: '获取Dify知识库列表失败', 
+      message: error instanceof Error ? error.message : '未知错误' 
+    });
+  }
+});
+
+// 获取课程的AI助手关联信息
+router.get('/:id/assistant-associations', authenticateToken, async (req: AuthRequest, res) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user!.id;
+
+    // 检查课程是否存在
+    const course = await prisma.course.findUnique({
+      where: { id }
+    });
+
+    if (!course) {
+      return res.status(404).json({ error: 'Course not found' });
+    }
+
+    // 检查权限（学生需要已加入课程，教师需要是课程创建者）
+    if (req.user!.role === 'STUDENT') {
+      const enrollment = await prisma.enrollment.findUnique({
+        where: {
+          userId_courseId: {
+            userId,
+            courseId: id
+          }
+        }
+      });
+
+      if (!enrollment) {
+        return res.status(403).json({ error: 'Not enrolled in this course' });
+      }
+    } else if (req.user!.role === 'TEACHER' && course.teacherId !== userId) {
+      return res.status(403).json({ error: 'Not authorized to access this course' });
+    }
+
+    // 检查课程是否有Agent应用
+    if (!course.agentAppId || !course.agentAccessCode) {
+      return res.json({
+        success: true,
+        data: []
+      });
+    }
+
+    // 获取课程的所有资料及其知识库信息
+    const materials = await prisma.material.findMany({
+      where: {
+        chapter: {
+          courseId: id
+        },
+        datasetId: {
+          not: null
+        }
+      },
+      select: {
+        id: true,
+        title: true
+      }
+    });
+
+    // 构建助手关联信息
+    const assistantAssociations = materials.map(material => ({
+      id: material.id,
+      accessCode: course.agentAccessCode,
+      materialId: material.id,
+      materialTitle: material.title
+    }));
+
+    res.json({
+      success: true,
+      data: assistantAssociations
+    });
+  } catch (error) {
+    console.error('获取AI助手关联信息失败:', error);
+    res.status(500).json({ 
+      error: '获取AI助手关联信息失败', 
       message: error instanceof Error ? error.message : '未知错误' 
     });
   }

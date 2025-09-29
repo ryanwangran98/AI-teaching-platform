@@ -472,6 +472,13 @@ WHERE app_id = '你的应用ID';
 }
 ```
 
+### 重要提醒：验证操作结果
+关联或取消关联操作完成后，**建议立即验证操作结果**：
+
+1. **重新获取应用配置**：再次调用`GET /console/api/apps/{appId}`接口，确认知识库列表已正确更新
+2. **检查知识库关联状态**：使用`GET /console/api/datasets/{datasetId}/related-apps`接口验证知识库与应用的关联状态
+3. **测试应用功能**：确保应用仍能正常工作，知识库检索功能正常
+
 ### 参数说明
 - **mode**: 应用模式，必须为`agent-chat`（智能助手）
 - **agent_mode**: 智能助手模式配置
@@ -880,6 +887,104 @@ curl -X POST "http://localhost:5001/console/api/files/upload" \
 **接口地址**: `POST /console/api/apps/{appId}/model-config`
 **功能**: 通过更新应用配置来关联或取消关联知识库
 
+### 重要提醒：操作前必须先查询当前应用配置
+在关联或取消关联知识库之前，**必须先获取当前应用的完整配置**，确保只修改知识库关联部分，保持其他所有配置不变。
+
+### 步骤1：获取当前应用配置
+**接口地址**: `GET /console/api/apps/{appId}`
+**功能**: 获取当前应用的完整配置信息
+
+**curl示例**:
+```bash
+curl -X GET "http://localhost:5001/console/api/apps/369d3518-06bd-4231-9afe-090d5109bbcc" \
+  -H "Authorization: Bearer {access_token}"
+```
+
+**响应示例**:
+```json
+{
+  "id": "369d3518-06bd-4231-9afe-090d5109bbcc",
+  "name": "应用名称",
+  "mode": "agent-chat",
+  "model_config": {
+    "pre_prompt": "1.当用户要求生成ppt时，先查询知识库有没有和ppt内容相关的部分，当做ppt内容的参考\n2.生成ppt后要保存并提供给用户下载链接",
+    "agent_mode": {
+      "max_iteration": 30,
+      "enabled": true,
+      "strategy": "react",
+      "tools": [
+        {
+          "provider_id": "123",
+          "provider_type": "mcp",
+          "provider_name": "123",
+          "tool_name": "list_available_templates",
+          "tool_label": "list_available_templates",
+          "tool_parameters": {},
+          "notAuthor": false,
+          "enabled": true
+        }
+      ]
+    },
+    "model": {
+      "provider": "axdlee/sophnet/sophnet",
+      "name": "Kimi-K2-0905",
+      "mode": "chat",
+      "completion_params": {
+        "temperature": 0.3,
+        "stop": []
+      },
+      "pre_prompt": "1.当用户要求生成ppt时，先查询知识库有没有和ppt内容相关的部分，当做ppt内容的参考\n2.生成ppt后要保存并提供给用户下载链接"
+    },
+    "dataset_configs": {
+      "datasets": {
+        "strategy": "router",
+        "datasets": [
+          {
+            "dataset": {
+              "enabled": true,
+              "id": "已有的知识库ID1"
+            }
+          },
+          {
+            "dataset": {
+              "enabled": true,
+              "id": "已有的知识库ID2"
+            }
+          }
+        ]
+      },
+      "retrieval_model": "multiple",
+      "top_k": 5,
+      "score_threshold": 0.0,
+      "score_threshold_enabled": false,
+      "reranking_enable": true,
+      "reranking_model": {
+        "reranking_provider_name": "",
+        "reranking_model_name": ""
+      },
+      "weights": {
+        "weight_type": "custom",
+        "keyword_setting": {
+          "keyword_weight": 0.3
+        },
+        "vector_setting": {
+          "vector_weight": 0.7
+        }
+      }
+    }
+  }
+}
+```
+
+### 步骤2：关联知识库
+**重要原则**：在现有知识库列表基础上，**只添加**要关联的新知识库，**保持所有已有关联的知识库不变**。
+
+**操作步骤**：
+1. 从步骤1的响应中获取`dataset_configs.datasets.datasets`数组
+2. 检查要关联的知识库ID是否已存在
+3. 如果不存在，将新知识库添加到数组中
+4. 使用完整的应用配置进行更新
+
 ### 关联知识库的请求格式
 **请求体**:
 ```json
@@ -1008,6 +1113,18 @@ curl -X POST "http://localhost:5001/console/api/files/upload" \
         {
           "dataset": {
             "enabled": true,
+            "id": "已有的知识库ID1"
+          }
+        },
+        {
+          "dataset": {
+            "enabled": true,
+            "id": "已有的知识库ID2"
+          }
+        },
+        {
+          "dataset": {
+            "enabled": true,
             "id": "43ad270c-38a6-4479-bd2f-4b9f9e9e1323"
           }
         }
@@ -1035,7 +1152,14 @@ curl -X POST "http://localhost:5001/console/api/files/upload" \
 }
 ```
 
-### 取消关联知识库
+### 步骤3：取消关联知识库
+**重要原则**：在现有知识库列表基础上，**只移除**要取消关联的知识库，**保持所有其他知识库的关联不变**。
+
+**操作步骤**：
+1. 从步骤1的响应中获取`dataset_configs.datasets.datasets`数组
+2. 过滤掉要取消关联的知识库ID
+3. 使用完整的应用配置进行更新
+
 **请求体**:
 ```json
 {
@@ -1044,6 +1168,7 @@ curl -X POST "http://localhost:5001/console/api/files/upload" \
   "agent_mode": {
     "max_iteration": 30,
     "enabled": true,
+    "strategy": "react",
     "tools": [
       {
         "provider_id": "123",
@@ -1143,8 +1268,7 @@ curl -X POST "http://localhost:5001/console/api/files/upload" \
         "notAuthor": false,
         "enabled": true
       }
-    ],
-    "strategy": "react"
+    ]
   },
   "model": {
     "provider": "axdlee/sophnet/sophnet",
@@ -1159,7 +1283,14 @@ curl -X POST "http://localhost:5001/console/api/files/upload" \
   "dataset_configs": {
     "datasets": {
       "strategy": "router",
-      "datasets": []
+      "datasets": [
+        {
+          "dataset": {
+            "enabled": true,
+            "id": "已有的知识库ID1"
+          }
+        }
+      ]
     },
     "retrieval_model": "multiple",
     "top_k": 5,

@@ -604,17 +604,6 @@ const TeacherCourseManagement: React.FC = () => {
 
   return (
     <Box sx={{ p: 3 }}>
-      {/* 添加返回按钮 */}
-      <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-        <Button
-          startIcon={<ArrowBack />}
-          onClick={() => navigate('/teacher')}
-          sx={{ mr: 2, textTransform: 'none' }}
-          color="inherit"
-        >
-          返回工作台
-        </Button>
-      </Box>
 
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
         <Typography variant="h4" component="h1">
@@ -1041,7 +1030,7 @@ const TeacherCourseManagement: React.FC = () => {
                     variant="outlined"
                     size="small"
                     startIcon={<SmartToy />}
-                    onClick={() => handleOpenAgentDialog(course)}
+                    onClick={() => navigate(`/teacher/courses/${course.id}/create-assistant`)}
                     color="primary"
                     sx={{
                       borderRadius: 2,

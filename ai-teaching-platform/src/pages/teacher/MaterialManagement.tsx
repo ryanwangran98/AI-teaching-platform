@@ -725,42 +725,43 @@ const MaterialManagement: React.FC = () => {
       // 3. 检查是否已经创建知识库，如果没有则创建
       let datasetId = materialInfo.datasetId;
       let documentId = materialInfo.documentId;
+      let accessToken = '';
+
+      // 3.1 登录获取访问令牌（无论是否需要创建知识库都需要令牌）
+      console.log('正在登录 Dify...');
+      const loginResponse = await fetch('http://localhost:5001/console/api/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: "3325127454@qq.com",
+          password: "wangran1998"
+        })
+      });
+      
+      console.log('登录响应状态:', loginResponse.status);
+      
+      if (!loginResponse.ok) {
+        const errorText = await loginResponse.text();
+        console.error('登录失败:', errorText);
+        throw new Error(`登录失败，状态码: ${loginResponse.status}, 错误信息: ${errorText}`);
+      }
+      
+      const loginData = await loginResponse.json();
+      console.log('登录响应数据:', loginData);
+      
+      accessToken = loginData.access_token || loginData.data?.access_token;
+      
+      if (!accessToken) {
+        console.error('访问令牌未找到，响应数据:', loginData);
+        throw new Error('获取访问令牌失败');
+      }
+      
+      console.log('成功获取访问令牌');
 
       if (!datasetId || !documentId) {
         console.log('知识库不存在，开始创建知识库...');
-        
-        // 3.1 登录获取访问令牌
-        console.log('正在登录 Dify...');
-        const loginResponse = await fetch('http://localhost:5001/console/api/login', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            email: "3325127454@qq.com",
-            password: "wangran1998"
-          })
-        });
-        
-        console.log('登录响应状态:', loginResponse.status);
-        
-        if (!loginResponse.ok) {
-          const errorText = await loginResponse.text();
-          console.error('登录失败:', errorText);
-          throw new Error(`登录失败，状态码: ${loginResponse.status}, 错误信息: ${errorText}`);
-        }
-        
-        const loginData = await loginResponse.json();
-        console.log('登录响应数据:', loginData);
-        
-        const accessToken = loginData.access_token || loginData.data?.access_token;
-        
-        if (!accessToken) {
-          console.error('访问令牌未找到，响应数据:', loginData);
-          throw new Error('获取访问令牌失败');
-        }
-        
-        console.log('成功获取访问令牌');
 
         // 3.2 创建新的知识库
         console.log('创建新的知识库...');
@@ -784,14 +785,110 @@ const MaterialManagement: React.FC = () => {
 
         if (!createDatasetResponse.ok) {
           const errorText = await createDatasetResponse.text();
-          throw new Error(`创建知识库失败: ${errorText}`);
+          // 检查是否是知识库名称重复错误
+          if (errorText.includes('dataset_name_duplicate') || errorText.includes('already exists')) {
+            console.log('检测到知识库名称重复，尝试获取已存在的知识库...');
+            
+            // 尝试获取知识库列表，查找名称匹配的知识库
+            try {
+              const datasetsResponse = await fetch('/api/courses/dify/datasets', {
+                method: 'GET',
+                headers: {
+                  'Authorization': `Bearer ${localStorage.getItem('token')}`
+                }
+              });
+
+              if (datasetsResponse.ok) {
+                const datasetsData = await datasetsResponse.json();
+                const existingDataset = datasetsData.data?.find((dataset: any) => 
+                  dataset.name === datasetName
+                );
+                
+                if (existingDataset) {
+                  datasetId = existingDataset.id;
+                  console.log('找到已存在的知识库，ID:', datasetId);
+                  
+                  // 由于知识库已存在，我们需要验证它是否有文档
+                  if (!documentId) {
+                    console.log('知识库已存在，但没有文档ID，需要重新上传文档...');
+                    // 继续执行后续的上传文档逻辑
+                  }
+                } else {
+                  throw new Error('无法找到已存在的知识库，请手动检查');
+                }
+              } else {
+                throw new Error('无法获取知识库列表');
+              }
+            } catch (listError) {
+              console.error('获取知识库列表失败:', listError);
+              throw new Error('知识库名称已存在，但无法获取已存在的知识库信息');
+            }
+          } else {
+            throw new Error(`创建知识库失败: ${errorText}`);
+          }
+        } else {
+          const datasetData = await createDatasetResponse.json();
+          datasetId = datasetData.id;
+          console.log('知识库创建成功，ID:', datasetId);
         }
+      } else {
+        // 验证已存在的知识库是否有效
+        console.log('验证已存在的知识库是否有效...');
+        try {
+          const verifyDatasetResponse = await fetch(`http://localhost:5001/console/api/datasets/${datasetId}`, {
+            method: 'GET',
+            headers: {
+              'Authorization': `Bearer ${accessToken}`
+            }
+          });
 
-        const datasetData = await createDatasetResponse.json();
-        datasetId = datasetData.id;
-        console.log('知识库创建成功，ID:', datasetId);
+          if (!verifyDatasetResponse.ok) {
+            console.warn('知识库验证失败，可能是知识库已被删除，需要重新创建');
+            // 如果验证失败，重置ID以便重新创建
+            datasetId = '';
+            documentId = '';
+            
+            // 重新创建知识库
+            console.log('重新创建知识库...');
+            const datasetName = material.title.length > 40 ? material.title.slice(0, 40) : material.title;
+            console.log('知识库名称:', datasetName);
+            
+            const createDatasetResponse = await fetch('http://localhost:5001/console/api/datasets', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${accessToken}`
+              },
+              body: JSON.stringify({
+                name: datasetName,
+                indexing_technique: "high_quality",
+                embedding_model: "embeddings",
+                embedding_model_provider: "axdlee/sophnet/sophnet"
+              })
+            });
 
-        // 3.3 上传文件获取文件ID
+            if (!createDatasetResponse.ok) {
+              const errorText = await createDatasetResponse.text();
+              if (errorText.includes('dataset_name_duplicate') || errorText.includes('already exists')) {
+                throw new Error('知识库名称已存在，请检查是否已有相同名称的知识库');
+              }
+              throw new Error(`创建知识库失败: ${errorText}`);
+            }
+
+            const datasetData = await createDatasetResponse.json();
+            datasetId = datasetData.id;
+            console.log('知识库重新创建成功，ID:', datasetId);
+          } else {
+            console.log('知识库验证成功，知识库存在且有效');
+          }
+        } catch (verifyError) {
+          console.error('验证知识库时出错:', verifyError);
+          throw new Error(`验证知识库失败: ${verifyError instanceof Error ? verifyError.message : '未知错误'}`);
+        }
+      }
+
+      // 3.3 上传文件获取文件ID（如果知识库是新创建或需要重新上传文档）
+      if (!materialInfo.datasetId || !materialInfo.documentId) {
         console.log('准备上传文件...');
         const fileUrl = material.fileUrl.startsWith('http') 
           ? material.fileUrl 
@@ -996,8 +1093,10 @@ const MaterialManagement: React.FC = () => {
         } else {
           console.log('知识库检索设置更新成功');
         }
+      }
 
-        // 3.6 保存知识库信息到数据库
+      // 3.6 保存知识库信息到数据库（如果知识库是新创建或重新创建的）
+      if (!materialInfo.datasetId || !materialInfo.documentId || datasetId !== materialInfo.datasetId) {
         console.log('保存知识库信息到数据库...');
         const updateResponse = await fetch(`http://localhost:3001/api/materials/${material.id}/knowledge-base`, {
           method: 'PUT',
@@ -1025,7 +1124,7 @@ const MaterialManagement: React.FC = () => {
           )
         );
 
-        console.log('知识库创建成功！');
+        console.log('知识库信息保存成功！');
       }
 
       console.log('获取到知识库信息:', datasetId);
@@ -1054,7 +1153,12 @@ const MaterialManagement: React.FC = () => {
       const associateData = await associateResponse.json();
       console.log('知识库关联成功:', associateData);
 
-      alert(`已成功将《${material.title}》的知识库创建并关联到《${currentCourse.name}》的课程答疑助手！`);
+      // 根据是否新创建知识库显示不同的成功消息
+      const successMessage = !materialInfo.datasetId || !materialInfo.documentId
+        ? `已成功将《${material.title}》的知识库创建并关联到《${currentCourse.name}》的课程答疑助手！`
+        : `已成功将《${material.title}》的知识库关联到《${currentCourse.name}》的课程答疑助手！`;
+      
+      alert(successMessage);
 
       // 5. 更新关联状态
       setAssociationStatus(prevStatus => ({
@@ -1260,7 +1364,7 @@ const MaterialManagement: React.FC = () => {
       const result = await response.json();
       
       // 3. 检查资料的知识库是否在关联列表中
-      const isAssociated = result.datasets?.some((dataset: any) => dataset.id === materialInfo.datasetId);
+      const isAssociated = result.data?.some((dataset: any) => dataset.datasetId === materialInfo.datasetId);
       
       setAssociationStatus(prev => ({ ...prev, [material.id]: isAssociated }));
       return isAssociated;
@@ -1564,46 +1668,7 @@ const MaterialManagement: React.FC = () => {
                         </Button>
                       )}
                       {/* 知识库相关按钮 */}
-                      {material.datasetId ? (
-                        <>
-                          {!associationStatus[material.id] ? (
-                            <Button 
-                              size="small" 
-                              onClick={() => handleAssociateToAssistant(material)}
-                              variant="outlined"
-                              startIcon={<SmartToy />}
-                              disabled={knowledgeBaseLoading[material.id] || !currentCourse?.agentAppId}
-                              sx={{ 
-                                minWidth: 'auto',
-                                px: 1,
-                                py: 0.5,
-                                '&:hover': { 
-                                  bgcolor: 'rgba(0, 0, 0, 0.04)' 
-                                } 
-                              }}
-                            >
-                              {knowledgeBaseLoading[material.id] ? '关联中...' : '关联AI助手'}
-                            </Button>
-                          ) : (
-                            <Button 
-                              size="small" 
-                              onClick={() => handleDisassociateFromAssistant(material)}
-                              variant="outlined"
-                              disabled={knowledgeBaseLoading[material.id]}
-                              sx={{ 
-                                minWidth: 'auto',
-                                px: 1,
-                                py: 0.5,
-                                '&:hover': { 
-                                  bgcolor: 'rgba(0, 0, 0, 0.04)' 
-                                } 
-                              }}
-                            >
-                              {knowledgeBaseLoading[material.id] ? '取消中...' : '取消关联'}
-                            </Button>
-                          )}
-                        </>
-                      ) : (
+                      {!associationStatus[material.id] ? (
                         <Button 
                           size="small" 
                           onClick={() => handleAssociateToAssistant(material)}
@@ -1619,7 +1684,24 @@ const MaterialManagement: React.FC = () => {
                             } 
                           }}
                         >
-                          {knowledgeBaseLoading[material.id] ? '创建中...' : '创建知识库并关联AI助手'}
+                          {knowledgeBaseLoading[material.id] ? '关联中...' : '关联到助手'}
+                        </Button>
+                      ) : (
+                        <Button 
+                          size="small" 
+                          onClick={() => handleDisassociateFromAssistant(material)}
+                          variant="outlined"
+                          disabled={knowledgeBaseLoading[material.id]}
+                          sx={{ 
+                            minWidth: 'auto',
+                            px: 1,
+                            py: 0.5,
+                            '&:hover': { 
+                              bgcolor: 'rgba(0, 0, 0, 0.04)' 
+                            } 
+                          }}
+                        >
+                          {knowledgeBaseLoading[material.id] ? '取消中...' : '取消关联到助手'}
                         </Button>
                       )}
                       <Button 

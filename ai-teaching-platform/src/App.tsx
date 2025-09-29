@@ -25,6 +25,7 @@ import QuestionBank from './pages/teacher/QuestionBank';
 import TeacherCourseManagement from './pages/teacher/TeacherCourseManagement';
 import CreateCourse from './pages/teacher/CreateCourse';
 import ResourceManagement from './pages/teacher/ResourceManagement';
+import TeacherCreateAssistant from './pages/teacher/TeacherCreateAssistant';
 
 // 教师端布局
 import TeacherLayout from './layouts/TeacherLayout';
@@ -99,6 +100,7 @@ function App() {
         <Route path="notifications" element={<NotificationManagement />} />
         <Route path="courses" element={<TeacherCourseManagement />} />
         <Route path="courses/new" element={<CreateCourse />} />
+        <Route path="courses/:courseId/create-assistant" element={<TeacherCreateAssistant />} />
       </Route>
 
       {/* 资源管理路由 - 独立于TeacherLayout */}
