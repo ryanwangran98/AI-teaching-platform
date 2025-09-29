@@ -33,10 +33,43 @@ const upload = multer({
     fileSize: 50 * 1024 * 1024, // 50MB的大小限制
   },
   fileFilter: (req, file, cb) => {
-    // 允许的文件类型
-    const allowedTypes = /jpeg|jpg|png|pdf|doc|docx|ppt|pptx|xls|xlsx|mp4|mp3|zip|rar/;
-    const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
-    const mimetype = allowedTypes.test(file.mimetype);
+    // 允许的文件扩展名
+    const allowedExtensions = /jpeg|jpg|png|pdf|doc|docx|ppt|pptx|xls|xlsx|mp4|mp3|zip|rar/;
+    // 允许的MIME类型
+    const allowedMimeTypes = [
+      // 图片
+      'image/jpeg',
+      'image/jpg',
+      'image/png',
+      'image/gif',
+      'image/webp',
+      // 文档
+      'application/pdf',
+      'application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'application/vnd.ms-powerpoint',
+      'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+      'application/vnd.ms-excel',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'text/plain',
+      // 视频
+      'video/mp4',
+      'video/mpeg',
+      'video/quicktime',
+      // 音频
+      'audio/mpeg',
+      'audio/mp3',
+      'audio/wav',
+      'audio/mp4',
+      // 压缩文件
+      'application/zip',
+      'application/x-rar-compressed',
+      'application/x-zip-compressed',
+      'application/x-7z-compressed'
+    ];
+    
+    const extname = allowedExtensions.test(path.extname(file.originalname).toLowerCase());
+    const mimetype = allowedMimeTypes.includes(file.mimetype);
     
     if (mimetype && extname) {
       return cb(null, true);
@@ -47,19 +80,47 @@ const upload = multer({
 });
 
 // 获取课件列表
-router.get('/', async (req, res) => {
+router.get('/', authenticateToken, async (req: AuthRequest, res) => {
   try {
     const { type, courseId, page = 1, limit = 20 } = req.query;
 
     const skip = (Number(page) - 1) * Number(limit);
-    const where: any = {};
+    const where: any = {
+      // 基础过滤：只返回当前用户上传的课件
+      uploadedById: req.user!.id
+    };
 
     if (type) where.type = type as string;
-    
+
+    // 如果提供了courseId，添加课程过滤逻辑
     if (courseId) {
-      where.chapter = {
-        courseId: courseId as string
-      };
+      // 简化逻辑：对于没有关联章节的课件，如果上传者是该课程的教师，则显示
+      // 先检查当前用户是否是该课程的教师
+      const course = await prisma.course.findUnique({
+        where: { id: courseId as string },
+        select: { teacherId: true }
+      });
+
+      if (course && course.teacherId === req.user!.id) {
+        // 当前用户是该课程的教师，显示所有相关课件
+        where.OR = [
+          // 情况1：课件属于该课程的某个章节
+          {
+            chapter: {
+              courseId: courseId as string
+            }
+          },
+          // 情况2：课件没有关联章节（由该教师上传）
+          {
+            chapterId: null
+          }
+        ];
+      } else {
+        // 当前用户不是该课程的教师，只显示属于该课程章节的课件
+        where.chapter = {
+          courseId: courseId as string
+        };
+      }
     }
 
     const coursewares = await prisma.courseware.findMany({
@@ -385,8 +446,16 @@ router.delete('/:id', authenticateToken, authorizeRoles('TEACHER', 'ADMIN'), asy
       return res.status(404).json({ error: 'Courseware not found' });
     }
 
-    if (req.user!.role !== 'ADMIN' && courseware.chapter.course.teacherId !== req.user!.id) {
-      return res.status(403).json({ error: 'Not authorized to delete this courseware' });
+    // 检查权限：管理员可以删除任何课件，教师只能删除自己上传的课件
+    if (req.user!.role !== 'ADMIN') {
+      // 如果课件关联了章节，检查是否是该课程的教师
+      if (courseware.chapter && courseware.chapter.course.teacherId !== req.user!.id) {
+        return res.status(403).json({ error: 'Not authorized to delete this courseware' });
+      }
+      // 如果课件没有关联章节，检查是否是上传者
+      if (!courseware.chapter && courseware.uploadedById !== req.user!.id) {
+        return res.status(403).json({ error: 'Not authorized to delete this courseware' });
+      }
     }
 
     await prisma.courseware.delete({
@@ -398,6 +467,7 @@ router.delete('/:id', authenticateToken, authorizeRoles('TEACHER', 'ADMIN'), asy
       message: 'Courseware deleted successfully'
     });
   } catch (error) {
+    console.error('删除课件失败:', error);
     res.status(500).json({ error: 'Server error' });
   }
 });

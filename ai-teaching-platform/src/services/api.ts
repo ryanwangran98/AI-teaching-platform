@@ -174,7 +174,7 @@ export const courseAPI = {
 
   // 获取课程的Agent应用信息
   getAgentAppInfo: async (courseId: string) => {
-    const response = await api.get(`/courses/${courseId}/agent-app-info`);
+    const response = await api.get(`/courses/${courseId}/agent-app`);
     return response.data;
   },
 

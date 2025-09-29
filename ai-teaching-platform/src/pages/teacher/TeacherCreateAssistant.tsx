@@ -111,18 +111,18 @@ const TeacherCreateAssistant: React.FC = () => {
       try {
         const assistantResponse = await courseAPI.getAssistantAssociations(courseId);
         setAssistantAssociations(assistantResponse.data);
-        
-        // 如果有助手关联信息，获取应用信息
-        if (assistantResponse.data.length > 0) {
-          try {
-            const appInfoResponse = await courseAPI.getAgentAppInfo(courseId);
-            setAgentAppInfo(appInfoResponse.data);
-          } catch (error) {
-            console.error('获取AI助手应用信息失败:', error);
-          }
-        }
       } catch (error) {
         console.error('获取AI助手关联信息失败:', error);
+      }
+      
+      // 直接尝试获取AI助手应用信息（不依赖于关联信息）
+      try {
+        const appInfoResponse = await courseAPI.getAgentAppInfo(courseId);
+        setAgentAppInfo(appInfoResponse.data);
+      } catch (error) {
+        console.error('获取AI助手应用信息失败:', error);
+        // 如果获取失败，说明AI助手确实不存在
+        setAgentAppInfo(null);
       }
     } catch (error) {
       console.error('获取课程信息失败:', error);
@@ -451,7 +451,7 @@ const TeacherCreateAssistant: React.FC = () => {
         }}
       >
         <CardContent sx={{ p: 0 }}>
-          {assistantAssociations.length > 0 ? (
+          {agentAppInfo && agentAppInfo.accessCode ? (
             <Box sx={{ 
               width: '100%', 
               height: '700px', 
@@ -460,7 +460,7 @@ const TeacherCreateAssistant: React.FC = () => {
               overflow: 'hidden'
             }}>
               <iframe
-                src={`http://localhost:3000/chatbot/${assistantAssociations[0].accessCode}`}
+                src={`http://localhost:3000/chatbot/${agentAppInfo.accessCode}`}
                 style={{
                   width: '100%',
                   height: '100%',

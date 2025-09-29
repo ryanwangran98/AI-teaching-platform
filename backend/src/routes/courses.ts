@@ -179,10 +179,50 @@ router.post('/', authenticateToken, authorizeRoles('TEACHER', 'ADMIN'), async (r
       }
     });
 
+    // 自动创建AI助手
+    let updatedCourse = course;
+    try {
+      logInfo(`开始为课程 ${course.name} 自动创建AI助手`);
+      
+      // 创建Agent应用
+      const difyService = createDifyService();
+      const agentInfo = await difyService.createAgentAppWithToken(
+        `${course.name} - AI助手`,
+        `为课程"${course.name}"提供智能问答和学习辅助`
+      );
+
+      // 更新课程，添加Agent应用信息
+      updatedCourse = await prisma.course.update({
+        where: { id: course.id },
+        data: {
+          agentAppId: agentInfo.appId,
+          agentAccessToken: agentInfo.accessToken,
+          agentAccessCode: agentInfo.code
+        },
+        include: {
+          teacher: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              email: true,
+              avatar: true
+            }
+          }
+        }
+      });
+
+      logInfo(`课程 ${course.name} 的AI助手创建成功，应用ID: ${agentInfo.appId}`);
+    } catch (agentError) {
+      // AI助手创建失败不影响课程创建，只记录错误日志
+      logError(`为课程 ${course.name} 创建AI助手失败:`, agentError);
+      console.warn('AI助手创建失败，但课程创建成功:', agentError);
+    }
+
     // 解析tags字段为数组返回给前端
-    if (course.tags) {
+    if (updatedCourse.tags) {
       try {
-        course.tags = JSON.parse(course.tags);
+        updatedCourse.tags = JSON.parse(updatedCourse.tags);
       } catch (e) {
         // 如果解析失败，保持原样
         console.error('Failed to parse tags JSON:', e);
@@ -191,8 +231,8 @@ router.post('/', authenticateToken, authorizeRoles('TEACHER', 'ADMIN'), async (r
 
     res.status(201).json({
       success: true,
-      data: course,
-      message: '课程创建成功'
+      data: updatedCourse,
+      message: '课程创建成功' + (updatedCourse.agentAppId ? '，AI助手已自动创建' : '，AI助手创建失败但不影响课程使用')
     });
   } catch (error: any) {
     console.error('创建课程错误:', error);
