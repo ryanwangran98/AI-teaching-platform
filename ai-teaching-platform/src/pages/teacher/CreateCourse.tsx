@@ -132,7 +132,7 @@ const CreateCourse: React.FC = () => {
       <Paper sx={{ p: 3 }}>
         <form onSubmit={handleSubmit}>
           <Grid container spacing={3}>
-            <Grid item xs={12} md={6}>
+            <Grid size={{ xs: 12, md: 6 }}>
               <TextField
                 fullWidth
                 label="课程名称"
@@ -143,7 +143,7 @@ const CreateCourse: React.FC = () => {
               />
             </Grid>
             
-            <Grid item xs={12} md={6}>
+            <Grid size={{ xs: 12, md: 6 }}>
               <TextField
                 fullWidth
                 label="课程代码"
@@ -155,7 +155,7 @@ const CreateCourse: React.FC = () => {
               />
             </Grid>
 
-            <Grid item xs={12}>
+            <Grid size={12}>
               <TextField
                 fullWidth
                 label="课程描述"
@@ -168,7 +168,7 @@ const CreateCourse: React.FC = () => {
               />
             </Grid>
 
-            <Grid item xs={12} md={6}>
+            <Grid size={{ xs: 12, md: 6 }}>
               <FormControl fullWidth>
                 <InputLabel>学院</InputLabel>
                 <Select
@@ -183,7 +183,7 @@ const CreateCourse: React.FC = () => {
               </FormControl>
             </Grid>
 
-            <Grid item xs={12} md={6}>
+            <Grid size={{ xs: 12, md: 6 }}>
               <FormControl fullWidth>
                 <InputLabel>课程级别</InputLabel>
                 <Select
@@ -198,7 +198,7 @@ const CreateCourse: React.FC = () => {
               </FormControl>
             </Grid>
 
-            <Grid item xs={12} md={4}>
+            <Grid size={{ xs: 12, md: 4 }}>
               <TextField
                 fullWidth
                 label="学分"
@@ -211,7 +211,7 @@ const CreateCourse: React.FC = () => {
               />
             </Grid>
 
-            <Grid item xs={12} md={8}>
+            <Grid size={{ xs: 12, md: 8 }}>
               <TextField
                 fullWidth
                 label="课程标签 (用逗号分隔)"
@@ -225,7 +225,7 @@ const CreateCourse: React.FC = () => {
               />
             </Grid>
 
-            <Grid item xs={12}>
+            <Grid size={12}>
               <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
                 <Button
                   variant="outlined"

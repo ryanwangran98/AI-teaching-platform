@@ -17,12 +17,18 @@ from packaging.version import Version
 from pptx import __version__ as PPTXVersion
 
 try:
+    # Try to parse version with Mark first (for custom version)
     PPTXVersion, Mark = PPTXVersion.split("+")
     assert Version(PPTXVersion) >= Version("1.0.4") and Mark == "PPTAgent"
 except Exception as _:
-    raise ImportError(
-        "You should install the customized `python-pptx` for this project, see https://github.com/Force1ess/python-pptx"
-    )
+    try:
+        # If custom version check fails, check for standard version
+        assert Version(PPTXVersion) >= Version("1.0.2")
+        print(f"Warning: Using standard python-pptx version {PPTXVersion}. Some features may not work as expected.")
+    except Exception as __:
+        raise ImportError(
+            "You should install python-pptx version >= 1.0.2 for this project"
+        )
 
 # __init__.py
 from .pptgen import PPTAgent

@@ -13,13 +13,13 @@ import {
   ListItemButton,
   ListItemIcon,
   ListItemText,
+  useTheme,
 } from '@mui/material';
 import {
   Menu as MenuIcon,
   Dashboard,
   School,
   Notifications,
-  Psychology,
 } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -44,12 +44,6 @@ const menuItems = [
     path: '/teacher/notifications',
     color: 'linear-gradient(135deg, #00c6ff 0%, #0072ff 100%)',
   },
-  { 
-    text: 'AI助手', 
-    icon: <Psychology />, 
-    path: '/ai/courseware-assistant',
-    color: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
-  },
 ];
 
 const TeacherLayout: React.FC = () => {
@@ -57,6 +51,7 @@ const TeacherLayout: React.FC = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const theme = useTheme();
 
   const handleDrawerToggle = () => {
     setMobileOpen(!mobileOpen);
@@ -69,26 +64,6 @@ const TeacherLayout: React.FC = () => {
 
   const drawer = (
     <div>
-      <Toolbar sx={{ 
-        display: 'flex', 
-        alignItems: 'center', 
-        justifyContent: 'center',
-        py: 2,
-        background: 'transparent',
-      }}>
-        <Typography 
-          variant="h6" 
-          noWrap 
-          component="div" 
-          sx={{ 
-            color: 'text.primary',
-            fontWeight: 'bold',
-            textAlign: 'center',
-          }}
-        >
-          教师菜单
-        </Typography>
-      </Toolbar>
       <Divider />
       <List sx={{ py: 2 }}>
         {menuItems.map((item) => (
@@ -132,11 +107,11 @@ const TeacherLayout: React.FC = () => {
       <AppBar
         position="fixed"
         sx={{
-          width: { sm: `calc(100% - ${drawerWidth}px)` },
-          ml: { sm: `${drawerWidth}px` },
+          width: '100%',
           background: 'white',
           boxShadow: '0 2px 10px rgba(0,0,0,0.05)',
           color: 'text.primary',
+          zIndex: 1201,
         }}
       >
         <Toolbar>
@@ -149,6 +124,16 @@ const TeacherLayout: React.FC = () => {
           >
             <MenuIcon />
           </IconButton>
+          <Box
+            component="img"
+            src="/amite.jpg"
+            alt="AMITE Logo"
+            sx={{
+              height: 40,
+              mr: 2,
+              borderRadius: 1,
+            }}
+          />
           <Typography 
             variant="h6" 
             noWrap 
@@ -156,7 +141,7 @@ const TeacherLayout: React.FC = () => {
             sx={{ 
               flexGrow: 1,
               fontWeight: 'bold',
-              background: 'linear-gradient(135deg, #6a11cb 0%, #2575fc 100%)',
+              background: `linear-gradient(45deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
               WebkitBackgroundClip: 'text',
               WebkitTextFillColor: 'transparent',
             }}
@@ -189,6 +174,8 @@ const TeacherLayout: React.FC = () => {
               boxSizing: 'border-box', 
               width: drawerWidth,
               border: 'none',
+              top: '56px',
+              height: 'calc(100% - 56px)',
             },
           }}
         >
@@ -203,6 +190,9 @@ const TeacherLayout: React.FC = () => {
               width: drawerWidth,
               border: 'none',
               boxShadow: '2px 0 10px rgba(0,0,0,0.05)',
+              zIndex: 1200,
+              top: '64px',
+              height: 'calc(100% - 64px)',
             },
           }}
           open
@@ -215,12 +205,24 @@ const TeacherLayout: React.FC = () => {
         component="main"
         sx={{
           flexGrow: 1,
-          p: { xs: 2, sm: 3 },
+          p: { xs: 2, sm: 0 },
           width: { sm: `calc(100% - ${drawerWidth}px)` },
           mt: 8,
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'flex-start',
         }}
       >
-        <Outlet />
+        <Box
+          sx={{
+            width: '100%',
+            maxWidth: '1600px',
+            px: { xs: 2, sm: 4 },
+            py: 2
+          }}
+        >
+          <Outlet />
+        </Box>
       </Box>
     </Box>
   );

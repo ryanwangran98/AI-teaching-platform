@@ -18,7 +18,16 @@ const MainLayout: React.FC = () => {
     <Box sx={{ flexGrow: 1 }}>
       <AppBar position="static">
         <Toolbar>
-          <School sx={{ mr: 2 }} />
+          <Box
+            component="img"
+            src="/amite.jpg"
+            alt="AMITE Logo"
+            sx={{
+              height: 40,
+              mr: 2,
+              borderRadius: 1,
+            }}
+          />
           <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
             AI融合教学平台
           </Typography>

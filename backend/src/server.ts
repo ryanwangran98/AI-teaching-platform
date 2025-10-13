@@ -199,7 +199,7 @@ app.use(notFound);
 app.use(errorHandler);
 
 // 启动服务器
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   console.log(`\n🚀 服务器启动成功!`);
   console.log(`� 端口: ${PORT}`);
   console.log(`📚 环境: ${process.env.NODE_ENV || 'development'}`);
@@ -212,5 +212,12 @@ app.listen(PORT, () => {
   }
   console.log(`===================================\n`);
 });
+
+// 设置服务器超时时间（5分钟），解决大文件上传超时问题
+server.setTimeout(5 * 60 * 1000); // 5分钟超时
+
+// 设置keep-alive超时时间
+server.keepAliveTimeout = 120000; // 2分钟
+server.headersTimeout = 120000; // 2分钟
 
 export default app;

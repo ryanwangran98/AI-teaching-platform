@@ -641,6 +641,17 @@ const TeacherCreateAssistant: React.FC = () => {
               创建AI助手
             </Button>
           )}
+          {agentAppInfo && !creatingAgent && (
+            <Button 
+              onClick={handleCreateAgentApp}
+              variant="outlined"
+              disabled={creatingAgent}
+              startIcon={<Refresh />}
+              sx={{ borderRadius: 2 }}
+            >
+              重新创建
+            </Button>
+          )}
         </DialogActions>
       </Dialog>
 

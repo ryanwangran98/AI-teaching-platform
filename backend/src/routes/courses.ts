@@ -814,11 +814,16 @@ router.post('/:id/agent-app', authenticateToken, authorizeRoles('TEACHER', 'ADMI
     // 如果已经有Agent应用，先删除旧的（重新创建）
     if (course.agentAppId) {
       try {
-        // 尝试删除旧的应用（如果失败也不影响新应用的创建）
+        // 尝试删除旧的应用
         await difyService.deleteApp(course.agentAppId);
         console.log(`已删除旧的Agent应用: ${course.agentAppId}`);
       } catch (deleteError) {
-        console.warn(`删除旧Agent应用失败，继续创建新应用:`, deleteError);
+        console.error(`删除旧Agent应用失败:`, deleteError);
+        // 如果删除失败，返回错误信息，不继续创建新应用
+        return res.status(500).json({ 
+          error: '删除旧AI助手失败，无法重新创建', 
+          message: deleteError instanceof Error ? deleteError.message : '未知错误' 
+        });
       }
     }
 

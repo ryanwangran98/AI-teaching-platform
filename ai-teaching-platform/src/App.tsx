@@ -43,15 +43,11 @@ import Materials from './pages/student/Materials';
 import NotificationsPage from './pages/student/Notifications';
 import CourseGraph from './pages/student/CourseGraph';
 import AssignmentDetail from './pages/student/assignments/AssignmentDetail';
-import CourseAssistant from './pages/student/CourseAssistant';
 
 // 管理员端页面
 import AdminDashboard from './pages/admin/AdminDashboard';
 import UserManagement from './pages/admin/UserManagement';
 import CourseManagement from './pages/admin/CourseManagement';
-
-// AI功能页面
-import AICoursewareAssistant from './pages/ai/AICoursewareAssistant';
 
 // 路由保护组件
 const ProtectedRoute: React.FC<{
@@ -147,7 +143,6 @@ function App() {
         <Route path="courses/explore" element={<StudentCourseManagement />} />
         <Route path="courses/materials" element={<Materials />} />
         <Route path="notifications" element={<NotificationsPage />} />
-        <Route path="course-assistant" element={<CourseAssistant />} />
       </Route>
 
       {/* 管理员端路由 */}
@@ -175,9 +170,6 @@ function App() {
           </ProtectedRoute>
         }
       />
-
-      {/* AI功能路由 */}
-      <Route path="/ai/courseware-assistant" element={<AICoursewareAssistant />} />
 
       {/* 测试页面 */}
       <Route path="/test-page" element={<TestPage />} />

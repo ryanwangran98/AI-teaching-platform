@@ -10,7 +10,17 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api';
 
 const api = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 10000,
+  timeout: 60000, // 增加超时时间到60秒
+  headers: {
+    'Content-Type': 'application/json;charset=UTF-8',
+    'Accept': 'application/json;charset=UTF-8',
+  },
+});
+
+// 创建专门用于文件上传的API实例，使用更长的超时时间
+const uploadApi = axios.create({
+  baseURL: API_BASE_URL,
+  timeout: 300000, // 文件上传使用300秒(5分钟)超时
   headers: {
     'Content-Type': 'application/json;charset=UTF-8',
     'Accept': 'application/json;charset=UTF-8',

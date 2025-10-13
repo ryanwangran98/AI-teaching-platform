@@ -934,11 +934,12 @@ const TeacherCourseManagement: React.FC = () => {
               {/* 操作按钮 */}
               <CardActions sx={{ 
                 justifyContent: 'space-between', 
-                px: 2.5, 
+                px: 2, 
                 pb: 2.5, 
-                pt: 0
+                pt: 0,
+                flexWrap: 'nowrap'
               }}>
-                <Box sx={{ display: 'flex', gap: 1 }}>
+                <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'nowrap' }}>
                   <Button
                     variant="outlined"
                     size="small"
@@ -948,10 +949,10 @@ const TeacherCourseManagement: React.FC = () => {
                       borderRadius: 2,
                       textTransform: 'none',
                       fontWeight: 500,
-                      px: 2,
-                      py: 0.75,
+                      px: 1.5,
+                      py: 0.5,
                       minWidth: 'auto',
-                      fontSize: '0.8125rem',
+                      fontSize: '0.75rem',
                       borderColor: alpha(theme.palette.primary.main, 0.5),
                       '&:hover': {
                         borderColor: theme.palette.primary.main,
@@ -971,10 +972,10 @@ const TeacherCourseManagement: React.FC = () => {
                         borderRadius: 2,
                         textTransform: 'none',
                         fontWeight: 500,
-                        px: 2,
-                        py: 0.75,
+                        px: 1.5,
+                        py: 0.5,
                         minWidth: 'auto',
-                        fontSize: '0.8125rem',
+                        fontSize: '0.75rem',
                         borderColor: alpha(theme.palette.primary.main, 0.5),
                         '&:hover': {
                           borderColor: theme.palette.primary.main,
@@ -994,10 +995,10 @@ const TeacherCourseManagement: React.FC = () => {
                         borderRadius: 2,
                         textTransform: 'none',
                         fontWeight: 500,
-                        px: 2,
-                        py: 0.75,
+                        px: 1.5,
+                        py: 0.5,
                         minWidth: 'auto',
-                        fontSize: '0.8125rem',
+                        fontSize: '0.75rem',
                         borderColor: alpha(theme.palette.primary.main, 0.5),
                         '&:hover': {
                           borderColor: theme.palette.primary.main,
@@ -1018,10 +1019,10 @@ const TeacherCourseManagement: React.FC = () => {
                       borderRadius: 2,
                       textTransform: 'none',
                       fontWeight: 500,
-                      px: 2,
-                      py: 0.75,
+                      px: 1.5,
+                      py: 0.5,
                       minWidth: 'auto',
-                      fontSize: '0.8125rem'
+                      fontSize: '0.75rem'
                     }}
                   >
                     资源
@@ -1036,10 +1037,10 @@ const TeacherCourseManagement: React.FC = () => {
                       borderRadius: 2,
                       textTransform: 'none',
                       fontWeight: 500,
-                      px: 2,
-                      py: 0.75,
+                      px: 1.5,
+                      py: 0.5,
                       minWidth: 'auto',
-                      fontSize: '0.8125rem'
+                      fontSize: '0.75rem'
                     }}
                   >
                     AI助手
@@ -1055,10 +1056,10 @@ const TeacherCourseManagement: React.FC = () => {
                     borderRadius: 2,
                     textTransform: 'none',
                     fontWeight: 500,
-                    px: 2,
-                    py: 0.75,
+                    px: 1.5,
+                    py: 0.5,
                     minWidth: 'auto',
-                    fontSize: '0.8125rem',
+                    fontSize: '0.75rem',
                     borderColor: alpha(theme.palette.error.main, 0.5),
                     '&:hover': {
                       borderColor: theme.palette.error.main,
@@ -1089,8 +1090,9 @@ const TeacherCourseManagement: React.FC = () => {
                   fullWidth
                   label="课程名称"
                   variant="outlined"
-                  value={editForm.title}
-                  onChange={(e) => handleEditFormChange('title', e.target.value)}
+                  value={editForm.name}
+                  onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                  margin="normal"
                 />
               </Grid>
               <Grid size={{ xs: 12, sm: 6 }}>
@@ -1099,57 +1101,58 @@ const TeacherCourseManagement: React.FC = () => {
                   label="课程代码"
                   variant="outlined"
                   value={editForm.code}
-                  onChange={(e) => handleEditFormChange('code', e.target.value)}
+                  onChange={(e) => setEditForm({ ...editForm, code: e.target.value })}
+                  margin="normal"
                 />
               </Grid>
-              <Grid size={{ xs: 12 }}>
+              <Grid size={12}>
                 <TextField
                   fullWidth
-                  multiline
-                  rows={3}
                   label="课程描述"
                   variant="outlined"
+                  multiline
+                  rows={4}
                   value={editForm.description}
-                  onChange={(e) => handleEditFormChange('description', e.target.value)}
+                  onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
+                  margin="normal"
                 />
               </Grid>
               <Grid size={{ xs: 12, sm: 6 }}>
-                <FormControl fullWidth>
+                <FormControl fullWidth margin="normal">
                   <InputLabel>难度级别</InputLabel>
                   <Select
                     value={editForm.difficulty}
-                    onChange={(e) => handleEditFormChange('difficulty', e.target.value)}
                     label="难度级别"
+                    onChange={(e) => setEditForm({ ...editForm, difficulty: e.target.value as 'BEGINNER' | 'INTERMEDIATE' | 'ADVANCED' | 'EASY' | 'MEDIUM' | 'HARD' })}
                   >
-                    {difficulties.map(diff => (
-                      <MenuItem key={diff} value={diff}>
-                        {diff === 'EASY' ? '简单' : diff === 'MEDIUM' ? '中等' : '困难'}
-                      </MenuItem>
-                    ))}
+                    <MenuItem value="BEGINNER">初级</MenuItem>
+                    <MenuItem value="INTERMEDIATE">中级</MenuItem>
+                    <MenuItem value="ADVANCED">高级</MenuItem>
+                    <MenuItem value="EASY">简单</MenuItem>
+                    <MenuItem value="MEDIUM">中等</MenuItem>
+                    <MenuItem value="HARD">困难</MenuItem>
                   </Select>
                 </FormControl>
               </Grid>
-              <Grid size={{ xs: 12, sm: 4 }}>
+              <Grid size={{ xs: 12, sm: 6 }}>
                 <TextField
                   fullWidth
                   label="学分"
-                  type="number"
                   variant="outlined"
+                  type="number"
                   value={editForm.credits}
-                  onChange={(e) => handleEditFormChange('credits', Number(e.target.value))}
-                  inputProps={{ min: 1, max: 10 }}
+                  onChange={(e) => setEditForm({ ...editForm, credits: parseInt(e.target.value) || 0 })}
+                  margin="normal"
                 />
               </Grid>
-              <Grid size={{ xs: 12, sm: 8 }}>
+              <Grid size={12}>
                 <TextField
                   fullWidth
                   label="课程标签 (用逗号分隔)"
                   variant="outlined"
-                  value={Array.isArray(editForm.tags) ? editForm.tags.join(', ') : ''}
-                  onChange={(e) => {
-                    const tags = e.target.value.split(',').map(tag => tag.trim()).filter(tag => tag);
-                    handleEditFormChange('tags', tags);
-                  }}
+                  value={editForm.tags.join(', ')}
+                  onChange={(e) => setEditForm({ ...editForm, tags: e.target.value.split(',').map(tag => tag.trim()).filter(tag => tag) })}
+                  margin="normal"
                   helperText="例如：编程, 基础, 必修"
                 />
               </Grid>
@@ -1215,7 +1218,7 @@ const TeacherCourseManagement: React.FC = () => {
                       margin="normal"
                     />
                   </Grid>
-                  <Grid size={{ xs: 12 }}>
+                  <Grid size={12}>
                     <TextField
                       fullWidth
                       label="嵌入代码"

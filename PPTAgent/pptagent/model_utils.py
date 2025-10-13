@@ -32,12 +32,33 @@ LID_FILES = glob(LID_PATTERN)
 if LID_FILES:
     LID_MODEL = load_model(LID_FILES[0])
 else:
-    LID_MODEL = load_model(
-        hf_hub_download(
-            repo_id="julien-c/fasttext-language-id",
-            filename="lid.176.bin",
+    # Check if proxy settings are available
+    http_proxy = os.environ.get("HTTP_PROXY")
+    https_proxy = os.environ.get("HTTPS_PROXY")
+    
+    # Set huggingface_hub specific proxy environment variables
+    if http_proxy:
+        os.environ["HF_HUB_HTTP_PROXY"] = http_proxy
+    if https_proxy:
+        os.environ["HF_HUB_HTTPS_PROXY"] = https_proxy
+    
+    # Try to download with proxy
+    try:
+        LID_MODEL = load_model(
+            hf_hub_download(
+                repo_id="julien-c/fasttext-language-id",
+                filename="lid.176.bin",
+            )
         )
-    )
+    except Exception as e:
+        logger.error(f"Failed to download model with proxy: {e}")
+        # Try without proxy as fallback
+        LID_MODEL = load_model(
+            hf_hub_download(
+                repo_id="julien-c/fasttext-language-id",
+                filename="lid.176.bin",
+            )
+        )
 
 MINERU_API = os.environ.get("MINERU_API", None)
 if MINERU_API is None:
@@ -108,6 +129,19 @@ def get_image_model(device: str = None):
         tuple: A tuple containing the feature extractor and the image model.
     """
     model_base = "google/vit-base-patch16-224-in21k"
+    
+    # Check if proxy settings are available
+    proxies = {}
+    if os.environ.get("HTTP_PROXY"):
+        proxies["http"] = os.environ.get("HTTP_PROXY")
+    if os.environ.get("HTTPS_PROXY"):
+        proxies["https"] = os.environ.get("HTTPS_PROXY")
+    
+    # Set proxy environment variables for transformers
+    if proxies:
+        os.environ["HF_HUB_HTTP_PROXY"] = proxies.get("http", "")
+        os.environ["HF_HUB_HTTPS_PROXY"] = proxies.get("https", "")
+    
     return (
         AutoProcessor.from_pretrained(
             model_base,
