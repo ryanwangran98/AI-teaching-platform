@@ -316,7 +316,7 @@ class DifyService {
         },
         model: {
           provider: "axdlee/sophnet/sophnet",
-          name: "GLM-4.5",
+          name: "DeepSeek-V3.1",
           mode: "chat",
           completion_params: {
             temperature: 0.3,
@@ -747,7 +747,7 @@ class DifyService {
         },
         model: currentConfig.model_config?.model || {
           provider: "axdlee/sophnet/sophnet",
-          name: "Kimi-K2-0905",
+          name: "DeepSeek-V3.1",
           mode: "chat",
           completion_params: {
             temperature: 0.3,
@@ -853,7 +853,7 @@ class DifyService {
         },
         model: currentConfig.model_config?.model || {
           provider: "axdlee/sophnet/sophnet",
-          name: "Kimi-K2-0905",
+          name: "DeepSeek-V3.1",
           mode: "chat",
           completion_params: {
             temperature: 0.3,

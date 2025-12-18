@@ -1124,7 +1124,7 @@ const CourseLearning: React.FC = () => {
               position: 'relative'
             }}>
               <iframe
-                src={`http://localhost:3000/chatbot/${course.agentAccessCode}`}
+                src={`http://localhost/chatbot/${course.agentAccessCode}`}
                 style={{
                   width: '100%',
                   height: '100%',

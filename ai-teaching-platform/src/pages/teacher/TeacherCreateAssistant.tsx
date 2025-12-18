@@ -230,6 +230,61 @@ const TeacherCreateAssistant: React.FC = () => {
     }
   };
 
+  // 重新创建AI助手
+  const handleRecreateAgent = async () => {
+    if (!courseId) return;
+    
+    // 弹出确认对话框
+    const confirmed = window.confirm(
+      '重新创建AI助手将会删除现有的AI助手并创建新的助手。\n\n' +
+      '这将导致：\n' +
+      '• 现有AI助手的对话历史将丢失\n' +
+      '• 需要重新关联学习资料\n\n' +
+      '确定要继续吗？'
+    );
+    
+    if (!confirmed) return;
+    
+    setCreatingAgent(true);
+    try {
+      // 重新创建AI助手应用
+      const response = await courseAPI.createAgentApp(courseId);
+      setAgentAppInfo(response.data);
+      
+      // 重新获取助手关联信息
+      const assistantResponse = await courseAPI.getAssistantAssociations(courseId);
+      setAssistantAssociations(assistantResponse.data);
+      
+      // 重新检查所有资料的关联状态
+      setAssociationStatus({});
+      if (materials.length > 0 && agentAppInfo?.appId) {
+        materials.forEach(material => {
+          if (material.datasetId) {
+            checkMaterialAssociation(material);
+          }
+        });
+      }
+      
+      setSnackbar({
+        open: true,
+        message: 'AI助手重新创建成功！',
+        severity: 'success'
+      });
+      
+      // 关闭对话框
+      setAgentDialogOpen(false);
+    } catch (error: any) {
+      console.error('重新创建AI助手失败:', error);
+      setSnackbar({
+        open: true,
+        message: error.response?.data?.message || '重新创建AI助手失败',
+        severity: 'error'
+      });
+    } finally {
+      setCreatingAgent(false);
+    }
+  };
+
   const handleCopyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
     setSnackbar({
@@ -339,7 +394,7 @@ const TeacherCreateAssistant: React.FC = () => {
             <Box>
               <Button
                 variant={agentAppInfo ? "outlined" : "contained"}
-                onClick={handleOpenAgentDialog}
+                onClick={agentAppInfo ? handleRecreateAgent : handleOpenAgentDialog}
                 startIcon={agentAppInfo ? <Refresh /> : <Add />}
                 size="large"
                 sx={{
@@ -352,8 +407,9 @@ const TeacherCreateAssistant: React.FC = () => {
                     boxShadow: agentAppInfo ? 'none' : '0 6px 16px rgba(0,0,0,0.15)',
                   }
                 }}
+                disabled={creatingAgent}
               >
-                {agentAppInfo ? "重新创建" : "创建AI助手"}
+                {creatingAgent ? '处理中...' : (agentAppInfo ? "重新创建" : "创建AI助手")}
               </Button>
             </Box>
           </Box>
@@ -460,7 +516,7 @@ const TeacherCreateAssistant: React.FC = () => {
               overflow: 'hidden'
             }}>
               <iframe
-                src={`http://localhost:3000/chatbot/${agentAppInfo.accessCode}`}
+                src={`http://localhost/chatbot/${agentAppInfo.accessCode}`}
                 style={{
                   width: '100%',
                   height: '100%',
@@ -587,7 +643,7 @@ const TeacherCreateAssistant: React.FC = () => {
                       fullWidth
                       multiline
                       rows={4}
-                      value={`<iframe src="http://localhost:3000/chatbot/${agentAppInfo.accessCode}" style="width: 100%; height: 600px; border: none;" allow="microphone"></iframe>`}
+                      value={`<iframe src="http://localhost/chatbot/${agentAppInfo.accessCode}" style="width: 100%; height: 600px; border: none;" allow="microphone"></iframe>`}
                       InputProps={{
                         readOnly: true,
                         sx: { fontFamily: 'monospace', fontSize: '0.875rem' }
@@ -596,7 +652,7 @@ const TeacherCreateAssistant: React.FC = () => {
                     />
                     <Button 
                       size="small" 
-                      onClick={() => handleCopyToClipboard(`<iframe src="http://localhost:3000/chatbot/${agentAppInfo.accessCode}" style="width: 100%; height: 600px; border: none;" allow="microphone"></iframe>`)}
+                      onClick={() => handleCopyToClipboard(`<iframe src="http://localhost/chatbot/${agentAppInfo.accessCode}" style="width: 100%; height: 600px; border: none;" allow="microphone"></iframe>`)}
                       sx={{ mt: 2, borderRadius: 2 }}
                     >
                       复制代码

@@ -40,21 +40,36 @@ const CourseAssistant: React.FC = () => {
     try {
       setLoading(true);
       
-      // 获取课程信息
+      // 获取课程信息和Agent应用信息
       if (courseId) {
-        const courseResponse = await fetch(`http://localhost:3001/api/courses/${courseId}`, {
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
-          }
-        });
+        // 并行获取课程信息和Agent应用信息
+        const [courseResponse, agentResponse] = await Promise.all([
+          fetch(`http://localhost:3001/api/courses/${courseId}`, {
+            headers: {
+              'Authorization': `Bearer ${localStorage.getItem('token')}`
+            }
+          }),
+          fetch(`http://localhost:3001/api/courses/${courseId}/agent-app-info`, {
+            headers: {
+              'Authorization': `Bearer ${localStorage.getItem('token')}`
+            }
+          })
+        ]);
         
+        // 设置课程信息
         if (courseResponse.ok) {
           const courseData = await courseResponse.json();
           const course = courseData.data;
           setCurrentCourse(course);
+        }
+        
+        // 处理Agent应用信息
+        if (agentResponse.ok) {
+          const agentData = await agentResponse.json();
           
-          // 如果课程已经关联了助手，创建一个关联对象
-          if (course.agentAppId && course.agentAccessCode) {
+          if (agentData.success && agentData.data) {
+            const { accessCode, appId } = agentData.data;
+            
             // 获取课程下的所有资料
             const materialsResponse = await fetch(`http://localhost:3001/api/materials?chapter.courseId=${courseId}`, {
               headers: {
@@ -70,11 +85,11 @@ const CourseAssistant: React.FC = () => {
               const associations = materials.map((material: any) => ({
                 materialId: material.id,
                 materialTitle: material.title,
-                courseId: course.id,
-                courseTitle: course.title,
+                courseId: courseId,
+                courseTitle: currentCourse?.title || '课程',
                 datasetId: material.datasetId || '',
-                appId: course.agentAppId,
-                accessCode: course.agentAccessCode,
+                appId: appId,
+                accessCode: accessCode,
                 createdAt: new Date().toISOString()
               }));
               
@@ -175,7 +190,7 @@ const CourseAssistant: React.FC = () => {
                 position: 'relative'
               }}>
                 <iframe
-                  src={`http://localhost:3000/chatbot/${assistantAssociations[0].accessCode}`}
+                  src={`http://localhost/chatbot/${assistantAssociations[0].accessCode}`}
                   style={{
                     width: '100%',
                     height: '100%',

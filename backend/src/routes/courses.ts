@@ -121,7 +121,8 @@ router.get('/:id', async (req, res) => {
       data: {
         ...course,
         agentAppId: course.agentAppId,
-        agentAccessToken: course.agentAccessToken
+        agentAccessToken: course.agentAccessToken,
+        agentAccessCode: course.agentAccessCode
       }
     });
   } catch (error) {

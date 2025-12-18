@@ -414,24 +414,80 @@ const AssignmentDetail: React.FC = () => {
   // 获取题目类型
   const questionType = question.type?.toLowerCase() || '';
   
-  // 获取题目选项
+  // 获取题目选项 - 修复版解析逻辑
   let questionOptions = [];
-  if (typeof question.options === 'string') {
+  console.log('原始选项数据:', question.options);
+  console.log('选项数据类型:', typeof question.options);
+  
+  if (question.options) {
     try {
-      // 尝试解析JSON字符串
-      questionOptions = JSON.parse(question.options);
+      if (typeof question.options === 'string') {
+        // 首先尝试直接JSON解析
+        const parsed = JSON.parse(question.options);
+        console.log('JSON解析后的选项数据:', parsed);
+        
+        if (Array.isArray(parsed) && parsed.every(item => typeof item === 'string')) {
+          // 如果解析结果是字符串数组，直接使用
+          questionOptions = parsed.filter(option => option && option.trim() !== '');
+        } else if (Array.isArray(parsed)) {
+          // 如果解析结果是其他类型数组，尝试转换为字符串
+          questionOptions = parsed.filter(option => option && String(option).trim() !== '').map(String);
+        } else if (parsed && typeof parsed === 'object') {
+          // 如果解析结果是对象，尝试提取字符串值
+          if (Array.isArray(parsed.options)) {
+            questionOptions = parsed.options.filter(option => option && String(option).trim() !== '').map(String);
+          } else {
+            questionOptions = Object.values(parsed).filter(option => option && String(option).trim() !== '').map(String);
+          }
+        } else {
+          // 单个值包装成数组
+          questionOptions = [String(parsed)];
+        }
+      } else if (Array.isArray(question.options)) {
+        // 已经是数组格式
+        questionOptions = question.options.filter(option => option && String(option).trim() !== '').map(String);
+      } else if (typeof question.options === 'object') {
+        // 如果是对象，提取字符串值
+        questionOptions = Object.values(question.options).filter(option => option && String(option).trim() !== '').map(String);
+      } else {
+        // 其他类型转换为字符串数组
+        questionOptions = [String(question.options)];
+      }
     } catch (e) {
-      console.error('解析选项JSON失败:', e);
-      questionOptions = [];
+      console.error('解析选项数据失败:', e);
+      console.log('原始选项数据:', question.options);
+      
+      // 解析失败时，提供智能回退方案
+      if (typeof question.options === 'string' && question.options.trim()) {
+        // 尝试按常见分隔符分割字符串
+        const optionStrings = question.options.split(/[,;；，]/).map(s => s.trim()).filter(s => s);
+        if (optionStrings.length > 1) {
+          questionOptions = optionStrings;
+        } else {
+          // 单个选项
+          questionOptions = [question.options.trim()];
+        }
+      } else {
+        // 完全无法解析时为空
+        questionOptions = [];
+      }
     }
-  } else if (Array.isArray(question.options)) {
-    questionOptions = question.options;
+  } else {
+    console.warn('题目选项为空:', question.id);
   }
   
-  // 输出题目类型用于调试
+  // 为选择题提供默认选项（如果解析后仍为空）
+  if ((questionType === 'single_choice' || questionType === 'multiple_choice') && questionOptions.length === 0) {
+    console.log('为题目生成默认选项:', question.id);
+    questionOptions = ['选项A', '选项B', '选项C', '选项D'];
+  }
+  
+  console.log('最终处理的题目选项:', questionOptions);
+  
+  // 输出调试信息
+  console.log('最终题目选项:', questionOptions);
   console.log('题目类型:', questionType);
   console.log('题目内容:', questionContent);
-  console.log('题目选项:', questionOptions);
 
   return (
     <Card 
@@ -541,6 +597,11 @@ const AssignmentDetail: React.FC = () => {
                 <FileCopy sx={{ fontSize: 16 }} />
                 选项
               </Typography>
+              {questionOptions.length === 0 ? (
+                <Alert severity="warning" sx={{ mb: 2 }}>
+                  该题目暂无选项数据，请联系教师
+                </Alert>
+              ) : null}
               <FormControl component="fieldset" fullWidth>
                 <RadioGroup
                   value={answerValue}
@@ -548,7 +609,11 @@ const AssignmentDetail: React.FC = () => {
                   disabled={isDisabled}
                   sx={{ gap: 1 }}
                 >
-                  {questionOptions.map((option: string, optIndex: number) => (
+                  {questionOptions.length === 0 ? (
+                    <Typography variant="body2" color="text.secondary">
+                      选项数据缺失
+                    </Typography>
+                  ) : questionOptions.map((option: string, optIndex: number) => (
                     <Box 
                       key={optIndex}
                       sx={{
@@ -600,9 +665,18 @@ const AssignmentDetail: React.FC = () => {
                 <FileCopy sx={{ fontSize: 16 }} />
                 选项（可多选）
               </Typography>
+              {questionOptions.length === 0 ? (
+                <Alert severity="warning" sx={{ mb: 2 }}>
+                  该题目暂无选项数据，请联系教师
+                </Alert>
+              ) : null}
               <FormControl component="fieldset" fullWidth>
                 <FormGroup sx={{ gap: 1 }}>
-                  {questionOptions.map((option: string, optIndex: number) => (
+                  {questionOptions.length === 0 ? (
+                    <Typography variant="body2" color="text.secondary">
+                      选项数据缺失
+                    </Typography>
+                  ) : questionOptions.map((option: string, optIndex: number) => (
                     <Box 
                       key={optIndex}
                       sx={{

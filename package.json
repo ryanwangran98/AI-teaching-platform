@@ -19,8 +19,11 @@
   },
   "homepage": "https://github.com/ryanwangran98/AI-teaching-platform#readme",
   "dependencies": {
+    "@playwright/test": "^1.57.0",
     "axios": "^1.12.2",
     "express": "^5.1.0",
+    "node-fetch": "^2.7.0",
+    "playwright": "^1.57.0",
     "selfsigned": "^3.0.1"
   }
 }
