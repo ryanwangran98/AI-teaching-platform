@@ -15,7 +15,7 @@ import {
   ThemeProvider,
   createTheme,
 } from '@mui/material';
-import { School, LockOutlined } from '@mui/icons-material';
+import { LockOutlined } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
 
 // 创建自定义主题
@@ -27,9 +27,9 @@ const theme = createTheme({
       dark: '#1565c0',
     },
     secondary: {
-      main: '#4caf50',
-      light: '#81c784',
-      dark: '#388e3c',
+      main: '#dc004e',
+      light: '#ff4081',
+      dark: '#9a0036',
     },
     background: {
       default: '#f5f5f5',
@@ -123,7 +123,7 @@ const Login: React.FC = () => {
       <Box
         sx={{
           minHeight: '100vh',
-          background: 'linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)',
+          backgroundColor: theme.palette.background.default,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -147,7 +147,7 @@ const Login: React.FC = () => {
                     left: 0,
                     right: 0,
                     height: '5px',
-                    background: 'linear-gradient(90deg, #1976d2, #4caf50)',
+                    background: 'linear-gradient(90deg, #1976d2, #dc004e)',
                   },
                 }}
               >
@@ -162,13 +162,24 @@ const Login: React.FC = () => {
                   <Avatar
                     sx={{
                       m: 1,
-                      bgcolor: 'primary.main',
-                      width: 64,
-                      height: 64,
+                      bgcolor: 'transparent',
+                      width: 80,
+                      height: 80,
                       boxShadow: '0 4px 10px rgba(0,0,0,0.2)',
+                      border: '2px solid #f0f0f0',
                     }}
                   >
-                    <School fontSize="large" />
+                    <Box
+                      component="img"
+                      src="/amite.jpg"
+                      alt="Logo"
+                      sx={{
+                        width: '100%',
+                        height: '100%',
+                        objectFit: 'cover',
+                        borderRadius: '50%',
+                      }}
+                    />
                   </Avatar>
                   <Typography
                     component="h1"
@@ -177,7 +188,7 @@ const Login: React.FC = () => {
                     gutterBottom
                     sx={{
                       fontWeight: 'bold',
-                      background: 'linear-gradient(45deg, #1976d2, #4caf50)',
+                      background: 'linear-gradient(45deg, #1976d2, #dc004e)',
                       WebkitBackgroundClip: 'text',
                       WebkitTextFillColor: 'transparent',
                       mb: 1,
@@ -260,13 +271,13 @@ const Login: React.FC = () => {
                       borderRadius: 2,
                       fontSize: '1rem',
                       fontWeight: 'bold',
-                      background: 'linear-gradient(45deg, #1976d2, #4caf50)',
+                      background: 'linear-gradient(45deg, #1976d2, #dc004e)',
                       boxShadow: '0 4px 10px rgba(0,0,0,0.2)',
                       transition: 'transform 0.2s, box-shadow 0.2s',
                       '&:hover': {
                         transform: 'translateY(-2px)',
                         boxShadow: '0 6px 12px rgba(0,0,0,0.3)',
-                        background: 'linear-gradient(45deg, #1565c0, #388e3c)',
+                        background: 'linear-gradient(45deg, #1565c0, #9a0036)',
                       },
                     }}
                     disabled={loading}

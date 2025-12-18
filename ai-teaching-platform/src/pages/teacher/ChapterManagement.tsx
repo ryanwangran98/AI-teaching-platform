@@ -94,7 +94,6 @@ interface Chapter {
 interface ChapterFormData {
   title: string;
   description: string;
-  status: 'draft' | 'published' | 'archived';
 }
 
 const ChapterManagement: React.FC = () => {
@@ -114,7 +113,6 @@ const ChapterManagement: React.FC = () => {
   const [formData, setFormData] = useState<ChapterFormData>({
     title: '',
     description: '',
-    status: 'draft',
   });
   const [submitting, setSubmitting] = useState(false);
   const [currentCourse, setCurrentCourse] = useState<{id: string, name: string} | null>(null);
@@ -212,7 +210,6 @@ const ChapterManagement: React.FC = () => {
     setFormData({
       title: '',
       description: '',
-      status: 'draft',
     });
     setOpen(true);
   };
@@ -222,7 +219,6 @@ const ChapterManagement: React.FC = () => {
     setFormData({
       title: chapter.title,
       description: chapter.description || chapter.content || '',
-      status: chapter.status || 'draft',
     });
     setOpen(true);
   };
@@ -233,7 +229,6 @@ const ChapterManagement: React.FC = () => {
     setFormData({
       title: '',
       description: '',
-      status: 'draft',
     });
   };
 
@@ -257,16 +252,12 @@ const ChapterManagement: React.FC = () => {
     try {
       setSubmitting(true);
       
-      const chapterData = {
-        title: formData.title.trim(),
-        content: formData.description.trim(), // 修改这里，使用content而不是description
-        courseId: currentCourseId, // 使用当前课程ID
-        status: formData.status,
-      };
-
       if (editingChapter) {
-        // 编辑现有章节
-        const response = await chapterAPI.updateChapter(editingChapter.id, chapterData);
+        // 编辑现有章节 - 不修改状态
+        const response = await chapterAPI.updateChapter(editingChapter.id, {
+          title: formData.title.trim(),
+          content: formData.description.trim(), // 修改这里，使用content而不是description
+        });
         const updatedChapter = response.data || response;
         
         // 映射更新后的数据
@@ -281,10 +272,11 @@ const ChapterManagement: React.FC = () => {
           c.id === editingChapter.id ? { ...c, ...mappedUpdatedChapter } : c
         ));
       } else {
-        // 创建新章节
+        // 创建新章节 - 默认状态为'draft'
         const response = await chapterAPI.createChapter(currentCourseId, {
           title: formData.title.trim(),
           content: formData.description.trim(), // 修改这里，使用content而不是description
+          status: 'draft' // 明确设置状态为草稿
         });
         const newChapter = response.data || response;
         
@@ -1048,33 +1040,13 @@ const ChapterManagement: React.FC = () => {
                 }
               }}
             />
-            <FormControl fullWidth required variant="outlined" sx={{ 
-              '& .MuiOutlinedInput-root': {
-                borderRadius: 2,
-                '&:hover fieldset': {
-                  borderColor: 'primary.main',
-                },
-              }
-            }}>
-              <InputLabel>状态</InputLabel>
-              <Select
-                name="status"
-                value={formData.status}
-                onChange={handleSelectChange}
-                label="状态"
-              >
-                <MenuItem value="draft">草稿</MenuItem>
-                <MenuItem value="published">已发布</MenuItem>
-                <MenuItem value="archived">已归档</MenuItem>
-              </Select>
-              <Typography variant="body2" color="textSecondary" sx={{ mt: 1 }}>
-                草稿状态仅自己可见，已发布状态对学生可见
-              </Typography>
-            </FormControl>
             {currentCourse && (
               <Box sx={{ p: 2, bgcolor: 'grey.100', borderRadius: 1 }}>
                 <Typography variant="body2" color="text.secondary">
                   所属课程：<strong>{currentCourse.name}</strong>
+                </Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                  章节创建后默认为草稿状态，您可以在章节列表中点击"发布"按钮将其发布
                 </Typography>
               </Box>
             )}

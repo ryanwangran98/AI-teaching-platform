@@ -257,9 +257,8 @@ const TeacherDashboard: React.FC = () => {
 
   return (
     <Box sx={{ 
-      background: 'linear-gradient(135deg, #f5f7fa 0%, #e4e8f0 100%)', 
       minHeight: '100vh',
-      p: 3
+      p: 1
     }}>
       <Box sx={{ 
         display: 'flex', 
@@ -268,9 +267,9 @@ const TeacherDashboard: React.FC = () => {
         mb: 4,
         p: 3,
         borderRadius: 3,
+        boxShadow: '0 8px 24px rgba(0, 0, 0, 0.08)',
         background: 'linear-gradient(90deg, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0.7) 100%)',
         backdropFilter: 'blur(10px)',
-        boxShadow: '0 8px 32px rgba(0, 0, 0, 0.05)',
         border: '1px solid rgba(255, 255, 255, 0.18)'
       }}>
         <Box sx={{ display: 'flex', alignItems: 'center' }}>

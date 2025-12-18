@@ -17,14 +17,4 @@ export const ROUTES = {
   ADMIN_DASHBOARD: '/admin',
   ADMIN_USERS: '/admin/users',
   ADMIN_COURSES: '/admin/courses',
-  
-  // AI功能
-  AI_COURSEWARE_ASSISTANT: '/ai/courseware-assistant',
-  AI_CORRECTION_ASSISTANT: '/ai/correction-assistant',
-  AI_QUESTION_ASSISTANT: '/ai/question-assistant',
-  AI_TEACHING_ASSISTANT: '/ai/teaching-assistant',
-  AI_WARNING_SYSTEM: '/ai/warning-system',
-  AI_CONTENT_GENERATION: '/ai/content-generation',
-  AI_VIDEO_GENERATION: '/ai/video-generation',
-  AI_VIDEO_MANAGEMENT: '/ai/video-management',
 } as const;

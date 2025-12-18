@@ -140,14 +140,15 @@ router.post('/', authenticateToken, authorizeRoles('TEACHER', 'ADMIN'), async (r
       return res.status(403).json({ error: 'Not authorized to add chapters to this course' });
     }
 
-    const { duration, isCompleted, videoUrl, ...validCreateData } = req.body;
+    const { duration, isCompleted, videoUrl, status, ...validCreateData } = req.body;
     
     const chapter = await prisma.chapter.create({
       data: {
         title: title,
         content: description,
         courseId: courseId,
-        order: order
+        order: order,
+        status: 'draft' // 默认设置为草稿状态
       },
       include: {
         course: {
@@ -193,14 +194,17 @@ router.put('/:id', authenticateToken, authorizeRoles('TEACHER', 'ADMIN'), async 
 
     const { duration, isCompleted, videoUrl, ...restData } = updateData;
     
-    // 允许更新所有相关字段
-    const validUpdateData = {
+    // 允许更新所有相关字段，但只有明确提供status时才更新status
+    const validUpdateData: any = {
       title: restData.title,
       content: restData.description || restData.content,
-
-      courseId: restData.courseId,
-      status: restData.status
+      courseId: restData.courseId
     };
+    
+    // 只有明确提供status时才更新status
+    if (restData.status !== undefined) {
+      validUpdateData.status = restData.status;
+    }
     
     const updatedChapter = await prisma.chapter.update({
       where: { id },
