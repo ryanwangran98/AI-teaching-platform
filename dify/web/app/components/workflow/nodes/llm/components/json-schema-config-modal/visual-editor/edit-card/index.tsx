@@ -39,19 +39,21 @@ type EditCardProps = {
 const TYPE_OPTIONS = [
   { value: Type.string, text: 'string' },
   { value: Type.number, text: 'number' },
-  { value: Type.boolean, text: 'boolean' },
+  // { value: Type.boolean, text: 'boolean' },
   { value: Type.object, text: 'object' },
   { value: ArrayType.string, text: 'array[string]' },
   { value: ArrayType.number, text: 'array[number]' },
+  // { value: ArrayType.boolean, text: 'array[boolean]' },
   { value: ArrayType.object, text: 'array[object]' },
 ]
 
 const MAXIMUM_DEPTH_TYPE_OPTIONS = [
   { value: Type.string, text: 'string' },
   { value: Type.number, text: 'number' },
-  { value: Type.boolean, text: 'boolean' },
+  // { value: Type.boolean, text: 'boolean' },
   { value: ArrayType.string, text: 'array[string]' },
   { value: ArrayType.number, text: 'array[number]' },
+  // { value: ArrayType.boolean, text: 'array[boolean]' },
 ]
 
 const EditCard: FC<EditCardProps> = ({
@@ -87,10 +89,8 @@ const EditCard: FC<EditCardProps> = ({
   })
 
   useSubscribe('fieldChangeSuccess', () => {
-    if (isAddingNewField)
-      setIsAddingNewField(false)
-    if (advancedEditing)
-      setAdvancedEditing(false)
+    isAddingNewField && setIsAddingNewField(false)
+    advancedEditing && setAdvancedEditing(false)
   })
 
   const emitPropertyNameChange = useCallback(() => {
@@ -122,8 +122,7 @@ const EditCard: FC<EditCardProps> = ({
   }, [emit, path, parentPath, fields, currentFields])
 
   const handlePropertyNameChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    // fix: when user add name contains space, the variable reference will not work
-    setCurrentFields(prev => ({ ...prev, name: e.target.value?.trim() }))
+    setCurrentFields(prev => ({ ...prev, name: e.target.value }))
   }, [])
 
   const handlePropertyNameBlur = useCallback(() => {
@@ -153,16 +152,14 @@ const EditCard: FC<EditCardProps> = ({
   }, [isAdvancedEditing, emitPropertyOptionsChange, currentFields])
 
   const handleAdvancedOptionsChange = useCallback((options: AdvancedOptionsType) => {
-    let enumValue: SchemaEnumType | undefined
-    if (options.enum === '') {
+    let enumValue: any = options.enum
+    if (enumValue === '') {
       enumValue = undefined
     }
     else {
-      const stringArray = options.enum.replace(/\s/g, '').split(',')
+      enumValue = options.enum.replace(/\s/g, '').split(',')
       if (currentFields.type === Type.number)
-        enumValue = stringArray.map(value => Number(value)).filter(num => !Number.isNaN(num))
-      else
-        enumValue = stringArray
+        enumValue = (enumValue as SchemaEnumType).map(value => Number(value)).filter(num => !Number.isNaN(num))
     }
     setCurrentFields(prev => ({ ...prev, enum: enumValue }))
     if (isAdvancedEditing) return

@@ -1,6 +1,6 @@
 from collections.abc import Generator
 from datetime import UTC, datetime
-from typing import Any
+from typing import Any, Optional
 
 from pytz import timezone as pytz_timezone
 
@@ -13,9 +13,9 @@ class CurrentTimeTool(BuiltinTool):
         self,
         user_id: str,
         tool_parameters: dict[str, Any],
-        conversation_id: str | None = None,
-        app_id: str | None = None,
-        message_id: str | None = None,
+        conversation_id: Optional[str] = None,
+        app_id: Optional[str] = None,
+        message_id: Optional[str] = None,
     ) -> Generator[ToolInvokeMessage, None, None]:
         """
         invoke tools

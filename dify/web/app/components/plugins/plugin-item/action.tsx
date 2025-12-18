@@ -14,7 +14,7 @@ import { useGitHubReleases } from '../install-plugin/hooks'
 import Toast from '@/app/components/base/toast'
 import { useModalContext } from '@/context/modal-context'
 import { useInvalidateInstalledPluginList } from '@/service/use-plugins'
-import type { PluginCategoryEnum } from '@/app/components/plugins/types'
+import type { PluginType } from '@/app/components/plugins/types'
 
 const i18nPrefix = 'plugin.action'
 
@@ -23,7 +23,7 @@ type Props = {
   installationId: string
   pluginUniqueIdentifier: string
   pluginName: string
-  category: PluginCategoryEnum
+  category: PluginType
   usedInApps: number
   isShowFetchNewVersion: boolean
   isShowInfo: boolean
@@ -92,19 +92,13 @@ const Action: FC<Props> = ({
 
   const handleDelete = useCallback(async () => {
     showDeleting()
-    try{
-      const res = await uninstallPlugin(installationId)
-      if (res.success) {
-        hideDeleteConfirm()
-        onDelete()
-      }
+    const res = await uninstallPlugin(installationId)
+    hideDeleting()
+    if (res.success) {
+      hideDeleteConfirm()
+      onDelete()
     }
-    catch (error) {
-      console.error('uninstallPlugin error', error)
-    }
-    finally {
-      hideDeleting()
-    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [installationId, onDelete])
   return (
     <div className='flex space-x-1'>

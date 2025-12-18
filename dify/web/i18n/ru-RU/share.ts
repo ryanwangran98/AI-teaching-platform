@@ -74,9 +74,8 @@ const translation = {
       moreThanMaxLengthLine: 'Строка {{rowIndex}}: значение {{varName}} не может превышать {{maxLength}} символов',
       atLeastOne: 'Пожалуйста, введите хотя бы одну строку в загруженный файл.',
     },
-    execution: 'Запуск',
-    executions: '{{num}} запусков',
-    stopRun: 'Остановить выполнение',
+    execution: 'ИСПОЛНЕНИЕ',
+    executions: '{{num}} ВЫПОЛНЕНИЯ',
   },
   login: {
     backToHome: 'Назад на главную',

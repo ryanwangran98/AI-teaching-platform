@@ -89,19 +89,10 @@ const ViewWorkflowHistory = () => {
 
   const calculateChangeList: ChangeHistoryList = useMemo(() => {
     const filterList = (list: any, startIndex = 0, reverse = false) => list.map((state: Partial<WorkflowHistoryState>, index: number) => {
-      const nodes = (state.nodes || store.getState().nodes) || []
-      const nodeId = state?.workflowHistoryEventMeta?.nodeId
-      const targetTitle = nodes.find(n => n.id === nodeId)?.data?.title ?? ''
       return {
         label: state.workflowHistoryEvent && getHistoryLabel(state.workflowHistoryEvent),
         index: reverse ? list.length - 1 - index - startIndex : index - startIndex,
-        state: {
-          ...state,
-          workflowHistoryEventMeta: state.workflowHistoryEventMeta ? {
-            ...state.workflowHistoryEventMeta,
-            nodeTitle: state.workflowHistoryEventMeta.nodeTitle || targetTitle,
-          } : undefined,
-        },
+        state,
       }
     }).filter(Boolean)
 
@@ -118,12 +109,6 @@ const ViewWorkflowHistory = () => {
       statesCount: pastStates.length + futureStates.length,
     }
   }, [futureStates, getHistoryLabel, pastStates, store])
-
-  const composeHistoryItemLabel = useCallback((nodeTitle: string | undefined, baseLabel: string) => {
-    if (!nodeTitle)
-      return baseLabel
-    return `${nodeTitle} ${baseLabel}`
-  }, [])
 
   return (
     (
@@ -212,10 +197,7 @@ const ViewWorkflowHistory = () => {
                                 'flex items-center text-[13px] font-medium leading-[18px] text-text-secondary',
                               )}
                             >
-                              {composeHistoryItemLabel(
-                                item?.state?.workflowHistoryEventMeta?.nodeTitle,
-                                item?.label || t('workflow.changeHistory.sessionStart'),
-                              )} ({calculateStepLabel(item?.index)}{item?.index === currentHistoryStateIndex && t('workflow.changeHistory.currentState')})
+                              {item?.label || t('workflow.changeHistory.sessionStart')} ({calculateStepLabel(item?.index)}{item?.index === currentHistoryStateIndex && t('workflow.changeHistory.currentState')})
                             </div>
                           </div>
                         </div>
@@ -240,10 +222,7 @@ const ViewWorkflowHistory = () => {
                                 'flex items-center text-[13px] font-medium leading-[18px] text-text-secondary',
                               )}
                             >
-                              {composeHistoryItemLabel(
-                                item?.state?.workflowHistoryEventMeta?.nodeTitle,
-                                item?.label || t('workflow.changeHistory.sessionStart'),
-                              )} ({calculateStepLabel(item?.index)})
+                              {item?.label || t('workflow.changeHistory.sessionStart')} ({calculateStepLabel(item?.index)})
                             </div>
                           </div>
                         </div>

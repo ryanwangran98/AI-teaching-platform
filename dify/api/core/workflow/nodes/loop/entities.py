@@ -1,6 +1,7 @@
-from typing import Annotated, Any, Literal
+from collections.abc import Mapping
+from typing import Annotated, Any, Literal, Optional
 
-from pydantic import AfterValidator, BaseModel, Field, field_validator
+from pydantic import AfterValidator, BaseModel, Field
 
 from core.variables.types import SegmentType
 from core.workflow.nodes.base import BaseLoopNodeData, BaseLoopState, BaseNodeData
@@ -11,11 +12,9 @@ _VALID_VAR_TYPE = frozenset(
         SegmentType.STRING,
         SegmentType.NUMBER,
         SegmentType.OBJECT,
-        SegmentType.BOOLEAN,
         SegmentType.ARRAY_STRING,
         SegmentType.ARRAY_NUMBER,
         SegmentType.ARRAY_OBJECT,
-        SegmentType.ARRAY_BOOLEAN,
     ]
 )
 
@@ -34,22 +33,19 @@ class LoopVariableData(BaseModel):
     label: str
     var_type: Annotated[SegmentType, AfterValidator(_is_valid_var_type)]
     value_type: Literal["variable", "constant"]
-    value: Any | list[str] | None = None
+    value: Optional[Any | list[str]] = None
 
 
 class LoopNodeData(BaseLoopNodeData):
+    """
+    Loop Node Data.
+    """
+
     loop_count: int  # Maximum number of loops
     break_conditions: list[Condition]  # Conditions to break the loop
     logical_operator: Literal["and", "or"]
-    loop_variables: list[LoopVariableData] | None = Field(default_factory=list[LoopVariableData])
-    outputs: dict[str, Any] = Field(default_factory=dict)
-
-    @field_validator("outputs", mode="before")
-    @classmethod
-    def validate_outputs(cls, v):
-        if v is None:
-            return {}
-        return v
+    loop_variables: Optional[list[LoopVariableData]] = Field(default_factory=list[LoopVariableData])
+    outputs: Optional[Mapping[str, Any]] = None
 
 
 class LoopStartNodeData(BaseNodeData):
@@ -74,7 +70,7 @@ class LoopState(BaseLoopState):
     """
 
     outputs: list[Any] = Field(default_factory=list)
-    current_output: Any = None
+    current_output: Optional[Any] = None
 
     class MetaData(BaseLoopState.MetaData):
         """
@@ -83,7 +79,7 @@ class LoopState(BaseLoopState):
 
         loop_length: int
 
-    def get_last_output(self) -> Any:
+    def get_last_output(self) -> Optional[Any]:
         """
         Get last output.
         """
@@ -91,7 +87,7 @@ class LoopState(BaseLoopState):
             return self.outputs[-1]
         return None
 
-    def get_current_output(self) -> Any:
+    def get_current_output(self) -> Optional[Any]:
         """
         Get current output.
         """

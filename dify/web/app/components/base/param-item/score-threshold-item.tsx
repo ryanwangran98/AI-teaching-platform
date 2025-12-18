@@ -20,6 +20,7 @@ const VALUE_LIMIT = {
   max: 1,
 }
 
+const key = 'score_threshold'
 const ScoreThresholdItem: FC<Props> = ({
   className,
   value,
@@ -38,9 +39,9 @@ const ScoreThresholdItem: FC<Props> = ({
   return (
     <ParamItem
       className={className}
-      id='score_threshold'
-      name={t('appDebug.datasetConfig.score_threshold')}
-      tip={t('appDebug.datasetConfig.score_thresholdTip') as string}
+      id={key}
+      name={t(`appDebug.datasetConfig.${key}`)}
+      tip={t(`appDebug.datasetConfig.${key}Tip`) as string}
       {...VALUE_LIMIT}
       value={value}
       enable={enable}

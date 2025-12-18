@@ -1,15 +1,16 @@
 import type { NodeDefault } from '../../types'
 import type { LoopStartNodeType } from './types'
-import { genNodeMetaData } from '@/app/components/workflow/utils'
-import { BlockEnum } from '@/app/components/workflow/types'
+import { ALL_CHAT_AVAILABLE_BLOCKS, ALL_COMPLETION_AVAILABLE_BLOCKS } from '@/app/components/workflow/blocks'
 
-const metaData = genNodeMetaData({
-  sort: -1,
-  type: BlockEnum.LoopStart,
-})
 const nodeDefault: NodeDefault<LoopStartNodeType> = {
-  metaData,
   defaultValue: {},
+  getAvailablePrevNodes() {
+    return []
+  },
+  getAvailableNextNodes(isChatMode: boolean) {
+    const nodes = isChatMode ? ALL_CHAT_AVAILABLE_BLOCKS : ALL_COMPLETION_AVAILABLE_BLOCKS
+    return nodes
+  },
   checkValid() {
     return {
       isValid: true,

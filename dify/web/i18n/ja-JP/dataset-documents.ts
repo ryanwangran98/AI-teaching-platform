@@ -32,6 +32,7 @@ const translation = {
       sync: '同期',
       pause: '一時停止',
       resume: '再開',
+      download: 'ファイルをダウンロード',
     },
     index: {
       enable: '有効にする',
@@ -81,10 +82,6 @@ const translation = {
       error: 'インポートエラー',
       ok: 'OK',
     },
-    sort: {
-      uploadTime: 'アップロード時間',
-      hitCount: '取得回数',
-    },
   },
   metadata: {
     title: 'メタデータ',
@@ -103,9 +100,6 @@ const translation = {
       upload_file: 'ファイルをアップロード',
       notion: 'Notion から同期',
       github: 'GitHub から同期',
-      website_crawl: 'ウェブサイトクロール',
-      online_document: 'オンライン文書',
-      local_file: 'ローカルファイル',
     },
     type: {
       book: '書籍',
@@ -343,7 +337,6 @@ const translation = {
     previewTip: '埋め込みが完了した後、段落のプレビューが利用可能になります',
     parentMaxTokens: '親',
     childMaxTokens: '子',
-    waiting: '埋め込み待機中...',
   },
   segment: {
     paragraphs: '段落',
@@ -401,7 +394,6 @@ const translation = {
     collapseChunks: 'チャンクを折りたたむ',
     keywordDuplicate: 'そのキーワードは既に存在しています',
     keywordEmpty: 'キーワードは空であってはいけません',
-    allFilesUploaded: '保存する前にすべてのファイルをアップロードする必要があります',
   },
 }
 

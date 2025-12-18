@@ -1,10 +1,9 @@
 'use client'
-import { useEffect, useImperativeHandle, useMemo, useRef } from 'react'
-import type { RefObject } from 'react'
+import React, { forwardRef, useEffect, useImperativeHandle, useMemo, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import useStickyScroll, { ScrollPosition } from '../use-sticky-scroll'
 import Item from './item'
-import type { Plugin, PluginCategoryEnum } from '@/app/components/plugins/types'
+import type { Plugin } from '@/app/components/plugins/types.ts'
 import cn from '@/utils/classnames'
 import Link from 'next/link'
 import { RiArrowRightUpLine, RiSearchLine } from '@remixicon/react'
@@ -12,39 +11,33 @@ import { noop } from 'lodash-es'
 import { getMarketplaceUrl } from '@/utils/var'
 
 export type ListProps = {
-  wrapElemRef: React.RefObject<HTMLElement | null>
+  wrapElemRef: React.RefObject<HTMLElement>
   list: Plugin[]
   searchText: string
   tags: string[]
-  category?: PluginCategoryEnum
   toolContentClassName?: string
   disableMaxWidth?: boolean
-  hideFindMoreFooter?: boolean
-  ref?: React.Ref<ListRef>
 }
 
 export type ListRef = { handleScroll: () => void }
 
-const List = ({
+const List = forwardRef<ListRef, ListProps>(({
   wrapElemRef,
   searchText,
   tags,
   list,
-  category,
   toolContentClassName,
   disableMaxWidth = false,
-  hideFindMoreFooter = false,
-  ref,
-}: ListProps) => {
+}, ref) => {
   const { t } = useTranslation()
-  const noFilter = !searchText && tags.length === 0
+  const hasFilter = !searchText
   const hasRes = list.length > 0
   const urlWithSearchText = getMarketplaceUrl('', { q: searchText, tags: tags.join(',') })
   const nextToStickyELemRef = useRef<HTMLDivElement>(null)
 
   const { handleScroll, scrollPosition } = useStickyScroll({
     wrapElemRef,
-    nextToStickyELemRef: nextToStickyELemRef as RefObject<HTMLElement>,
+    nextToStickyELemRef,
   })
   const stickyClassName = useMemo(() => {
     switch (scrollPosition) {
@@ -63,6 +56,7 @@ const List = ({
 
   useEffect(() => {
     handleScroll()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [list])
 
   const handleHeadClick = () => {
@@ -73,14 +67,11 @@ const List = ({
     window.open(urlWithSearchText, '_blank')
   }
 
-  if (noFilter) {
-    if (hideFindMoreFooter)
-      return null
-
+  if (hasFilter) {
     return (
       <Link
         className='system-sm-medium sticky bottom-0 z-10 flex h-8 cursor-pointer items-center rounded-b-lg border-[0.5px] border-t border-components-panel-border bg-components-panel-bg-blur px-4 py-1 text-text-accent-light-mode-only shadow-lg'
-        href={getMarketplaceUrl('', { category })}
+        href={getMarketplaceUrl('')}
         target='_blank'
       >
         <span>{t('plugin.findMoreInMarketplace')}</span>
@@ -118,7 +109,7 @@ const List = ({
             onAction={noop}
           />
         ))}
-        {hasRes && (
+        {list.length > 0 && (
           <div className='mb-3 mt-2 flex items-center justify-center space-x-2'>
             <div className="h-[2px] w-[90px] bg-gradient-to-l from-[rgba(16,24,40,0.08)] to-[rgba(255,255,255,0.01)]"></div>
             <Link
@@ -135,7 +126,7 @@ const List = ({
       </div>
     </>
   )
-}
+})
 
 List.displayName = 'List'
 

@@ -11,6 +11,7 @@ import {
   RiErrorWarningFill,
   RiLoader2Line,
 } from '@remixicon/react'
+import { useTranslation } from 'react-i18next'
 import {
   NodeTargetHandle,
 } from '@/app/components/workflow/nodes/_base/components/node-handle'
@@ -33,6 +34,7 @@ const SimpleNode: FC<SimpleNodeProps> = ({
   id,
   data,
 }) => {
+  const { t } = useTranslation()
   const { nodesReadOnly } = useNodesReadOnly()
 
   const showSelectedBorder = data.selected || data._isBundled || data._isEntering
@@ -55,6 +57,7 @@ const SimpleNode: FC<SimpleNodeProps> = ({
       className={cn(
         'flex rounded-2xl border-[2px]',
         showSelectedBorder ? 'border-components-option-card-option-selected-border' : 'border-transparent',
+        !showSelectedBorder && data._inParallelHovering && 'border-workflow-block-border-highlight',
         data._waitingRun && 'opacity-70',
       )}
       style={{
@@ -75,6 +78,13 @@ const SimpleNode: FC<SimpleNodeProps> = ({
           data._isBundled && '!shadow-lg',
         )}
       >
+        {
+          data._inParallelHovering && (
+            <div className='top system-2xs-medium-uppercase absolute -top-2.5 left-2 z-10 text-text-tertiary'>
+              {t('workflow.common.parallelRun')}
+            </div>
+          )
+        }
         {
           !data._isCandidate && (
             <NodeTargetHandle

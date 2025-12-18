@@ -2,16 +2,14 @@ import logging
 import time
 
 import click
-from celery import shared_task
+from celery import shared_task  # type: ignore
 
 from extensions.ext_mail import mail
 from libs.email_i18n import EmailType, get_email_i18n_service
 
-logger = logging.getLogger(__name__)
-
 
 @shared_task(queue="mail")
-def send_email_code_login_mail_task(language: str, to: str, code: str):
+def send_email_code_login_mail_task(language: str, to: str, code: str) -> None:
     """
     Send email code login email with internationalization support.
 
@@ -23,7 +21,7 @@ def send_email_code_login_mail_task(language: str, to: str, code: str):
     if not mail.is_inited():
         return
 
-    logger.info(click.style(f"Start email code login mail to {to}", fg="green"))
+    logging.info(click.style(f"Start email code login mail to {to}", fg="green"))
     start_at = time.perf_counter()
 
     try:
@@ -39,8 +37,8 @@ def send_email_code_login_mail_task(language: str, to: str, code: str):
         )
 
         end_at = time.perf_counter()
-        logger.info(
+        logging.info(
             click.style(f"Send email code login mail to {to} succeeded: latency: {end_at - start_at}", fg="green")
         )
     except Exception:
-        logger.exception("Send email code login mail to %s failed", to)
+        logging.exception("Send email code login mail to %s failed", to)

@@ -1,6 +1,6 @@
 import io
 from collections.abc import Generator
-from typing import Any
+from typing import Any, Optional
 
 from core.file.enums import FileType
 from core.file.file_manager import download
@@ -18,9 +18,9 @@ class ASRTool(BuiltinTool):
         self,
         user_id: str,
         tool_parameters: dict[str, Any],
-        conversation_id: str | None = None,
-        app_id: str | None = None,
-        message_id: str | None = None,
+        conversation_id: Optional[str] = None,
+        app_id: Optional[str] = None,
+        message_id: Optional[str] = None,
     ) -> Generator[ToolInvokeMessage, None, None]:
         file = tool_parameters.get("audio_file")
         if file.type != FileType.AUDIO:  # type: ignore
@@ -56,9 +56,9 @@ class ASRTool(BuiltinTool):
 
     def get_runtime_parameters(
         self,
-        conversation_id: str | None = None,
-        app_id: str | None = None,
-        message_id: str | None = None,
+        conversation_id: Optional[str] = None,
+        app_id: Optional[str] = None,
+        message_id: Optional[str] = None,
     ) -> list[ToolParameter]:
         parameters = []
 

@@ -4,10 +4,10 @@ on:
   push:
     branches:
       - "main"
-      - "deploy/**"
+      - "deploy/dev"
+      - "deploy/enterprise"
       - "build/**"
       - "release/e-*"
-      - "hotfix/**"
     tags:
       - "*"
 

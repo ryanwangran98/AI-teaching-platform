@@ -12,10 +12,7 @@ const AddField = () => {
 
   const handleAddField = useCallback(() => {
     setIsAddingNewField(true)
-    // fix: when user change the last property type, the 'hoveringProperty' value will be reset by 'setHoveringPropertyDebounced(null)', that cause the EditCard not showing
-    setTimeout(() => {
-      emit('addField', { path: [] })
-    }, 100)
+    emit('addField', { path: [] })
   }, [setIsAddingNewField, emit])
 
   return (

@@ -1,6 +1,6 @@
 'use client'
 import type { FC } from 'react'
-import React, { useCallback, useMemo } from 'react'
+import React, { useCallback, useState } from 'react'
 import { RiEqualizer2Line } from '@remixicon/react'
 import { useTranslation } from 'react-i18next'
 import type { MultipleRetrievalConfig, SingleRetrievalConfig } from '../types'
@@ -14,6 +14,8 @@ import {
 import ConfigRetrievalContent from '@/app/components/app/configuration/dataset-config/params-config/config-content'
 import { RETRIEVE_TYPE } from '@/types/app'
 import { DATASET_DEFAULT } from '@/config'
+import { useModelListAndDefaultModelAndCurrentProviderAndModel } from '@/app/components/header/account-setting/model-provider-page/hooks'
+import { ModelTypeEnum } from '@/app/components/header/account-setting/model-provider-page/declarations'
 import Button from '@/app/components/base/button'
 import type { DatasetConfigs } from '@/models/debug'
 import type { DataSet } from '@/models/datasets'
@@ -30,8 +32,8 @@ type Props = {
   onSingleRetrievalModelChange?: (config: ModelConfig) => void
   onSingleRetrievalModelParamsChange?: (config: ModelConfig) => void
   readonly?: boolean
-  rerankModalOpen: boolean
-  onRerankModelOpenChange: (open: boolean) => void
+  openFromProps?: boolean
+  onOpenFromPropsChange?: (openFromProps: boolean) => void
   selectedDatasets: DataSet[]
 }
 
@@ -43,52 +45,26 @@ const RetrievalConfig: FC<Props> = ({
   onSingleRetrievalModelChange,
   onSingleRetrievalModelParamsChange,
   readonly,
-  rerankModalOpen,
-  onRerankModelOpenChange,
+  openFromProps,
+  onOpenFromPropsChange,
   selectedDatasets,
 }) => {
   const { t } = useTranslation()
-  const { retrieval_mode, multiple_retrieval_config } = payload
+  const [open, setOpen] = useState(false)
+  const mergedOpen = openFromProps !== undefined ? openFromProps : open
 
   const handleOpen = useCallback((newOpen: boolean) => {
-    onRerankModelOpenChange(newOpen)
-  }, [onRerankModelOpenChange])
+    setOpen(newOpen)
+    onOpenFromPropsChange?.(newOpen)
+  }, [onOpenFromPropsChange])
 
-  const datasetConfigs = useMemo(() => {
-    const {
-      reranking_model,
-      top_k,
-      score_threshold,
-      reranking_mode,
-      weights,
-      reranking_enable,
-    } = multiple_retrieval_config || {}
+  const {
+    currentProvider: validRerankDefaultProvider,
+    currentModel: validRerankDefaultModel,
+  } = useModelListAndDefaultModelAndCurrentProviderAndModel(ModelTypeEnum.rerank)
 
-    return {
-      retrieval_model: retrieval_mode,
-      reranking_model: (reranking_model?.provider && reranking_model?.model)
-        ? {
-          reranking_provider_name: reranking_model?.provider,
-          reranking_model_name: reranking_model?.model,
-        }
-        : {
-          reranking_provider_name: '',
-          reranking_model_name: '',
-        },
-      top_k: top_k || DATASET_DEFAULT.top_k,
-      score_threshold_enabled: !(score_threshold === undefined || score_threshold === null),
-      score_threshold,
-      datasets: {
-        datasets: [],
-      },
-      reranking_mode,
-      weights,
-      reranking_enable,
-    }
-  }, [retrieval_mode, multiple_retrieval_config])
-
+  const { multiple_retrieval_config } = payload
   const handleChange = useCallback((configs: DatasetConfigs, isRetrievalModeChange?: boolean) => {
-    // Legacy code, for compatibility, have to keep it
     if (isRetrievalModeChange) {
       onRetrievalModeChange(configs.retrieval_model)
       return
@@ -96,11 +72,13 @@ const RetrievalConfig: FC<Props> = ({
     onMultipleRetrievalConfigChange({
       top_k: configs.top_k,
       score_threshold: configs.score_threshold_enabled ? (configs.score_threshold ?? DATASET_DEFAULT.score_threshold) : null,
-      reranking_model: retrieval_mode === RETRIEVE_TYPE.oneWay
+      reranking_model: payload.retrieval_mode === RETRIEVE_TYPE.oneWay
         ? undefined
-        // eslint-disable-next-line sonarjs/no-nested-conditional
         : (!configs.reranking_model?.reranking_provider_name
-          ? undefined
+          ? {
+            provider: validRerankDefaultProvider?.provider || '',
+            model: validRerankDefaultModel?.model || '',
+          }
           : {
             provider: configs.reranking_model?.reranking_provider_name,
             model: configs.reranking_model?.reranking_model_name,
@@ -109,11 +87,11 @@ const RetrievalConfig: FC<Props> = ({
       weights: configs.weights,
       reranking_enable: configs.reranking_enable,
     })
-  }, [onMultipleRetrievalConfigChange, retrieval_mode, onRetrievalModeChange])
+  }, [onMultipleRetrievalConfigChange, payload.retrieval_mode, validRerankDefaultProvider, validRerankDefaultModel, onRetrievalModeChange])
 
   return (
     <PortalToFollowElem
-      open={rerankModalOpen}
+      open={mergedOpen}
       onOpenChange={handleOpen}
       placement='bottom-end'
       offset={{
@@ -124,14 +102,14 @@ const RetrievalConfig: FC<Props> = ({
         onClick={() => {
           if (readonly)
             return
-          handleOpen(!rerankModalOpen)
+          handleOpen(!mergedOpen)
         }}
       >
         <Button
           variant='ghost'
           size='small'
           disabled={readonly}
-          className={cn(rerankModalOpen && 'bg-components-button-ghost-bg-hover')}
+          className={cn(open && 'bg-components-button-ghost-bg-hover')}
         >
           <RiEqualizer2Line className='mr-1 h-3.5 w-3.5' />
           {t('dataset.retrievalSettings')}
@@ -140,13 +118,35 @@ const RetrievalConfig: FC<Props> = ({
       <PortalToFollowElemContent style={{ zIndex: 1001 }}>
         <div className='w-[404px] rounded-2xl border border-components-panel-border bg-components-panel-bg  px-4 pb-4 pt-3  shadow-xl'>
           <ConfigRetrievalContent
-            datasetConfigs={datasetConfigs}
+            datasetConfigs={
+              {
+                retrieval_model: payload.retrieval_mode,
+                reranking_model: multiple_retrieval_config?.reranking_model?.provider
+                  ? {
+                    reranking_provider_name: multiple_retrieval_config.reranking_model?.provider,
+                    reranking_model_name: multiple_retrieval_config.reranking_model?.model,
+                  }
+                  : {
+                    reranking_provider_name: '',
+                    reranking_model_name: '',
+                  },
+                top_k: multiple_retrieval_config?.top_k || DATASET_DEFAULT.top_k,
+                score_threshold_enabled: !(multiple_retrieval_config?.score_threshold === undefined || multiple_retrieval_config.score_threshold === null),
+                score_threshold: multiple_retrieval_config?.score_threshold,
+                datasets: {
+                  datasets: [],
+                },
+                reranking_mode: multiple_retrieval_config?.reranking_mode,
+                weights: multiple_retrieval_config?.weights,
+                reranking_enable: multiple_retrieval_config?.reranking_enable,
+              }
+            }
             onChange={handleChange}
-            selectedDatasets={selectedDatasets}
             isInWorkflow
             singleRetrievalModelConfig={singleRetrievalModelConfig}
             onSingleRetrievalModelChange={onSingleRetrievalModelChange}
             onSingleRetrievalModelParamsChange={onSingleRetrievalModelParamsChange}
+            selectedDatasets={selectedDatasets}
           />
         </div>
       </PortalToFollowElemContent>

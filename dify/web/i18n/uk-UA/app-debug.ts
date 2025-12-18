@@ -105,6 +105,8 @@ const translation = {
     dataSet: {
       title: 'Контекст', // Context
       noData: 'Ви можете імпортувати знання як контекст', // You can import Knowledge as context
+      words: 'Слова', // Words
+      textBlocks: 'Текстові блоки', // Text Blocks
       selectTitle: 'Виберіть довідкові знання', // Select reference Knowledge
       selected: 'Знання обрані', // Knowledge selected
       noDataSet: 'Знання не знайдені', // No Knowledge found
@@ -231,6 +233,21 @@ const translation = {
     },
   },
   automatic: {
+    title: 'Автоматизована оркестрація застосунків',
+    description: 'Опишіть свій сценарій, Dify збере для вас застосунок.',
+    intendedAudience: 'Хто є цільовою аудиторією?',
+    intendedAudiencePlaceHolder: 'напр. Студент',
+    solveProblem: 'Які проблеми вони сподіваються вирішити за допомогою AI?',
+    solveProblemPlaceHolder: 'напр. Оцінка успішності',
+    generate: 'Генерувати',
+    audiencesRequired: 'Необхідна аудиторія',
+    problemRequired: 'Необхідна проблема',
+    resTitle: 'Ми створили для вас такий застосунок.',
+    apply: 'Застосувати цю оркестрацію',
+    noData: 'Опишіть свій випадок використання зліва, тут буде показано попередній перегляд оркестрації.',
+    loading: 'Оркестрація програми для вас...',
+    overwriteTitle: 'Перезаписати існуючу конфігурацію?',
+    overwriteMessage: 'Застосування цієї оркестрації призведе до перезапису існуючої конфігурації.',
   },
   resetConfig: {
     title: 'Підтвердіть скидання?',
@@ -271,6 +288,7 @@ const translation = {
   variableTable: {
     key: 'Ключ змінної', // Variable Key
     name: 'Назва поля для введення користувача', // User Input Field Name
+    optional: 'Додатково', // Optional
     type: 'Тип введення', // Input Type
     action: 'Дії', // Actions
     typeString: 'Рядок', // String
@@ -345,24 +363,6 @@ const translation = {
     'localUpload': 'Локальне завантаження',
     'uploadFileTypes': 'Типи файлів для завантаження',
     'maxNumberOfUploads': 'Максимальна кількість завантажень',
-    'maxNumberTip': 'Документ < {{docLimit}}, зображення < {{imgLimit}}, аудіо < {{audioLimit}}, відео < {{videoLimit}}',
-    'jsonSchema': 'JSON схема',
-    'optional': 'додатковий',
-    'json': 'JSON Код',
-    'checkbox': 'Чекбокс',
-    'unit': 'Одиниці',
-    'placeholder': 'Заповнювач',
-    'noDefaultSelected': 'Не вибирати',
-    'startChecked': 'Почати перевірено',
-    'displayName': 'Відображуване ім\'я',
-    'uploadMethod': 'Спосіб завантаження',
-    'showAllSettings': 'Показати всі налаштування',
-    'startSelectedOption': 'Почати вибраний варіант',
-    'tooltips': 'Спливаючі чтива',
-    'placeholderPlaceholder': 'Введіть текст для відображення, коли поле порожнє',
-    'unitPlaceholder': 'Показувати одиниці виміру після чисел, наприклад токени',
-    'defaultValuePlaceholder': 'Введіть значення за замовчуванням, щоб попередньо заповнити поле',
-    'tooltipsPlaceholder': 'Введіть корисний текст, який відображається при наведенні курсору на мітку',
   },
   vision: {
     // Vision
@@ -566,29 +566,14 @@ const translation = {
     apply: 'Застосовувати',
     tryIt: 'Спробуйте',
     overwriteTitle: 'Змінити існуючу конфігурацію?',
+    instructionPlaceHolder: 'Пишіть чіткі та конкретні інструкції.',
     loading: 'Оркестрування програми для вас...',
+    noDataLine1: 'Опишіть свій випадок використання зліва,',
     resTitle: 'Згенерований запит',
     title: 'Генератор підказок',
+    noDataLine2: 'Тут буде показано попередній перегляд оркестровки.',
     overwriteMessage: 'Застосування цього рядка замінить існуючу конфігурацію.',
     description: 'Генератор підказок використовує налаштовану модель для оптимізації запитів для кращої якості та кращої структури. Напишіть, будь ласка, зрозумілу та детальну інструкцію.',
-    versions: 'Версії',
-    version: 'Версія',
-    press: 'Пресa',
-    optional: 'Необов\'язково',
-    dismiss: 'Відхилити',
-    to: 'до',
-    latest: 'Останні новини',
-    idealOutput: 'Ідеальний вихід',
-    insertContext: 'вставте контекст',
-    optimizePromptTooltip: 'Оптимізувати в генераторі запитів',
-    optimizationNote: 'Примітка щодо оптимізації',
-    instructionPlaceHolderTitle: 'Опишіть, як би ви хотіли покращити цей запит. Наприклад:',
-    instructionPlaceHolderLine3: 'Тон занадто жорсткий, будь ласка, зробіть його більш дружнім.',
-    instructionPlaceHolderLine2: 'Формат виводу неправильний, будь ласка, суворо дотримуйтесь формату JSON.',
-    newNoDataLine1: 'Напишіть інструкцію в лівій колонці та натисніть Генерувати, щоб побачити відповідь.',
-    instructionPlaceHolderLine1: 'Зробіть вихідні дані більш стислими, зберігаючи основні моменти.',
-    idealOutputPlaceholder: 'Опишіть свій ідеальний формат відповіді, довжину, тон та вимоги до змісту...',
-    codeGenInstructionPlaceHolderLine: 'Чим детальнішим буде зворотний зв\'язок, наприклад, типи даних вхідних та вихідних даних, а також спосіб обробки змінних, тим точнішою буде генерація коду.',
   },
   warningMessage: {
     timeoutExceeded: 'Результати не відображаються через тайм-аут. Будь ласка, зверніться до журналів, щоб отримати повні результати.',

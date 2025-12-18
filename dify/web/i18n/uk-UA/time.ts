@@ -37,7 +37,6 @@ const translation = {
     output: 'РРРР-ММ-ДД',
     display: 'MMMM D, YYYY',
     outputWithTime: 'YYYY-MM-DDTHH:mm:ss.SSSZ',
-    input: 'РРРР-ММ-ДД',
   },
 }
 

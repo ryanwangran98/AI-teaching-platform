@@ -3,21 +3,41 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useParams } from 'next/navigation'
+import useSWRInfinite from 'swr/infinite'
 import { flatten } from 'lodash-es'
-import { produce } from 'immer'
+import produce from 'immer'
 import {
   RiRobot2Fill,
   RiRobot2Line,
 } from '@remixicon/react'
 import Nav from '../nav'
 import type { NavItem } from '../nav/nav-selector'
+import { fetchAppList } from '@/service/apps'
 import CreateAppTemplateDialog from '@/app/components/app/create-app-dialog'
 import CreateAppModal from '@/app/components/app/create-app-modal'
 import CreateFromDSLModal from '@/app/components/app/create-from-dsl-modal'
+import type { AppListResponse } from '@/models/app'
 import { useAppContext } from '@/context/app-context'
 import { useStore as useAppStore } from '@/app/components/app/store'
-import { AppModeEnum } from '@/types/app'
-import { useInfiniteAppList } from '@/service/use-apps'
+
+const getKey = (
+  pageIndex: number,
+  previousPageData: AppListResponse,
+  activeTab: string,
+  keywords: string,
+) => {
+  if (!pageIndex || previousPageData.has_more) {
+    const params: any = { url: 'apps', params: { page: pageIndex + 1, limit: 30, name: keywords } }
+
+    if (activeTab !== 'all')
+      params.params.mode = activeTab
+    else
+      delete params.params.mode
+
+    return params
+  }
+  return null
+}
 
 const AppNav = () => {
   const { t } = useTranslation()
@@ -29,21 +49,17 @@ const AppNav = () => {
   const [showCreateFromDSLModal, setShowCreateFromDSLModal] = useState(false)
   const [navItems, setNavItems] = useState<NavItem[]>([])
 
-  const {
-    data: appsData,
-    fetchNextPage,
-    hasNextPage,
-    refetch,
-  } = useInfiniteAppList({
-    page: 1,
-    limit: 30,
-    name: '',
-  }, { enabled: !!appId })
+  const { data: appsData, setSize, mutate } = useSWRInfinite(
+    appId
+      ? (pageIndex: number, previousPageData: AppListResponse) => getKey(pageIndex, previousPageData, 'all', '')
+      : () => null,
+    fetchAppList,
+    { revalidateFirstPage: false },
+  )
 
-  const handleLoadMore = useCallback(() => {
-    if (hasNextPage)
-      fetchNextPage()
-  }, [fetchNextPage, hasNextPage])
+  const handleLoadmore = useCallback(() => {
+    setSize(size => size + 1)
+  }, [setSize])
 
   const openModal = (state: string) => {
     if (state === 'blank')
@@ -56,14 +72,14 @@ const AppNav = () => {
 
   useEffect(() => {
     if (appsData) {
-      const appItems = flatten((appsData.pages ?? []).map(appData => appData.data))
+      const appItems = flatten(appsData?.map(appData => appData.data))
       const navItems = appItems.map((app) => {
         const link = ((isCurrentWorkspaceEditor, app) => {
           if (!isCurrentWorkspaceEditor) {
             return `/app/${app.id}/overview`
           }
           else {
-            if (app.mode === AppModeEnum.WORKFLOW || app.mode === AppModeEnum.ADVANCED_CHAT)
+            if (app.mode === 'workflow' || app.mode === 'advanced-chat')
               return `/app/${app.id}/workflow`
             else
               return `/app/${app.id}/configuration`
@@ -106,26 +122,26 @@ const AppNav = () => {
         text={t('common.menus.apps')}
         activeSegment={['apps', 'app']}
         link='/apps'
-        curNav={appDetail}
-        navigationItems={navItems}
+        curNav={appDetail as any}
+        navs={navItems}
         createText={t('common.menus.newApp')}
         onCreate={openModal}
-        onLoadMore={handleLoadMore}
+        onLoadmore={handleLoadmore}
       />
       <CreateAppModal
         show={showNewAppDialog}
         onClose={() => setShowNewAppDialog(false)}
-        onSuccess={() => refetch()}
+        onSuccess={() => mutate()}
       />
       <CreateAppTemplateDialog
         show={showNewAppTemplateDialog}
         onClose={() => setShowNewAppTemplateDialog(false)}
-        onSuccess={() => refetch()}
+        onSuccess={() => mutate()}
       />
       <CreateFromDSLModal
         show={showCreateFromDSLModal}
         onClose={() => setShowCreateFromDSLModal(false)}
-        onSuccess={() => refetch()}
+        onSuccess={() => mutate()}
       />
     </>
   )

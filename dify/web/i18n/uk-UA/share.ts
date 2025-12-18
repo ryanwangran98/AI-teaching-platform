@@ -70,9 +70,8 @@ const translation = {
       moreThanMaxLengthLine: 'Рядок {{rowIndex}}: значення {{varName}} не може містити більше {{maxLength}} символів',
       atLeastOne: 'Будь ласка, введіть принаймні один рядок у завантажений файл.',
     },
-    execution: 'Запуск',
-    executions: '{{num}} запусків',
-    stopRun: 'Зупинити виконання',
+    execution: 'ВИКОНАННЯ',
+    executions: '{{num}} ВИКОНАНЬ',
   },
   login: {
     backToHome: 'Повернутися на головну',

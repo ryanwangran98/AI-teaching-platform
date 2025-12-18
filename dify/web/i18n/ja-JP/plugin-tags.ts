@@ -15,7 +15,6 @@ const translation = {
     news: 'ニュース',
     other: '他',
     agent: 'エージェント',
-    rag: 'RAG',
     business: 'ビジネス',
     travel: '旅行',
   },

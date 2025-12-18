@@ -23,7 +23,7 @@ from core.model_runtime.errors.invoke import InvokeAuthorizationError
 from core.ops.ops_trace_manager import TraceQueueManager
 from extensions.ext_database import db
 from factories import file_factory
-from models import Account
+from models.account import Account
 from models.model import App, EndUser
 from services.conversation_service import ConversationService
 
@@ -140,9 +140,7 @@ class ChatAppGenerator(MessageBasedAppGenerator):
         )
 
         # get tracing instance
-        trace_manager = TraceQueueManager(
-            app_id=app_model.id, user_id=user.id if isinstance(user, Account) else user.session_id
-        )
+        trace_manager = TraceQueueManager(app_id=app_model.id)
 
         # init application generate entity
         application_generate_entity = ChatAppGenerateEntity(
@@ -211,7 +209,7 @@ class ChatAppGenerator(MessageBasedAppGenerator):
         queue_manager: AppQueueManager,
         conversation_id: str,
         message_id: str,
-    ):
+    ) -> None:
         """
         Generate worker in a new thread.
         :param flask_app: Flask app

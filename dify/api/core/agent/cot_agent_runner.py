@@ -1,8 +1,7 @@
 import json
-import logging
 from abc import ABC, abstractmethod
 from collections.abc import Generator, Mapping, Sequence
-from typing import Any
+from typing import Any, Optional
 
 from core.agent.base_agent_runner import BaseAgentRunner
 from core.agent.entities import AgentScratchpadUnit
@@ -23,8 +22,6 @@ from core.tools.__base.tool import Tool
 from core.tools.entities.tool_entities import ToolInvokeMeta
 from core.tools.tool_engine import ToolEngine
 from models.model import Message
-
-logger = logging.getLogger(__name__)
 
 
 class CotAgentRunner(BaseAgentRunner, ABC):
@@ -73,12 +70,10 @@ class CotAgentRunner(BaseAgentRunner, ABC):
         self._prompt_messages_tools = prompt_messages_tools
 
         function_call_state = True
-        llm_usage: dict[str, LLMUsage | None] = {"usage": None}
+        llm_usage: dict[str, Optional[LLMUsage]] = {"usage": None}
         final_answer = ""
-        prompt_messages: list = []  # Initialize prompt_messages
-        agent_thought_id = ""  # Initialize agent_thought_id
 
-        def increase_usage(final_llm_usage_dict: dict[str, LLMUsage | None], usage: LLMUsage):
+        def increase_usage(final_llm_usage_dict: dict[str, Optional[LLMUsage]], usage: LLMUsage):
             if not final_llm_usage_dict["usage"]:
                 final_llm_usage_dict["usage"] = usage
             else:
@@ -125,7 +120,7 @@ class CotAgentRunner(BaseAgentRunner, ABC):
                 callbacks=[],
             )
 
-            usage_dict: dict[str, LLMUsage | None] = {}
+            usage_dict: dict[str, Optional[LLMUsage]] = {}
             react_chunks = CotAgentOutputParser.handle_react_stream_output(chunks, usage_dict)
             scratchpad = AgentScratchpadUnit(
                 agent_response="",
@@ -202,7 +197,7 @@ class CotAgentRunner(BaseAgentRunner, ABC):
                             final_answer = scratchpad.action.action_input
                         else:
                             final_answer = f"{scratchpad.action.action_input}"
-                    except TypeError:
+                    except json.JSONDecodeError:
                         final_answer = f"{scratchpad.action.action_input}"
                 else:
                     function_call_state = True
@@ -277,7 +272,7 @@ class CotAgentRunner(BaseAgentRunner, ABC):
         action: AgentScratchpadUnit.Action,
         tool_instances: Mapping[str, Tool],
         message_file_ids: list[str],
-        trace_manager: TraceQueueManager | None = None,
+        trace_manager: Optional[TraceQueueManager] = None,
     ) -> tuple[str, ToolInvokeMeta]:
         """
         handle invoke action
@@ -343,7 +338,7 @@ class CotAgentRunner(BaseAgentRunner, ABC):
 
         return instruction
 
-    def _init_react_state(self, query):
+    def _init_react_state(self, query) -> None:
         """
         init agent scratchpad
         """
@@ -403,8 +398,8 @@ class CotAgentRunner(BaseAgentRunner, ABC):
                             action_input=json.loads(message.tool_calls[0].function.arguments),
                         )
                         current_scratchpad.action_str = json.dumps(current_scratchpad.action.to_dict())
-                    except Exception:
-                        logger.exception("Failed to parse tool call from assistant message")
+                    except:
+                        pass
             elif isinstance(message, ToolPromptMessage):
                 if current_scratchpad:
                     assert isinstance(message.content, str)

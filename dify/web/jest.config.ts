@@ -160,11 +160,7 @@ const config: Config = {
   testEnvironment: '@happy-dom/jest-environment',
 
   // Options that will be passed to the testEnvironment
-  testEnvironmentOptions: {
-    // Match happy-dom's default to ensure Node.js environment resolution
-    // This prevents ESM packages like uuid from using browser exports
-    customExportConditions: ['node', 'node-addons'],
-  },
+  // testEnvironmentOptions: {},
 
   // Adds a location field to test results
   // testLocationInResults: false,
@@ -193,10 +189,10 @@ const config: Config = {
   // transform: undefined,
 
   // An array of regexp pattern strings that are matched against all source file paths, matched files will skip transformation
-  // For pnpm: allow transforming uuid ESM package
-  transformIgnorePatterns: [
-    'node_modules/(?!(.pnpm|uuid))',
-  ],
+  // transformIgnorePatterns: [
+  //   "/node_modules/",
+  //   "\\.pnp\\.[^\\/]+$"
+  // ],
 
   // An array of regexp pattern strings that are matched against all modules before the module loader will automatically return a mock for them
   // unmockedModulePathPatterns: undefined,

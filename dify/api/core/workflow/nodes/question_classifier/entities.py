@@ -1,3 +1,5 @@
+from typing import Optional
+
 from pydantic import BaseModel, Field
 
 from core.prompt.entities.advanced_prompt_entities import MemoryConfig
@@ -14,8 +16,8 @@ class QuestionClassifierNodeData(BaseNodeData):
     query_variable_selector: list[str]
     model: ModelConfig
     classes: list[ClassConfig]
-    instruction: str | None = None
-    memory: MemoryConfig | None = None
+    instruction: Optional[str] = None
+    memory: Optional[MemoryConfig] = None
     vision: VisionConfig = Field(default_factory=VisionConfig)
 
     @property

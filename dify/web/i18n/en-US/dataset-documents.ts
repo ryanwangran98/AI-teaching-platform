@@ -32,6 +32,7 @@ const translation = {
       sync: 'Sync',
       pause: 'Pause',
       resume: 'Resume',
+      download: 'Download File',
     },
     index: {
       enable: 'Enable',
@@ -39,10 +40,6 @@ const translation = {
       all: 'All',
       enableTip: 'The file can be indexed',
       disableTip: 'The file cannot be indexed',
-    },
-    sort: {
-      uploadTime: 'Upload Time',
-      hitCount: 'Retrieval Count',
     },
     status: {
       queuing: 'Queuing',
@@ -103,9 +100,6 @@ const translation = {
       upload_file: 'Upload File',
       notion: 'Sync form Notion',
       github: 'Sync form Github',
-      local_file: 'Local File',
-      website_crawl: 'Website Crawl',
-      online_document: 'Online Document',
     },
     type: {
       book: 'Book',
@@ -322,7 +316,6 @@ const translation = {
     },
   },
   embedding: {
-    waiting: 'Embedding waiting...',
     processing: 'Embedding processing...',
     paused: 'Embedding paused',
     completed: 'Embedding completed',
@@ -378,7 +371,6 @@ const translation = {
     answerEmpty: 'Answer can not be empty',
     contentPlaceholder: 'Add content here',
     contentEmpty: 'Content can not be empty',
-    allFilesUploaded: 'All files must be uploaded before saving',
     newTextSegment: 'New Text Segment',
     newQaSegment: 'New Q&A Segment',
     addChunk: 'Add Chunk',

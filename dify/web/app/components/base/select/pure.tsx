@@ -1,6 +1,5 @@
 import {
   useCallback,
-  useMemo,
   useState,
 } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -18,13 +17,15 @@ import type {
 } from '@/app/components/base/portal-to-follow-elem'
 import cn from '@/utils/classnames'
 
-export type Option = {
+type Option = {
   label: string
   value: string
 }
 
-type SharedPureSelectProps = {
+type PureSelectProps = {
   options: Option[]
+  value?: string
+  onChange?: (value: string) => void
   containerProps?: PortalToFollowElemOptions & {
     open?: boolean
     onOpenChange?: (open: boolean) => void
@@ -37,39 +38,22 @@ type SharedPureSelectProps = {
     className?: string
     itemClassName?: string
     title?: string
-    titleClassName?: string
   },
   placeholder?: string
   disabled?: boolean
   triggerPopupSameWidth?: boolean
 }
-
-type SingleSelectProps = {
-  multiple?: false
-  value?: string
-  onChange?: (value: string) => void
-}
-
-type MultiSelectProps = {
-  multiple: true
-  value?: string[]
-  onChange?: (value: string[]) => void
-}
-
-export type PureSelectProps = SharedPureSelectProps & (SingleSelectProps | MultiSelectProps)
-const PureSelect = (props: PureSelectProps) => {
-  const {
-    options,
-    containerProps,
-    triggerProps,
-    popupProps,
-    placeholder,
-    disabled,
-    triggerPopupSameWidth,
-    multiple,
-    value,
-    onChange,
-  } = props
+const PureSelect = ({
+  options,
+  value,
+  onChange,
+  containerProps,
+  triggerProps,
+  popupProps,
+  placeholder,
+  disabled,
+  triggerPopupSameWidth,
+}: PureSelectProps) => {
   const { t } = useTranslation()
   const {
     open,
@@ -85,7 +69,6 @@ const PureSelect = (props: PureSelectProps) => {
     className: popupClassName,
     itemClassName: popupItemClassName,
     title: popupTitle,
-    titleClassName: popupTitleClassName,
   } = popupProps || {}
 
   const [localOpen, setLocalOpen] = useState(false)
@@ -96,13 +79,8 @@ const PureSelect = (props: PureSelectProps) => {
     setLocalOpen(openValue)
   }, [onOpenChange])
 
-  const triggerText = useMemo(() => {
-    const placeholderText = placeholder || t('common.placeholder.select')
-    if (multiple)
-      return value?.length ? t('common.dynamicSelect.selected', { count: value.length }) : placeholderText
-
-    return options.find(option => option.value === value)?.label || placeholderText
-  }, [multiple, value, options, placeholder])
+  const selectedOption = options.find(option => option.value === value)
+  const triggerText = selectedOption?.label || placeholder || t('common.placeholder.select')
 
   return (
     <PortalToFollowElem
@@ -144,16 +122,13 @@ const PureSelect = (props: PureSelectProps) => {
       )}>
         <div
           className={cn(
-            'max-h-80 overflow-auto rounded-xl border-[0.5px] border-components-panel-border bg-components-panel-bg-blur p-1 shadow-lg',
+            'rounded-xl border-[0.5px] border-components-panel-border bg-components-panel-bg-blur p-1 shadow-lg',
             popupClassName,
           )}
         >
           {
             popupTitle && (
-              <div className={cn(
-                'system-xs-medium-uppercase flex h-[22px] items-center px-3 text-text-tertiary',
-                popupTitleClassName,
-              )}>
+              <div className='system-xs-medium-uppercase flex h-[22px] items-center px-3 text-text-tertiary'>
                 {popupTitle}
               </div>
             )
@@ -169,14 +144,6 @@ const PureSelect = (props: PureSelectProps) => {
                 title={option.label}
                 onClick={() => {
                   if (disabled) return
-                  if (multiple) {
-                    const currentValues = value ?? []
-                    const nextValues = currentValues.includes(option.value)
-                      ? currentValues.filter(valueItem => valueItem !== option.value)
-                      : [...currentValues, option.value]
-                    onChange?.(nextValues)
-                    return
-                  }
                   onChange?.(option.value)
                   handleOpenChange(false)
                 }}
@@ -185,11 +152,7 @@ const PureSelect = (props: PureSelectProps) => {
                   {option.label}
                 </div>
                 {
-                  (
-                    multiple
-                      ? (value ?? []).includes(option.value)
-                      : value === option.value
-                  ) && <RiCheckLine className='h-4 w-4 shrink-0 text-text-accent' />
+                  value === option.value && <RiCheckLine className='h-4 w-4 shrink-0 text-text-accent' />
                 }
               </div>
             ))

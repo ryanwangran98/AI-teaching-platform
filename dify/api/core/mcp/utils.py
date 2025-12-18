@@ -1,10 +1,6 @@
 import json
-from collections.abc import Generator
-from contextlib import AbstractContextManager
 
 import httpx
-import httpx_sse
-from httpx_sse import connect_sse
 
 from configs import dify_config
 from core.mcp.types import ErrorData, JSONRPCError
@@ -59,42 +55,20 @@ def create_ssrf_proxy_mcp_http_client(
         )
 
 
-def ssrf_proxy_sse_connect(url: str, **kwargs) -> AbstractContextManager[httpx_sse.EventSource]:
+def ssrf_proxy_sse_connect(url, **kwargs):
     """Connect to SSE endpoint with SSRF proxy protection.
 
     This function creates an SSE connection using the configured proxy settings
-    to prevent SSRF attacks when connecting to external endpoints. It returns
-    a context manager that yields an EventSource object for SSE streaming.
-
-    The function handles HTTP client creation and cleanup automatically, but
-    also accepts a pre-configured client via kwargs.
+    to prevent SSRF attacks when connecting to external endpoints.
 
     Args:
-        url (str): The SSE endpoint URL to connect to
-        **kwargs: Additional arguments passed to the SSE connection, including:
-            - client (httpx.Client, optional): Pre-configured HTTP client.
-              If not provided, one will be created with SSRF protection.
-            - method (str, optional): HTTP method to use, defaults to "GET"
-            - headers (dict, optional): HTTP headers to include in the request
-            - timeout (httpx.Timeout, optional): Timeout configuration for the connection
+        url: The SSE endpoint URL
+        **kwargs: Additional arguments passed to the SSE connection
 
     Returns:
-        AbstractContextManager[httpx_sse.EventSource]: A context manager that yields an EventSource
-        object for SSE streaming. The EventSource provides access to server-sent events.
-
-    Example:
-        ```python
-        with ssrf_proxy_sse_connect(url, headers=headers) as event_source:
-            for sse in event_source.iter_sse():
-                print(sse.event, sse.data)
-        ```
-
-    Note:
-        If a client is not provided in kwargs, one will be automatically created
-        with SSRF protection based on the application's configuration. If an
-        exception occurs during connection, any automatically created client
-        will be cleaned up automatically.
+        EventSource object for SSE streaming
     """
+    from httpx_sse import connect_sse
 
     # Extract client if provided, otherwise create one
     client = kwargs.pop("client", None)
@@ -127,9 +101,7 @@ def ssrf_proxy_sse_connect(url: str, **kwargs) -> AbstractContextManager[httpx_s
         raise
 
 
-def create_mcp_error_response(
-    request_id: int | str | None, code: int, message: str, data=None
-) -> Generator[bytes, None, None]:
+def create_mcp_error_response(request_id: int | str | None, code: int, message: str, data=None):
     """Create MCP error response"""
     error_data = ErrorData(code=code, message=message, data=data)
     json_response = JSONRPCError(
@@ -138,5 +110,5 @@ def create_mcp_error_response(
         error=error_data,
     )
     json_data = json.dumps(jsonable_encoder(json_response))
-    sse_content = json_data.encode()
+    sse_content = f"event: message\ndata: {json_data}\n\n".encode()
     yield sse_content

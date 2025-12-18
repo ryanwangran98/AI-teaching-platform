@@ -17,7 +17,7 @@ import {
   RiAlignTop,
 } from '@remixicon/react'
 import { useNodesReadOnly, useNodesSyncDraft } from './hooks'
-import { produce } from 'immer'
+import produce from 'immer'
 import { WorkflowHistoryEvent, useWorkflowHistory } from './hooks/use-workflow-history'
 import { useStore } from './store'
 import { useSelectionInteractions } from './hooks/use-selection-interactions'
@@ -414,9 +414,9 @@ const SelectionContextmenu = () => {
             {t('workflow.operator.distributeVertical')}
           </div>
         </div>
-        <div className='h-px bg-divider-regular'></div>
+        <div className='h-[1px] bg-divider-regular'></div>
         <div className='p-1'>
-          <div className='system-xs-medium px-2 py-2 text-text-tertiary'>
+            <div className='system-xs-medium px-2 py-2 text-text-tertiary'>
             {t('workflow.operator.horizontal')}
           </div>
           <div

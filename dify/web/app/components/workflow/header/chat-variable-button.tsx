@@ -7,16 +7,13 @@ import cn from '@/utils/classnames'
 
 const ChatVariableButton = ({ disabled }: { disabled: boolean }) => {
   const { theme } = useTheme()
-  const showChatVariablePanel = useStore(s => s.showChatVariablePanel)
   const setShowChatVariablePanel = useStore(s => s.setShowChatVariablePanel)
   const setShowEnvPanel = useStore(s => s.setShowEnvPanel)
-  const setShowGlobalVariablePanel = useStore(s => s.setShowGlobalVariablePanel)
   const setShowDebugAndPreviewPanel = useStore(s => s.setShowDebugAndPreviewPanel)
 
   const handleClick = () => {
     setShowChatVariablePanel(true)
     setShowEnvPanel(false)
-    setShowGlobalVariablePanel(false)
     setShowDebugAndPreviewPanel(false)
   }
 
@@ -24,11 +21,10 @@ const ChatVariableButton = ({ disabled }: { disabled: boolean }) => {
     <Button
       className={cn(
         'p-2',
-        theme === 'dark' && showChatVariablePanel && 'rounded-lg border border-black/5 bg-white/10 backdrop-blur-sm',
+        theme === 'dark' && 'rounded-lg border border-black/5 bg-white/10 backdrop-blur-sm',
       )}
       disabled={disabled}
       onClick={handleClick}
-      variant='ghost'
     >
       <BubbleX className='h-4 w-4 text-components-button-secondary-text' />
     </Button>

@@ -1,7 +1,7 @@
 from collections.abc import Sequence
 from typing import Any
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
 from core.workflow.nodes.base import BaseNodeData
 
@@ -18,9 +18,9 @@ class VariableOperationItem(BaseModel):
     # 2. For VARIABLE input_type: Initially contains the selector of the source variable.
     # 3. During the variable updating procedure: The `value` field is reassigned to hold
     #    the resolved actual value that will be applied to the target variable.
-    value: Any = None
+    value: Any | None = None
 
 
 class VariableAssignerNodeData(BaseNodeData):
     version: str = "2"
-    items: Sequence[VariableOperationItem] = Field(default_factory=list)
+    items: Sequence[VariableOperationItem]

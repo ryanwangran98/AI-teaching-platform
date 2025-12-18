@@ -6,8 +6,6 @@ const translation = {
     all: 'Все',
     bundles: 'Пакеты',
     agents: 'Агентские стратегии',
-    datasources: 'Источники данных',
-    triggers: 'Триггеры',
   },
   categorySingle: {
     bundle: 'Связка',
@@ -15,8 +13,6 @@ const translation = {
     model: 'Модель',
     extension: 'Расширение',
     tool: 'Инструмент',
-    datasource: 'Источник данных',
-    trigger: 'Спусковой крючок',
   },
   list: {
     source: {
@@ -47,7 +43,6 @@ const translation = {
       install: 'Устанавливать',
       update: 'Обновлять',
       checkUpdate: 'Проверить обновление',
-      back: 'Назад',
     },
     toolSelector: {
       placeholder: 'Выберите инструмент...',
@@ -208,11 +203,6 @@ const translation = {
     installingWithSuccess: 'Установка плагинов {{installingLength}}, {{successLength}} успех.',
     installedError: 'плагины {{errorLength}} не удалось установить',
     installError: 'Плагины {{errorLength}} не удалось установить, нажмите для просмотра',
-    installSuccess: '{{successLength}} plugins installed successfully',
-    installed: 'Installed',
-    runningPlugins: 'Installing Plugins',
-    successPlugins: 'Successfully Installed Plugins',
-    errorPlugins: 'Failed to Install Plugins',
   },
   install: '{{num}} установок',
   searchCategories: 'Поиск категорий',
@@ -256,12 +246,6 @@ const translation = {
     saveAndAuth: 'Сохранить и авторизовать',
     useApiAuthDesc: 'После настройки учетных данных все члены рабочей области могут использовать этот инструмент при оркестрации приложений.',
     clientInfo: 'Поскольку не найдены секреты клиентской системы для этого поставщика инструментов, необходимо настроить его вручную, для redirect_uri, пожалуйста, используйте',
-    unavailable: 'Недоступно',
-    customCredentialUnavailable: 'Кастомные учетные данные в настоящее время недоступны',
-    credentialUnavailable: 'Учетные данные в настоящее время недоступны. Пожалуйста, свяжитесь с администратором.',
-    credentialUnavailableInButton: 'Учетные данные недоступны',
-    emptyAuth: 'Пожалуйста, настройте аутентификацию',
-    connectedWorkspace: 'Подключенное рабочее пространство',
   },
   deprecated: 'Устаревший',
   autoUpdate: {
@@ -313,12 +297,6 @@ const translation = {
     excludeUpdate: 'Следующие {{num}} плагины не будут обновляться автоматически',
     partialUPdate: 'Только следующие {{num}} плагины будут обновляться автоматически',
     changeTimezone: 'Чтобы изменить часовой пояс, перейдите в <setTimezone>Настройки</setTimezone>',
-  },
-  readmeInfo: {
-    title: 'ПРОЧТИ_МЕНЯ',
-    needHelpCheckReadme: 'Нужна помощь? Ознакомьтесь с файлом README.',
-    noReadmeAvailable: 'README недоступен',
-    failedToFetch: 'Не удалось получить README',
   },
 }
 

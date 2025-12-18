@@ -16,7 +16,7 @@ const AgentResultPanel = ({
 }: AgentResultPanelProps) => {
   const { t } = useTranslation()
   const top = agentOrToolLogItemStack[agentOrToolLogItemStack.length - 1]
-  const list = agentOrToolLogListMap[top.message_id]
+  const list = agentOrToolLogListMap[top.id]
 
   return (
     <div className='overflow-y-auto bg-background-section'>
@@ -29,7 +29,7 @@ const AgentResultPanel = ({
           {
             list.map(item => (
               <AgentLogItem
-                key={item.message_id}
+                key={item.id}
                 item={item}
                 onShowAgentOrToolLog={onShowAgentOrToolLog}
               />

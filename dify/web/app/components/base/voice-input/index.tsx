@@ -81,8 +81,7 @@ const VoiceInput = ({
     setStartRecord(false)
     setStartConvert(true)
     recorder.current.stop()
-    if (drawRecordId.current)
-      cancelAnimationFrame(drawRecordId.current)
+    drawRecordId.current && cancelAnimationFrame(drawRecordId.current)
     drawRecordId.current = null
     const canvas = canvasRef.current!
     const ctx = ctxRef.current!

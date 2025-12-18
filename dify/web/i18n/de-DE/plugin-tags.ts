@@ -17,7 +17,6 @@ const translation = {
     entertainment: 'Unterhaltung',
     utilities: 'Versorgungswirtschaft',
     productivity: 'Produktivität',
-    rag: 'LAPPEN',
   },
   searchTags: 'Such-Tags',
   allTags: 'Alle Schlagwörter',

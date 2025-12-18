@@ -7,8 +7,8 @@ eliminates the need for repetitive language switching logic.
 """
 
 from dataclasses import dataclass
-from enum import StrEnum, auto
-from typing import Any, Protocol
+from enum import Enum
+from typing import Any, Optional, Protocol
 
 from flask import render_template
 from pydantic import BaseModel, Field
@@ -17,36 +17,26 @@ from extensions.ext_mail import mail
 from services.feature_service import BrandingModel, FeatureService
 
 
-class EmailType(StrEnum):
+class EmailType(Enum):
     """Enumeration of supported email types."""
 
-    RESET_PASSWORD = auto()
-    RESET_PASSWORD_WHEN_ACCOUNT_NOT_EXIST = auto()
-    INVITE_MEMBER = auto()
-    EMAIL_CODE_LOGIN = auto()
-    CHANGE_EMAIL_OLD = auto()
-    CHANGE_EMAIL_NEW = auto()
-    CHANGE_EMAIL_COMPLETED = auto()
-    OWNER_TRANSFER_CONFIRM = auto()
-    OWNER_TRANSFER_OLD_NOTIFY = auto()
-    OWNER_TRANSFER_NEW_NOTIFY = auto()
-    ACCOUNT_DELETION_SUCCESS = auto()
-    ACCOUNT_DELETION_VERIFICATION = auto()
-    ENTERPRISE_CUSTOM = auto()
-    QUEUE_MONITOR_ALERT = auto()
-    DOCUMENT_CLEAN_NOTIFY = auto()
-    EMAIL_REGISTER = auto()
-    EMAIL_REGISTER_WHEN_ACCOUNT_EXIST = auto()
-    RESET_PASSWORD_WHEN_ACCOUNT_NOT_EXIST_NO_REGISTER = auto()
-    TRIGGER_EVENTS_LIMIT_SANDBOX = auto()
-    TRIGGER_EVENTS_LIMIT_PROFESSIONAL = auto()
-    TRIGGER_EVENTS_USAGE_WARNING_SANDBOX = auto()
-    TRIGGER_EVENTS_USAGE_WARNING_PROFESSIONAL = auto()
-    API_RATE_LIMIT_LIMIT_SANDBOX = auto()
-    API_RATE_LIMIT_WARNING_SANDBOX = auto()
+    RESET_PASSWORD = "reset_password"
+    INVITE_MEMBER = "invite_member"
+    EMAIL_CODE_LOGIN = "email_code_login"
+    CHANGE_EMAIL_OLD = "change_email_old"
+    CHANGE_EMAIL_NEW = "change_email_new"
+    CHANGE_EMAIL_COMPLETED = "change_email_completed"
+    OWNER_TRANSFER_CONFIRM = "owner_transfer_confirm"
+    OWNER_TRANSFER_OLD_NOTIFY = "owner_transfer_old_notify"
+    OWNER_TRANSFER_NEW_NOTIFY = "owner_transfer_new_notify"
+    ACCOUNT_DELETION_SUCCESS = "account_deletion_success"
+    ACCOUNT_DELETION_VERIFICATION = "account_deletion_verification"
+    ENTERPRISE_CUSTOM = "enterprise_custom"
+    QUEUE_MONITOR_ALERT = "queue_monitor_alert"
+    DOCUMENT_CLEAN_NOTIFY = "document_clean_notify"
 
 
-class EmailLanguage(StrEnum):
+class EmailLanguage(Enum):
     """Supported email languages with fallback handling."""
 
     EN_US = "en-US"
@@ -138,7 +128,7 @@ class FeatureBrandingService:
 class EmailSender(Protocol):
     """Protocol for email sending abstraction."""
 
-    def send_email(self, to: str, subject: str, html_content: str):
+    def send_email(self, to: str, subject: str, html_content: str) -> None:
         """Send email with given parameters."""
         ...
 
@@ -146,7 +136,7 @@ class EmailSender(Protocol):
 class FlaskMailSender:
     """Flask-Mail based email sender."""
 
-    def send_email(self, to: str, subject: str, html_content: str):
+    def send_email(self, to: str, subject: str, html_content: str) -> None:
         """Send email using Flask-Mail."""
         if mail.is_inited():
             mail.send(to=to, subject=subject, html=html_content)
@@ -166,7 +156,7 @@ class EmailI18nService:
         renderer: EmailRenderer,
         branding_service: BrandingService,
         sender: EmailSender,
-    ):
+    ) -> None:
         self._config = config
         self._renderer = renderer
         self._branding_service = branding_service
@@ -177,8 +167,8 @@ class EmailI18nService:
         email_type: EmailType,
         language_code: str,
         to: str,
-        template_context: dict[str, Any] | None = None,
-    ):
+        template_context: Optional[dict[str, Any]] = None,
+    ) -> None:
         """
         Send internationalized email with branding support.
 
@@ -202,7 +192,7 @@ class EmailI18nService:
         to: str,
         code: str,
         phase: str,
-    ):
+    ) -> None:
         """
         Send change email notification with phase-specific handling.
 
@@ -234,7 +224,7 @@ class EmailI18nService:
         to: str | list[str],
         subject: str,
         html_content: str,
-    ):
+    ) -> None:
         """
         Send a raw email directly without template processing.
 
@@ -451,126 +441,6 @@ def create_default_email_config() -> EmailI18nConfig:
                 branded_template_path="clean_document_job_mail_template_zh-CN.html",
             ),
         },
-        EmailType.TRIGGER_EVENTS_LIMIT_SANDBOX: {
-            EmailLanguage.EN_US: EmailTemplate(
-                subject="You’ve reached your Sandbox Trigger Events limit",
-                template_path="trigger_events_limit_template_en-US.html",
-                branded_template_path="without-brand/trigger_events_limit_template_en-US.html",
-            ),
-            EmailLanguage.ZH_HANS: EmailTemplate(
-                subject="您的 Sandbox 触发事件额度已用尽",
-                template_path="trigger_events_limit_template_zh-CN.html",
-                branded_template_path="without-brand/trigger_events_limit_template_zh-CN.html",
-            ),
-        },
-        EmailType.TRIGGER_EVENTS_LIMIT_PROFESSIONAL: {
-            EmailLanguage.EN_US: EmailTemplate(
-                subject="You’ve reached your monthly Trigger Events limit",
-                template_path="trigger_events_limit_template_en-US.html",
-                branded_template_path="without-brand/trigger_events_limit_template_en-US.html",
-            ),
-            EmailLanguage.ZH_HANS: EmailTemplate(
-                subject="您的月度触发事件额度已用尽",
-                template_path="trigger_events_limit_template_zh-CN.html",
-                branded_template_path="without-brand/trigger_events_limit_template_zh-CN.html",
-            ),
-        },
-        EmailType.TRIGGER_EVENTS_USAGE_WARNING_SANDBOX: {
-            EmailLanguage.EN_US: EmailTemplate(
-                subject="You’re nearing your Sandbox Trigger Events limit",
-                template_path="trigger_events_usage_warning_template_en-US.html",
-                branded_template_path="without-brand/trigger_events_usage_warning_template_en-US.html",
-            ),
-            EmailLanguage.ZH_HANS: EmailTemplate(
-                subject="您的 Sandbox 触发事件额度接近上限",
-                template_path="trigger_events_usage_warning_template_zh-CN.html",
-                branded_template_path="without-brand/trigger_events_usage_warning_template_zh-CN.html",
-            ),
-        },
-        EmailType.TRIGGER_EVENTS_USAGE_WARNING_PROFESSIONAL: {
-            EmailLanguage.EN_US: EmailTemplate(
-                subject="You’re nearing your Monthly Trigger Events limit",
-                template_path="trigger_events_usage_warning_template_en-US.html",
-                branded_template_path="without-brand/trigger_events_usage_warning_template_en-US.html",
-            ),
-            EmailLanguage.ZH_HANS: EmailTemplate(
-                subject="您的月度触发事件额度接近上限",
-                template_path="trigger_events_usage_warning_template_zh-CN.html",
-                branded_template_path="without-brand/trigger_events_usage_warning_template_zh-CN.html",
-            ),
-        },
-        EmailType.API_RATE_LIMIT_LIMIT_SANDBOX: {
-            EmailLanguage.EN_US: EmailTemplate(
-                subject="You’ve reached your API Rate Limit",
-                template_path="api_rate_limit_limit_template_en-US.html",
-                branded_template_path="without-brand/api_rate_limit_limit_template_en-US.html",
-            ),
-            EmailLanguage.ZH_HANS: EmailTemplate(
-                subject="您的 API 速率额度已用尽",
-                template_path="api_rate_limit_limit_template_zh-CN.html",
-                branded_template_path="without-brand/api_rate_limit_limit_template_zh-CN.html",
-            ),
-        },
-        EmailType.API_RATE_LIMIT_WARNING_SANDBOX: {
-            EmailLanguage.EN_US: EmailTemplate(
-                subject="You’re nearing your API Rate Limit",
-                template_path="api_rate_limit_warning_template_en-US.html",
-                branded_template_path="without-brand/api_rate_limit_warning_template_en-US.html",
-            ),
-            EmailLanguage.ZH_HANS: EmailTemplate(
-                subject="您的 API 速率额度接近上限",
-                template_path="api_rate_limit_warning_template_zh-CN.html",
-                branded_template_path="without-brand/api_rate_limit_warning_template_zh-CN.html",
-            ),
-        },
-        EmailType.EMAIL_REGISTER: {
-            EmailLanguage.EN_US: EmailTemplate(
-                subject="Register Your {application_title} Account",
-                template_path="register_email_template_en-US.html",
-                branded_template_path="without-brand/register_email_template_en-US.html",
-            ),
-            EmailLanguage.ZH_HANS: EmailTemplate(
-                subject="注册您的 {application_title} 账户",
-                template_path="register_email_template_zh-CN.html",
-                branded_template_path="without-brand/register_email_template_zh-CN.html",
-            ),
-        },
-        EmailType.EMAIL_REGISTER_WHEN_ACCOUNT_EXIST: {
-            EmailLanguage.EN_US: EmailTemplate(
-                subject="Register Your {application_title} Account",
-                template_path="register_email_when_account_exist_template_en-US.html",
-                branded_template_path="without-brand/register_email_when_account_exist_template_en-US.html",
-            ),
-            EmailLanguage.ZH_HANS: EmailTemplate(
-                subject="注册您的 {application_title} 账户",
-                template_path="register_email_when_account_exist_template_zh-CN.html",
-                branded_template_path="without-brand/register_email_when_account_exist_template_zh-CN.html",
-            ),
-        },
-        EmailType.RESET_PASSWORD_WHEN_ACCOUNT_NOT_EXIST: {
-            EmailLanguage.EN_US: EmailTemplate(
-                subject="Reset Your {application_title} Password",
-                template_path="reset_password_mail_when_account_not_exist_template_en-US.html",
-                branded_template_path="without-brand/reset_password_mail_when_account_not_exist_template_en-US.html",
-            ),
-            EmailLanguage.ZH_HANS: EmailTemplate(
-                subject="重置您的 {application_title} 密码",
-                template_path="reset_password_mail_when_account_not_exist_template_zh-CN.html",
-                branded_template_path="without-brand/reset_password_mail_when_account_not_exist_template_zh-CN.html",
-            ),
-        },
-        EmailType.RESET_PASSWORD_WHEN_ACCOUNT_NOT_EXIST_NO_REGISTER: {
-            EmailLanguage.EN_US: EmailTemplate(
-                subject="Reset Your {application_title} Password",
-                template_path="reset_password_mail_when_account_not_exist_no_register_template_en-US.html",
-                branded_template_path="without-brand/reset_password_mail_when_account_not_exist_no_register_template_en-US.html",
-            ),
-            EmailLanguage.ZH_HANS: EmailTemplate(
-                subject="重置您的 {application_title} 密码",
-                template_path="reset_password_mail_when_account_not_exist_no_register_template_zh-CN.html",
-                branded_template_path="without-brand/reset_password_mail_when_account_not_exist_no_register_template_zh-CN.html",
-            ),
-        },
     }
 
     return EmailI18nConfig(templates=templates)
@@ -593,7 +463,7 @@ def get_default_email_i18n_service() -> EmailI18nService:
 
 
 # Global instance
-_email_i18n_service: EmailI18nService | None = None
+_email_i18n_service: Optional[EmailI18nService] = None
 
 
 def get_email_i18n_service() -> EmailI18nService:

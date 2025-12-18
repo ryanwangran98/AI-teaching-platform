@@ -26,15 +26,12 @@ const defaultItems = [
 export type Item = {
   value: number | string
   name: string
-  isGroup?: boolean
-  disabled?: boolean
-  extra?: React.ReactNode
 } & Record<string, any>
 
 export type ISelectProps = {
   className?: string
   wrapperClassName?: string
-  renderTrigger?: (value: Item | null, isOpen: boolean) => React.JSX.Element | null
+  renderTrigger?: (value: Item | null) => React.JSX.Element | null
   items?: Item[]
   defaultValue?: number | string
   disabled?: boolean
@@ -73,13 +70,14 @@ const Select: FC<ISelectProps> = ({
   const [open, setOpen] = useState(false)
 
   const [selectedItem, setSelectedItem] = useState<Item | null>(null)
-  // Ensure selectedItem is properly set when defaultValue or items change
   useEffect(() => {
     let defaultSelect = null
-    // Handle cases where defaultValue might be undefined, null, or empty string
-    defaultSelect = (defaultValue && items.find((item: Item) => item.value === defaultValue)) || null
+    const existed = items.find((item: Item) => item.value === defaultValue)
+    if (existed)
+      defaultSelect = existed
+
     setSelectedItem(defaultSelect)
-  }, [defaultValue, items])
+  }, [defaultValue])
 
   const filteredItems: Item[]
     = query === ''
@@ -195,18 +193,14 @@ const SimpleSelect: FC<ISelectProps> = ({
 
   const [selectedItem, setSelectedItem] = useState<Item | null>(null)
 
-  // Enhanced: Preserve user selection, only reset when necessary
   useEffect(() => {
-    // Only reset if no current selection or current selection is invalid
-    const isCurrentSelectionValid = selectedItem && items.some(item => item.value === selectedItem.value)
+    let defaultSelect = null
+    const existed = items.find((item: Item) => item.value === defaultValue)
+    if (existed)
+      defaultSelect = existed
 
-    if (!isCurrentSelectionValid) {
-      let defaultSelect = null
-      // Handle cases where defaultValue might be undefined, null, or empty string
-      defaultSelect = items.find((item: Item) => item.value === defaultValue) ?? null
-      setSelectedItem(defaultSelect)
-    }
-  }, [defaultValue, items, selectedItem])
+    setSelectedItem(defaultSelect)
+  }, [defaultValue])
 
   const listboxRef = useRef<HTMLDivElement>(null)
 
@@ -220,92 +214,78 @@ const SimpleSelect: FC<ISelectProps> = ({
         }
       }}
     >
-      {({ open }) => (
-        <div className={classNames('group/simple-select relative h-9', wrapperClassName)}>
-          {renderTrigger && <ListboxButton className='w-full'>{renderTrigger(selectedItem, open)}</ListboxButton>}
-          {!renderTrigger && (
-            <ListboxButton onClick={() => {
-              onOpenChange?.(open)
-            }} className={classNames(`flex h-full w-full items-center rounded-lg border-0 bg-components-input-bg-normal pl-3 pr-10 focus-visible:bg-state-base-hover-alt focus-visible:outline-none group-hover/simple-select:bg-state-base-hover-alt sm:text-sm sm:leading-6 ${disabled ? 'cursor-not-allowed' : 'cursor-pointer'}`, className)}>
-              <span className={classNames('system-sm-regular block truncate text-left text-components-input-text-filled', !selectedItem?.name && 'text-components-input-text-placeholder')}>{selectedItem?.name ?? localPlaceholder}</span>
-              <span className="absolute inset-y-0 right-0 flex items-center pr-2">
-                {isLoading ? <RiLoader4Line className='h-3.5 w-3.5 animate-spin text-text-secondary' />
-                  : (selectedItem && !notClearable)
-                    ? (
-                      <XMarkIcon
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          setSelectedItem(null)
-                          onSelect({ name: '', value: '' })
-                        }}
-                        className="h-4 w-4 cursor-pointer text-text-quaternary"
-                        aria-hidden="false"
-                      />
-                    )
-                    : (
-                      open ? (
-                        <ChevronUpIcon
-                          className="h-4 w-4 text-text-quaternary group-hover/simple-select:text-text-secondary"
-                          aria-hidden="true"
-                        />
-                      ) : (
-                        <ChevronDownIcon
-                          className="h-4 w-4 text-text-quaternary group-hover/simple-select:text-text-secondary"
-                          aria-hidden="true"
-                        />
-                      )
-                    )}
-              </span>
-            </ListboxButton>
-          )}
+      <div className={classNames('group/simple-select relative h-9', wrapperClassName)}>
+        {renderTrigger && <ListboxButton className='w-full'>{renderTrigger(selectedItem)}</ListboxButton>}
+        {!renderTrigger && (
+          <ListboxButton onClick={() => {
+              // get data-open, use setTimeout to ensure the attribute is set
+              setTimeout(() => {
+                if (listboxRef.current)
+                  onOpenChange?.(listboxRef.current.getAttribute('data-open') !== null)
+              })
+          }} className={classNames(`flex h-full w-full items-center rounded-lg border-0 bg-components-input-bg-normal pl-3 pr-10 focus-visible:bg-state-base-hover-alt focus-visible:outline-none group-hover/simple-select:bg-state-base-hover-alt sm:text-sm sm:leading-6 ${disabled ? 'cursor-not-allowed' : 'cursor-pointer'}`, className)}>
+            <span className={classNames('system-sm-regular block truncate text-left text-components-input-text-filled', !selectedItem?.name && 'text-components-input-text-placeholder')}>{selectedItem?.name ?? localPlaceholder}</span>
+            <span className="absolute inset-y-0 right-0 flex items-center pr-2">
+              {isLoading ? <RiLoader4Line className='h-3.5 w-3.5 animate-spin text-text-secondary' />
+              : (selectedItem && !notClearable)
+                ? (
+                  <XMarkIcon
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      setSelectedItem(null)
+                      onSelect({ name: '', value: '' })
+                    }}
+                    className="h-4 w-4 cursor-pointer text-text-quaternary"
+                    aria-hidden="false"
+                  />
+                )
+                : (
+                  <ChevronDownIcon
+                    className="h-4 w-4 text-text-quaternary group-hover/simple-select:text-text-secondary"
+                    aria-hidden="true"
+                  />
+                )}
+            </span>
+          </ListboxButton>
+        )}
 
-          {(!disabled) && (
-            <ListboxOptions className={classNames('absolute z-10 mt-1 max-h-60 w-full overflow-auto rounded-xl border-[0.5px] border-components-panel-border bg-components-panel-bg-blur px-1 py-1 text-base shadow-lg backdrop-blur-sm focus:outline-none sm:text-sm', optionWrapClassName)}>
-              {items.map((item: Item) =>
-                item.isGroup ? (
-                  <div
-                    key={item.value}
-                    className="select-none px-3 py-1.5 text-xs font-medium uppercase tracking-wide text-text-tertiary"
-                  >
-                    {item.name}
-                  </div>
-                ) : (
-                  <ListboxOption
-                    key={item.value}
-                    className={
-                      classNames(
-                        'relative cursor-pointer select-none rounded-lg py-2 pl-3 pr-9 text-text-secondary hover:bg-state-base-hover',
-                        optionClassName,
-                      )
-                    }
-                    value={item}
-                    disabled={item.disabled || disabled}
-                  >
-                    {({ /* active, */ selected }) => (
-                      <>
-                        {renderOption
-                          ? renderOption({ item, selected })
-                          : (<>
-                            <span className={classNames('block', selected && 'font-normal')}>{item.name}</span>
-                            {selected && !hideChecked && (
-                              <span
-                                className={classNames(
-                                  'absolute inset-y-0 right-0 flex items-center pr-2 text-text-accent',
-                                )}
-                              >
-                                <RiCheckLine className="h-4 w-4" aria-hidden="true" />
-                              </span>
+        {(!disabled) && (
+          <ListboxOptions className={classNames('absolute z-10 mt-1 max-h-60 w-full overflow-auto rounded-xl border-[0.5px] border-components-panel-border bg-components-panel-bg-blur px-1 py-1 text-base shadow-lg backdrop-blur-sm focus:outline-none sm:text-sm', optionWrapClassName)}>
+            {items.map((item: Item) => (
+              <ListboxOption
+                key={item.value}
+                className={
+                  classNames(
+                    'relative cursor-pointer select-none rounded-lg py-2 pl-3 pr-9 text-text-secondary hover:bg-state-base-hover',
+                    optionClassName,
+                  )
+                }
+                value={item}
+                disabled={disabled}
+              >
+                {({ /* active, */ selected }) => (
+                  <>
+                    {renderOption
+                      ? renderOption({ item, selected })
+                      : (<>
+                        <span className={classNames('block', selected && 'font-normal')}>{item.name}</span>
+                        {selected && !hideChecked && (
+                          <span
+                            className={classNames(
+                              'absolute inset-y-0 right-0 flex items-center pr-4 text-text-accent',
                             )}
-                          </>)}
-                      </>
-                    )}
-                  </ListboxOption>
-                ),
-              )}
-            </ListboxOptions>
-          )}
-        </div>
-      )}
+                          >
+                            <RiCheckLine className="h-4 w-4" aria-hidden="true" />
+                          </span>
+                        )}
+                      </>)}
+                  </>
+                )}
+              </ListboxOption>
+            ))}
+          </ListboxOptions>
+        )}
+      </div>
     </Listbox>
   )
 }
@@ -349,7 +329,6 @@ const PortalSelect: FC<PortalSelectProps> = ({
       onOpenChange={setOpen}
       placement='bottom-start'
       offset={4}
-      triggerPopupSameWidth={true}
     >
       <PortalToFollowElemTrigger onClick={() => !readonly && setOpen(v => !v)} className='w-full'>
         {renderTrigger
@@ -377,7 +356,7 @@ const PortalSelect: FC<PortalSelectProps> = ({
       </PortalToFollowElemTrigger>
       <PortalToFollowElemContent className={`z-20 ${popupClassName}`}>
         <div
-          className={classNames('max-h-60 overflow-auto rounded-xl border-[0.5px] border-components-panel-border bg-components-panel-bg px-1 py-1 text-base shadow-lg focus:outline-none sm:text-sm', popupInnerClassName)}
+          className={classNames('max-h-60 overflow-auto rounded-md border-[0.5px] border-components-panel-border bg-components-panel-bg px-1 py-1 text-base shadow-lg focus:outline-none sm:text-sm', popupInnerClassName)}
         >
           {items.map((item: Item) => (
             <div
@@ -404,7 +383,6 @@ const PortalSelect: FC<PortalSelectProps> = ({
               {!hideChecked && item.value === value && (
                 <RiCheckLine className='h-4 w-4 shrink-0 text-text-accent' />
               )}
-              {item.extra}
             </div>
           ))}
         </div>

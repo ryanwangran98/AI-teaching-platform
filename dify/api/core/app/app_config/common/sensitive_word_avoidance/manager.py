@@ -1,10 +1,12 @@
+from typing import Optional
+
 from core.app.app_config.entities import SensitiveWordAvoidanceEntity
 from core.moderation.factory import ModerationFactory
 
 
 class SensitiveWordAvoidanceConfigManager:
     @classmethod
-    def convert(cls, config: dict) -> SensitiveWordAvoidanceEntity | None:
+    def convert(cls, config: dict) -> Optional[SensitiveWordAvoidanceEntity]:
         sensitive_word_avoidance_dict = config.get("sensitive_word_avoidance")
         if not sensitive_word_avoidance_dict:
             return None
@@ -19,7 +21,7 @@ class SensitiveWordAvoidanceConfigManager:
 
     @classmethod
     def validate_and_set_defaults(
-        cls, tenant_id: str, config: dict, only_structure_validate: bool = False
+        cls, tenant_id, config: dict, only_structure_validate: bool = False
     ) -> tuple[dict, list[str]]:
         if not config.get("sensitive_word_avoidance"):
             config["sensitive_word_avoidance"] = {"enabled": False}
@@ -36,14 +38,7 @@ class SensitiveWordAvoidanceConfigManager:
 
             if not only_structure_validate:
                 typ = config["sensitive_word_avoidance"]["type"]
-                if not isinstance(typ, str):
-                    raise ValueError("sensitive_word_avoidance.type must be a string")
-
-                sensitive_word_avoidance_config = config["sensitive_word_avoidance"].get("config")
-                if sensitive_word_avoidance_config is None:
-                    sensitive_word_avoidance_config = {}
-                if not isinstance(sensitive_word_avoidance_config, dict):
-                    raise ValueError("sensitive_word_avoidance.config must be a dict")
+                sensitive_word_avoidance_config = config["sensitive_word_avoidance"]["config"]
 
                 ModerationFactory.validate_config(name=typ, tenant_id=tenant_id, config=sensitive_word_avoidance_config)
 

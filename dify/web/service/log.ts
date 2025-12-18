@@ -67,8 +67,8 @@ export const fetchWorkflowLogs: Fetcher<WorkflowLogsResponse, { url: string; par
   return get<WorkflowLogsResponse>(url, { params })
 }
 
-export const fetchRunDetail = (url: string) => {
-  return get<WorkflowRunDetailResponse>(url)
+export const fetchRunDetail = ({ appID, runID }: { appID: string; runID: string }) => {
+  return get<WorkflowRunDetailResponse>(`/apps/${appID}/workflow-runs/${runID}`)
 }
 
 export const fetchTracingList: Fetcher<NodeTracingListResponse, { url: string }> = ({ url }) => {

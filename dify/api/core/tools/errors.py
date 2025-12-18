@@ -29,14 +29,6 @@ class ToolApiSchemaError(ValueError):
     pass
 
 
-class ToolSSRFError(ValueError):
-    pass
-
-
-class ToolCredentialPolicyViolationError(ValueError):
-    pass
-
-
 class ToolEngineInvokeError(Exception):
     meta: ToolInvokeMeta
 

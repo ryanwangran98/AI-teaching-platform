@@ -1,6 +1,7 @@
 import decimal
 import hashlib
 from threading import Lock
+from typing import Optional
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -23,7 +24,8 @@ from core.model_runtime.errors.invoke import (
     InvokeRateLimitError,
     InvokeServerUnavailableError,
 )
-from core.plugin.entities.plugin_daemon import PluginModelProviderEntity
+from core.plugin.entities.plugin_daemon import PluginDaemonInnerError, PluginModelProviderEntity
+from core.plugin.impl.model import PluginModelClient
 
 
 class AIModel(BaseModel):
@@ -51,8 +53,6 @@ class AIModel(BaseModel):
 
         :return: Invoke error mapping
         """
-        from core.plugin.entities.plugin_daemon import PluginDaemonInnerError
-
         return {
             InvokeConnectionError: [InvokeConnectionError],
             InvokeServerUnavailableError: [InvokeServerUnavailableError],
@@ -99,7 +99,7 @@ class AIModel(BaseModel):
         model_schema = self.get_model_schema(model, credentials)
 
         # get price info from predefined model schema
-        price_config: PriceConfig | None = None
+        price_config: Optional[PriceConfig] = None
         if model_schema and model_schema.pricing:
             price_config = model_schema.pricing
 
@@ -132,7 +132,7 @@ class AIModel(BaseModel):
             currency=price_config.currency,
         )
 
-    def get_model_schema(self, model: str, credentials: dict | None = None) -> AIModelEntity | None:
+    def get_model_schema(self, model: str, credentials: Optional[dict] = None) -> Optional[AIModelEntity]:
         """
         Get model schema by model name and credentials
 
@@ -140,8 +140,6 @@ class AIModel(BaseModel):
         :param credentials: model credentials
         :return: model schema
         """
-        from core.plugin.impl.model import PluginModelClient
-
         plugin_model_manager = PluginModelClient()
         cache_key = f"{self.tenant_id}:{self.plugin_id}:{self.provider_name}:{self.model_type.value}:{model}"
         # sort credentials
@@ -173,7 +171,7 @@ class AIModel(BaseModel):
 
             return schema
 
-    def get_customizable_model_schema_from_credentials(self, model: str, credentials: dict) -> AIModelEntity | None:
+    def get_customizable_model_schema_from_credentials(self, model: str, credentials: dict) -> Optional[AIModelEntity]:
         """
         Get customizable model schema from credentials
 
@@ -231,7 +229,7 @@ class AIModel(BaseModel):
 
         return schema
 
-    def get_customizable_model_schema(self, model: str, credentials: dict) -> AIModelEntity | None:
+    def get_customizable_model_schema(self, model: str, credentials: dict) -> Optional[AIModelEntity]:
         """
         Get customizable model schema
 
@@ -241,7 +239,7 @@ class AIModel(BaseModel):
         """
         return None
 
-    def _get_default_parameter_rule_variable_map(self, name: DefaultParameterName):
+    def _get_default_parameter_rule_variable_map(self, name: DefaultParameterName) -> dict:
         """
         Get default parameter rule for given name
 

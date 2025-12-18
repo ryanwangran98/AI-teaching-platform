@@ -74,9 +74,8 @@ const translation = {
       moreThanMaxLengthLine: 'Rândul {{rowIndex}}: valoarea {{varName}} nu poate avea mai mult de {{maxLength}} caractere',
       atLeastOne: 'Vă rugăm să introduceți cel puțin un rând în fișierul încărcat.',
     },
-    execution: 'Rulare',
-    executions: '{{num}} rulări',
-    stopRun: 'Oprește execuția',
+    execution: 'EXECUȚIE',
+    executions: '{{num}} EXECUȚII',
   },
   login: {
     backToHome: 'Înapoi la Acasă',

@@ -1,4 +1,5 @@
 'use client'
+import type { ForwardRefRenderFunction } from 'react'
 import { useImperativeHandle } from 'react'
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import type { Dependency, GitHubItemAndMarketPlaceDependency, PackageDependency, Plugin, VersionInfo } from '../../../types'
@@ -6,7 +7,7 @@ import MarketplaceItem from '../item/marketplace-item'
 import GithubItem from '../item/github-item'
 import { useFetchPluginsInMarketPlaceByInfo } from '@/service/use-plugins'
 import useCheckInstalled from '@/app/components/plugins/install-plugin/hooks/use-check-installed'
-import { produce } from 'immer'
+import produce from 'immer'
 import PackageItem from '../item/package-item'
 import LoadingError from '../../base/loading-error'
 import { useGlobalPublicStore } from '@/context/global-public-context'
@@ -20,7 +21,6 @@ type Props = {
   onDeSelectAll: () => void
   onLoadedAllPlugin: (installedInfo: Record<string, VersionInfo>) => void
   isFromMarketPlace?: boolean
-  ref?: React.Ref<ExposeRefs>
 }
 
 export type ExposeRefs = {
@@ -28,7 +28,7 @@ export type ExposeRefs = {
   deSelectAllPlugins: () => void
 }
 
-const InstallByDSLList = ({
+const InstallByDSLList: ForwardRefRenderFunction<ExposeRefs, Props> = ({
   allPlugins,
   selectedPlugins,
   onSelect,
@@ -36,8 +36,7 @@ const InstallByDSLList = ({
   onDeSelectAll,
   onLoadedAllPlugin,
   isFromMarketPlace,
-  ref,
-}: Props) => {
+}, ref) => {
   const systemFeatures = useGlobalPublicStore(s => s.systemFeatures)
   // DSL has id, to get plugin info to show more info
   const { isLoading: isFetchingMarketplaceDataById, data: infoGetById, error: infoByIdError } = useFetchPluginsInMarketPlaceByInfo(allPlugins.filter(d => d.type === 'marketplace').map((d) => {
@@ -132,6 +131,7 @@ const InstallByDSLList = ({
       if (failedIndex.length > 0)
         setErrorIndexes([...errorIndexes, ...failedIndex])
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isFetchingMarketplaceDataById])
 
   useEffect(() => {
@@ -156,12 +156,15 @@ const InstallByDSLList = ({
       if (failedIndex.length > 0)
         setErrorIndexes([...errorIndexes, ...failedIndex])
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isFetchingDataByMeta])
 
   useEffect(() => {
     // get info all failed
     if (infoByMetaError || infoByIdError)
       setErrorIndexes([...errorIndexes, ...marketPlaceInDSLIndex])
+
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [infoByMetaError, infoByIdError])
 
   const isLoadedAllData = (plugins.filter(p => !!p).length + errorIndexes.length) === allPlugins.length
@@ -186,6 +189,8 @@ const InstallByDSLList = ({
   useEffect(() => {
     if (isLoadedAllData && installedInfo)
       onLoadedAllPlugin(installedInfo!)
+
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isLoadedAllData, installedInfo])
 
   const handleSelect = useCallback((index: number) => {
@@ -269,4 +274,4 @@ const InstallByDSLList = ({
     </>
   )
 }
-export default InstallByDSLList
+export default React.forwardRef(InstallByDSLList)

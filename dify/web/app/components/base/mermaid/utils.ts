@@ -2,28 +2,6 @@ export function cleanUpSvgCode(svgCode: string): string {
   return svgCode.replaceAll('<br>', '<br/>')
 }
 
-export const sanitizeMermaidCode = (mermaidCode: string): string => {
-  if (!mermaidCode || typeof mermaidCode !== 'string')
-    return ''
-
-  return mermaidCode
-    .split('\n')
-    .filter((line) => {
-      const trimmed = line.trimStart()
-
-      // Mermaid directives can override config; treat as untrusted in chat context.
-      if (trimmed.startsWith('%%{'))
-        return false
-
-      // Mermaid click directives can create JS callbacks/links inside rendered SVG.
-      if (trimmed.startsWith('click '))
-        return false
-
-      return true
-    })
-    .join('\n')
-}
-
 /**
  * Prepares mermaid code for rendering by sanitizing common syntax issues.
  * @param {string} mermaidCode - The mermaid code to prepare
@@ -34,7 +12,10 @@ export const prepareMermaidCode = (mermaidCode: string, style: 'classic' | 'hand
   if (!mermaidCode || typeof mermaidCode !== 'string')
     return ''
 
-  let code = sanitizeMermaidCode(mermaidCode.trim())
+  let code = mermaidCode.trim()
+
+  // Security: Sanitize against javascript: protocol in click events (XSS vector)
+  code = code.replace(/(\bclick\s+\w+\s+")javascript:[^"]*(")/g, '$1#$2')
 
   // Convenience: Basic BR replacement. This is a common and safe operation.
   code = code.replace(/<br\s*\/?>/g, '\n')
@@ -79,7 +60,7 @@ export function svgToBase64(svgGraph: string): Promise<string> {
       reader.readAsDataURL(blob)
     })
   }
-  catch {
+  catch (error) {
     return Promise.resolve('')
   }
 }

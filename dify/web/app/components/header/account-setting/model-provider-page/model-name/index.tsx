@@ -17,7 +17,6 @@ type ModelNameProps = PropsWithChildren<{
   showMode?: boolean
   modeClassName?: string
   showFeatures?: boolean
-  showFeaturesLabel?: boolean
   featuresClassName?: string
   showContextSize?: boolean
 }>
@@ -29,7 +28,6 @@ const ModelName: FC<ModelNameProps> = ({
   showMode,
   modeClassName,
   showFeatures,
-  showFeaturesLabel,
   featuresClassName,
   showContextSize,
   children,
@@ -62,21 +60,20 @@ const ModelName: FC<ModelNameProps> = ({
           )
         }
         {
-          showContextSize && modelItem.model_properties.context_size && (
-            <ModelBadge>
-              {sizeFormat(modelItem.model_properties.context_size as number)}
-            </ModelBadge>
-          )
-        }
-        {
           showFeatures && modelItem.features?.map(feature => (
             <FeatureIcon
               key={feature}
               feature={feature}
               className={featuresClassName}
-              showFeaturesLabel={showFeaturesLabel}
             />
           ))
+        }
+        {
+          showContextSize && modelItem.model_properties.context_size && (
+            <ModelBadge>
+              {sizeFormat(modelItem.model_properties.context_size as number)}
+            </ModelBadge>
+          )
         }
       </div>
       {children}

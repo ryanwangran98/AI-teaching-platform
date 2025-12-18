@@ -3,9 +3,8 @@ import os
 from collections.abc import Generator
 from pathlib import Path
 
-import opendal
+import opendal  # type: ignore[import]
 from dotenv import dotenv_values
-from opendal import Operator
 
 from extensions.storage.base_storage import BaseStorage
 
@@ -35,12 +34,13 @@ class OpenDALStorage(BaseStorage):
             root = kwargs.get("root", "storage")
             Path(root).mkdir(parents=True, exist_ok=True)
 
-        retry_layer = opendal.layers.RetryLayer(max_times=3, factor=2.0, jitter=True)
-        self.op = Operator(scheme=scheme, **kwargs).layer(retry_layer)
+        self.op = opendal.Operator(scheme=scheme, **kwargs)  # type: ignore
         logger.debug("opendal operator created with scheme %s", scheme)
+        retry_layer = opendal.layers.RetryLayer(max_times=3, factor=2.0, jitter=True)
+        self.op = self.op.layer(retry_layer)
         logger.debug("added retry layer to opendal operator")
 
-    def save(self, filename: str, data: bytes):
+    def save(self, filename: str, data: bytes) -> None:
         self.op.write(path=filename, bs=data)
         logger.debug("file %s saved", filename)
 
@@ -57,24 +57,22 @@ class OpenDALStorage(BaseStorage):
             raise FileNotFoundError("File not found")
 
         batch_size = 4096
-        with self.op.open(
-            path=filename,
-            mode="rb",
-            chunck=batch_size,
-        ) as file:
-            while chunk := file.read(batch_size):
-                yield chunk
+        file = self.op.open(path=filename, mode="rb")
+        while chunk := file.read(batch_size):
+            yield chunk
         logger.debug("file %s loaded as stream", filename)
 
     def download(self, filename: str, target_filepath: str):
         if not self.exists(filename):
             raise FileNotFoundError("File not found")
 
-        Path(target_filepath).write_bytes(self.op.read(path=filename))
+        with Path(target_filepath).open("wb") as f:
+            f.write(self.op.read(path=filename))
         logger.debug("file %s downloaded to %s", filename, target_filepath)
 
     def exists(self, filename: str) -> bool:
-        return self.op.exists(path=filename)
+        res: bool = self.op.exists(path=filename)
+        return res
 
     def delete(self, filename: str):
         if self.exists(filename):
@@ -87,16 +85,15 @@ class OpenDALStorage(BaseStorage):
         if not self.exists(path):
             raise FileNotFoundError("Path not found")
 
-        # Use the new OpenDAL 0.46.0+ API with recursive listing
-        lister = self.op.list(path, recursive=True)
+        all_files = self.op.scan(path=path)
         if files and directories:
             logger.debug("files and directories on %s scanned", path)
-            return [entry.path for entry in lister]
+            return [f.path for f in all_files]
         if files:
             logger.debug("files on %s scanned", path)
-            return [entry.path for entry in lister if not entry.metadata.is_dir]
+            return [f.path for f in all_files if not f.path.endswith("/")]
         elif directories:
             logger.debug("directories on %s scanned", path)
-            return [entry.path for entry in lister if entry.metadata.is_dir]
+            return [f.path for f in all_files if f.path.endswith("/")]
         else:
             raise ValueError("At least one of files or directories must be True")

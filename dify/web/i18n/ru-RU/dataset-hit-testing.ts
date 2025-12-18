@@ -2,11 +2,12 @@ const translation = {
   title: 'Тестирование поиска',
   desc: 'Проверьте эффективность поиска в базе знаний на основе заданного текста запроса.',
   dateTimeFormat: 'DD.MM.YYYY HH:mm',
+  recents: 'Недавние',
   table: {
     header: {
       source: 'Источник',
+      text: 'Текст',
       time: 'Время',
-      queryContent: 'Содержимое запроса',
     },
   },
   input: {
@@ -29,12 +30,6 @@ const translation = {
   chunkDetail: 'Деталь Чанка',
   open: 'Открытый',
   keyword: 'Ключевые слова',
-  imageUploader: {
-    tip: 'Загрузите или перетащите изображения (Макс. {{batchCount}}, {{size}} МБ каждое)',
-    tooltip: 'Загрузите изображения (макс. {{batchCount}}, {{size}} МБ каждое)',
-    dropZoneTip: 'Перетащите файл сюда для загрузки',
-    singleChunkAttachmentLimitTooltip: 'Количество одноэлементных вложений не может превышать {{limit}}',
-  },
 }
 
 export default translation

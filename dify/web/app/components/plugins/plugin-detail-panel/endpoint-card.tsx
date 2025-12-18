@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { useBoolean } from 'ahooks'
 import copy from 'copy-to-clipboard'
 import { RiClipboardLine, RiDeleteBinLine, RiEditLine, RiLoginCircleLine } from '@remixicon/react'
-import type { EndpointListItem, PluginDetail } from '../types'
+import type { EndpointListItem } from '../types'
 import EndpointModal from './endpoint-modal'
 import { NAME_FIELD } from './utils'
 import { addDefaultValue, toolCredentialToFormSchemas } from '@/app/components/tools/utils/to-form-schema'
@@ -22,13 +22,11 @@ import {
 } from '@/service/use-endpoints'
 
 type Props = {
-  pluginDetail: PluginDetail
   data: EndpointListItem
   handleChange: () => void
 }
 
 const EndpointCard = ({
-  pluginDetail,
   data,
   handleChange,
 }: Props) => {
@@ -208,11 +206,10 @@ const EndpointCard = ({
       )}
       {isShowEndpointModal && (
         <EndpointModal
-          formSchemas={formSchemas as any}
+          formSchemas={formSchemas}
           defaultValues={formValue}
           onCancel={hideEndpointModalConfirm}
           onSaved={handleUpdate}
-          pluginDetail={pluginDetail}
         />
       )}
     </div>

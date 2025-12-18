@@ -1,7 +1,7 @@
 const translation = {
   title: 'Registros',
   description: 'Os registros registram o status de execução do aplicativo, incluindo entradas do usuário e respostas do AI.',
-  dateTimeFormat: 'MM/DD/YYYY hh:mm:ss A',
+  dateTimeFormat: 'MM/DD/YYYY hh:mm A',
   table: {
     header: {
       updatedTime: 'Hora de atualização',
@@ -19,7 +19,6 @@ const translation = {
       tokens: 'TOKENS',
       user: 'USUÁRIO FINAL OU CONTA',
       version: 'VERSÃO',
-      triggered_from: 'ATIVADO POR',
     },
     pagination: {
       previous: 'Anterior',
@@ -66,8 +65,6 @@ const translation = {
       quarterToDate: 'Trimestre até hoje',
       yearToDate: 'Ano até hoje',
       allTime: 'Todo o tempo',
-      custom: 'Personalizado',
-      last30days: 'Últimos 30 Dias',
     },
     annotation: {
       all: 'Tudo',
@@ -85,7 +82,6 @@ const translation = {
     workflowTitle: 'Detalhes do Registro',
     fileListLabel: 'Detalhes do arquivo',
     fileListDetail: 'Detalhe',
-    testWithParams: 'Teste com parâmetros',
   },
   promptLog: 'Registro de Prompt',
   agentLog: 'Registro do agente',
@@ -98,16 +94,6 @@ const translation = {
     finalProcessing: 'Processamento final',
     iteration: 'Iteração',
     toolUsed: 'Ferramenta usada',
-  },
-  dateFormat: 'DD/MM/AAAA',
-  triggerBy: {
-    debugging: 'Depuração',
-    appRun: 'Aplicativo Web',
-    webhook: 'Webhook',
-    schedule: 'Agenda',
-    plugin: 'Plugin',
-    ragPipelineRun: 'Pipeline RAG',
-    ragPipelineDebugging: 'Depuração RAG',
   },
 }
 

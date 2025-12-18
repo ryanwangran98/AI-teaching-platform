@@ -2,7 +2,7 @@ import json
 from collections.abc import Generator, Mapping, Sequence
 from copy import deepcopy
 from enum import StrEnum
-from typing import Any, Literal, cast, overload
+from typing import Any, Literal, Optional, cast, overload
 
 import json_repair
 from pydantic import TypeAdapter, ValidationError
@@ -45,62 +45,64 @@ class SpecialModelType(StrEnum):
 
 @overload
 def invoke_llm_with_structured_output(
-    *,
     provider: str,
     model_schema: AIModelEntity,
     model_instance: ModelInstance,
     prompt_messages: Sequence[PromptMessage],
     json_schema: Mapping[str, Any],
-    model_parameters: Mapping | None = None,
+    model_parameters: Optional[Mapping] = None,
     tools: Sequence[PromptMessageTool] | None = None,
-    stop: list[str] | None = None,
-    stream: Literal[True],
-    user: str | None = None,
-    callbacks: list[Callback] | None = None,
+    stop: Optional[list[str]] = None,
+    stream: Literal[True] = True,
+    user: Optional[str] = None,
+    callbacks: Optional[list[Callback]] = None,
 ) -> Generator[LLMResultChunkWithStructuredOutput, None, None]: ...
+
+
 @overload
 def invoke_llm_with_structured_output(
-    *,
     provider: str,
     model_schema: AIModelEntity,
     model_instance: ModelInstance,
     prompt_messages: Sequence[PromptMessage],
     json_schema: Mapping[str, Any],
-    model_parameters: Mapping | None = None,
+    model_parameters: Optional[Mapping] = None,
     tools: Sequence[PromptMessageTool] | None = None,
-    stop: list[str] | None = None,
-    stream: Literal[False],
-    user: str | None = None,
-    callbacks: list[Callback] | None = None,
+    stop: Optional[list[str]] = None,
+    stream: Literal[False] = False,
+    user: Optional[str] = None,
+    callbacks: Optional[list[Callback]] = None,
 ) -> LLMResultWithStructuredOutput: ...
+
+
 @overload
 def invoke_llm_with_structured_output(
-    *,
     provider: str,
     model_schema: AIModelEntity,
     model_instance: ModelInstance,
     prompt_messages: Sequence[PromptMessage],
     json_schema: Mapping[str, Any],
-    model_parameters: Mapping | None = None,
+    model_parameters: Optional[Mapping] = None,
     tools: Sequence[PromptMessageTool] | None = None,
-    stop: list[str] | None = None,
+    stop: Optional[list[str]] = None,
     stream: bool = True,
-    user: str | None = None,
-    callbacks: list[Callback] | None = None,
+    user: Optional[str] = None,
+    callbacks: Optional[list[Callback]] = None,
 ) -> LLMResultWithStructuredOutput | Generator[LLMResultChunkWithStructuredOutput, None, None]: ...
+
+
 def invoke_llm_with_structured_output(
-    *,
     provider: str,
     model_schema: AIModelEntity,
     model_instance: ModelInstance,
     prompt_messages: Sequence[PromptMessage],
     json_schema: Mapping[str, Any],
-    model_parameters: Mapping | None = None,
+    model_parameters: Optional[Mapping] = None,
     tools: Sequence[PromptMessageTool] | None = None,
-    stop: list[str] | None = None,
+    stop: Optional[list[str]] = None,
     stream: bool = True,
-    user: str | None = None,
-    callbacks: list[Callback] | None = None,
+    user: Optional[str] = None,
+    callbacks: Optional[list[Callback]] = None,
 ) -> LLMResultWithStructuredOutput | Generator[LLMResultChunkWithStructuredOutput, None, None]:
     """
     Invoke large language model with structured output
@@ -166,7 +168,7 @@ def invoke_llm_with_structured_output(
         def generator() -> Generator[LLMResultChunkWithStructuredOutput, None, None]:
             result_text: str = ""
             prompt_messages: Sequence[PromptMessage] = []
-            system_fingerprint: str | None = None
+            system_fingerprint: Optional[str] = None
             for event in llm_result:
                 if isinstance(event, LLMResultChunk):
                     prompt_messages = event.prompt_messages
@@ -208,7 +210,7 @@ def _handle_native_json_schema(
     structured_output_schema: Mapping,
     model_parameters: dict,
     rules: list[ParameterRule],
-):
+) -> dict:
     """
     Handle structured output for models with native JSON schema support.
 
@@ -224,13 +226,13 @@ def _handle_native_json_schema(
 
     # Set appropriate response format if required by the model
     for rule in rules:
-        if rule.name == "response_format" and ResponseFormat.JSON_SCHEMA in rule.options:
-            model_parameters["response_format"] = ResponseFormat.JSON_SCHEMA
+        if rule.name == "response_format" and ResponseFormat.JSON_SCHEMA.value in rule.options:
+            model_parameters["response_format"] = ResponseFormat.JSON_SCHEMA.value
 
     return model_parameters
 
 
-def _set_response_format(model_parameters: dict, rules: list):
+def _set_response_format(model_parameters: dict, rules: list) -> None:
     """
     Set the appropriate response format parameter based on model rules.
 
@@ -239,10 +241,10 @@ def _set_response_format(model_parameters: dict, rules: list):
     """
     for rule in rules:
         if rule.name == "response_format":
-            if ResponseFormat.JSON in rule.options:
-                model_parameters["response_format"] = ResponseFormat.JSON
-            elif ResponseFormat.JSON_OBJECT in rule.options:
-                model_parameters["response_format"] = ResponseFormat.JSON_OBJECT
+            if ResponseFormat.JSON.value in rule.options:
+                model_parameters["response_format"] = ResponseFormat.JSON.value
+            elif ResponseFormat.JSON_OBJECT.value in rule.options:
+                model_parameters["response_format"] = ResponseFormat.JSON_OBJECT.value
 
 
 def _handle_prompt_based_schema(
@@ -304,7 +306,7 @@ def _parse_structured_output(result_text: str) -> Mapping[str, Any]:
     return structured_output
 
 
-def _prepare_schema_for_model(provider: str, model_schema: AIModelEntity, schema: Mapping):
+def _prepare_schema_for_model(provider: str, model_schema: AIModelEntity, schema: Mapping) -> dict:
     """
     Prepare JSON schema based on model requirements.
 
@@ -332,7 +334,7 @@ def _prepare_schema_for_model(provider: str, model_schema: AIModelEntity, schema
         return {"schema": processed_schema, "name": "llm_response"}
 
 
-def remove_additional_properties(schema: dict):
+def remove_additional_properties(schema: dict) -> None:
     """
     Remove additionalProperties fields from JSON schema.
     Used for models like Gemini that don't support this property.
@@ -355,7 +357,7 @@ def remove_additional_properties(schema: dict):
                     remove_additional_properties(item)
 
 
-def convert_boolean_to_string(schema: dict):
+def convert_boolean_to_string(schema: dict) -> None:
     """
     Convert boolean type specifications to string in JSON schema.
 

@@ -24,7 +24,7 @@ import type { AnnotationReplyConfig } from '@/models/debug'
 import { sleep } from '@/utils'
 import { useProviderContext } from '@/context/provider-context'
 import AnnotationFullModal from '@/app/components/billing/annotation-full/modal'
-import { type App, AppModeEnum } from '@/types/app'
+import type { App } from '@/types/app'
 import cn from '@/utils/classnames'
 import { delAnnotations } from '@/service/annotation'
 
@@ -37,8 +37,8 @@ const Annotation: FC<Props> = (props) => {
   const { t } = useTranslation()
   const [isShowEdit, setIsShowEdit] = useState(false)
   const [annotationConfig, setAnnotationConfig] = useState<AnnotationReplyConfig | null>(null)
-  const [isChatApp] = useState(appDetail.mode !== AppModeEnum.COMPLETION)
-  const [controlRefreshSwitch, setControlRefreshSwitch] = useState(() => Date.now())
+  const [isChatApp] = useState(appDetail.mode !== 'completion')
+  const [controlRefreshSwitch, setControlRefreshSwitch] = useState(Date.now())
   const { plan, enableBilling } = useProviderContext()
   const isAnnotationFull = enableBilling && plan.usage.annotatedResponse >= plan.total.annotatedResponse
   const [isShowAnnotationFullModal, setIsShowAnnotationFullModal] = useState(false)
@@ -48,11 +48,12 @@ const Annotation: FC<Props> = (props) => {
   const [list, setList] = useState<AnnotationItem[]>([])
   const [total, setTotal] = useState(0)
   const [isLoading, setIsLoading] = useState(false)
-  const [controlUpdateList, setControlUpdateList] = useState(() => Date.now())
+  const [controlUpdateList, setControlUpdateList] = useState(Date.now())
   const [currItem, setCurrItem] = useState<AnnotationItem | null>(null)
   const [isShowViewModal, setIsShowViewModal] = useState(false)
   const [selectedIds, setSelectedIds] = useState<string[]>([])
   const debouncedQueryParams = useDebounce(queryParams, { wait: 500 })
+  const [isBatchDeleting, setIsBatchDeleting] = useState(false)
 
   const fetchAnnotationConfig = async () => {
     const res = await doFetchAnnotationConfig(appDetail.id)
@@ -83,7 +84,7 @@ const Annotation: FC<Props> = (props) => {
       setList(data as AnnotationItem[])
       setTotal(total)
     }
-    finally {
+ finally {
       setIsLoading(false)
     }
   }
@@ -107,6 +108,9 @@ const Annotation: FC<Props> = (props) => {
   }
 
   const handleBatchDelete = async () => {
+    if (isBatchDeleting)
+      return
+    setIsBatchDeleting(true)
     try {
       await delAnnotations(appDetail.id, selectedIds)
       Toast.notify({ message: t('common.api.actionSuccess'), type: 'success' })
@@ -116,6 +120,9 @@ const Annotation: FC<Props> = (props) => {
     }
     catch (e: any) {
       Toast.notify({ type: 'error', message: e.message || t('common.api.actionFailed') })
+    }
+    finally {
+      setIsBatchDeleting(false)
     }
   }
 
@@ -139,7 +146,7 @@ const Annotation: FC<Props> = (props) => {
   return (
     <div className='flex h-full flex-col'>
       <p className='system-sm-regular text-text-tertiary'>{t('appLog.description')}</p>
-      <div className='relative flex h-full flex-1 flex-col py-4'>
+      <div className='flex h-full flex-1 flex-col py-4'>
         <Filter appId={appDetail.id} queryParams={queryParams} setQueryParams={setQueryParams}>
           <div className='flex items-center space-x-2'>
             {isChatApp && (
@@ -206,6 +213,7 @@ const Annotation: FC<Props> = (props) => {
               onSelectedIdsChange={setSelectedIds}
               onBatchDelete={handleBatchDelete}
               onCancel={() => setSelectedIds([])}
+              isBatchDeleting={isBatchDeleting}
             />
             : <div className='flex h-full grow items-center justify-center'><EmptyElement /></div>
         }

@@ -1,6 +1,6 @@
 .dot-flashing {
   position: relative;
-  animation: dot-flashing 1s infinite linear alternate;
+  animation: 1s infinite linear alternate;
   animation-delay: 0.5s;
 }
 
@@ -10,7 +10,7 @@
   display: inline-block;
   position: absolute;
   top: 0;
-  animation: dot-flashing 1s infinite linear alternate;
+  animation: 1s infinite linear alternate;
 }
 
 .dot-flashing::before {
@@ -51,21 +51,15 @@
   border-radius: 50%;
   background-color: #667085;
   color: #667085;
-  animation: dot-flashing 1s infinite linear alternate;
-}
-
-.text {
-  animation-delay: 0.5s;
+  animation-name: dot-flashing;
 }
 
 .text::before {
   left: -7px;
-  animation-delay: 0s;
 }
 
 .text::after {
   left: 7px;
-  animation-delay: 1s;
 }
 
 .avatar,
@@ -76,19 +70,13 @@
   border-radius: 50%;
   background-color: #155EEF;
   color: #155EEF;
-  animation: dot-flashing-avatar 1s infinite linear alternate;
-}
-
-.avatar {
-  animation-delay: 0.5s;
+  animation-name: dot-flashing-avatar;
 }
 
 .avatar::before {
   left: -5px;
-  animation-delay: 0s;
 }
 
 .avatar::after {
   left: 5px;
-  animation-delay: 1s;
 }

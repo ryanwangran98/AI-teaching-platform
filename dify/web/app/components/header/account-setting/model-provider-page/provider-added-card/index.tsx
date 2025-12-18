@@ -7,6 +7,7 @@ import {
   RiLoader2Line,
 } from '@remixicon/react'
 import type {
+  CustomConfigurationModelFixedFields,
   ModelItem,
   ModelProvider,
 } from '../declarations'
@@ -20,24 +21,23 @@ import ModelBadge from '../model-badge'
 import CredentialPanel from './credential-panel'
 import QuotaPanel from './quota-panel'
 import ModelList from './model-list'
+import AddModelButton from './add-model-button'
 import { fetchModelProviderModelList } from '@/service/common'
 import { useEventEmitterContextContext } from '@/context/event-emitter'
 import { IS_CE_EDITION } from '@/config'
 import { useAppContext } from '@/context/app-context'
 import cn from '@/utils/classnames'
-import {
-  AddCustomModel,
-  ManageCustomModelCredentials,
-} from '@/app/components/header/account-setting/model-provider-page/model-auth'
 
 export const UPDATE_MODEL_PROVIDER_CUSTOM_MODEL_LIST = 'UPDATE_MODEL_PROVIDER_CUSTOM_MODEL_LIST'
 type ProviderAddedCardProps = {
   notConfigured?: boolean
   provider: ModelProvider
+  onOpenModal: (configurationMethod: ConfigurationMethodEnum, currentCustomConfigurationModelFixedFields?: CustomConfigurationModelFixedFields) => void
 }
 const ProviderAddedCard: FC<ProviderAddedCardProps> = ({
   notConfigured,
   provider,
+  onOpenModal,
 }) => {
   const { t } = useTranslation()
   const { eventEmitter } = useEventEmitterContextContext()
@@ -114,6 +114,7 @@ const ProviderAddedCard: FC<ProviderAddedCardProps> = ({
         {
           showCredential && (
             <CredentialPanel
+              onSetup={() => onOpenModal(ConfigurationMethodEnum.predefinedModel)}
               provider={provider}
             />
           )
@@ -158,17 +159,10 @@ const ProviderAddedCard: FC<ProviderAddedCardProps> = ({
             )}
             {
               configurationMethods.includes(ConfigurationMethodEnum.customizableModel) && isCurrentWorkspaceManager && (
-                <div className='flex grow justify-end'>
-                  <ManageCustomModelCredentials
-                    provider={provider}
-                    currentCustomConfigurationModelFixedFields={undefined}
-                  />
-                  <AddCustomModel
-                    provider={provider}
-                    configurationMethod={ConfigurationMethodEnum.customizableModel}
-                    currentCustomConfigurationModelFixedFields={undefined}
-                  />
-                </div>
+                <AddModelButton
+                  onClick={() => onOpenModal(ConfigurationMethodEnum.customizableModel)}
+                  className='flex'
+                />
               )
             }
           </div>
@@ -180,6 +174,7 @@ const ProviderAddedCard: FC<ProviderAddedCardProps> = ({
             provider={provider}
             models={modelList}
             onCollapse={() => setCollapsed(true)}
+            onConfig={currentCustomConfigurationModelFixedFields => onOpenModal(ConfigurationMethodEnum.customizableModel, currentCustomConfigurationModelFixedFields)}
             onChange={(provider: string) => getModelList(provider)}
           />
         )

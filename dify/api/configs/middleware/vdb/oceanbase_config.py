@@ -1,3 +1,5 @@
+from typing import Optional
+
 from pydantic import Field, PositiveInt
 from pydantic_settings import BaseSettings
 
@@ -7,27 +9,27 @@ class OceanBaseVectorConfig(BaseSettings):
     Configuration settings for OceanBase Vector database
     """
 
-    OCEANBASE_VECTOR_HOST: str | None = Field(
+    OCEANBASE_VECTOR_HOST: Optional[str] = Field(
         description="Hostname or IP address of the OceanBase Vector server (e.g. 'localhost')",
         default=None,
     )
 
-    OCEANBASE_VECTOR_PORT: PositiveInt | None = Field(
+    OCEANBASE_VECTOR_PORT: Optional[PositiveInt] = Field(
         description="Port number on which the OceanBase Vector server is listening (default is 2881)",
         default=2881,
     )
 
-    OCEANBASE_VECTOR_USER: str | None = Field(
+    OCEANBASE_VECTOR_USER: Optional[str] = Field(
         description="Username for authenticating with the OceanBase Vector database",
         default=None,
     )
 
-    OCEANBASE_VECTOR_PASSWORD: str | None = Field(
+    OCEANBASE_VECTOR_PASSWORD: Optional[str] = Field(
         description="Password for authenticating with the OceanBase Vector database",
         default=None,
     )
 
-    OCEANBASE_VECTOR_DATABASE: str | None = Field(
+    OCEANBASE_VECTOR_DATABASE: Optional[str] = Field(
         description="Name of the OceanBase Vector database to connect to",
         default=None,
     )
@@ -36,16 +38,4 @@ class OceanBaseVectorConfig(BaseSettings):
         description="Enable hybrid search features (requires OceanBase >= 4.3.5.1). Set to false for compatibility "
         "with older versions",
         default=False,
-    )
-
-    OCEANBASE_FULLTEXT_PARSER: str | None = Field(
-        description=(
-            "Fulltext parser to use for text indexing. "
-            "Built-in options: 'ngram' (N-gram tokenizer for English/numbers), "
-            "'beng' (Basic English tokenizer), 'space' (Space-based tokenizer), "
-            "'ngram2' (Improved N-gram tokenizer), 'ik' (Chinese tokenizer). "
-            "External plugins (require installation): 'japanese_ftparser' (Japanese tokenizer), "
-            "'thai_ftparser' (Thai tokenizer). Default is 'ik'"
-        ),
-        default="ik",
     )

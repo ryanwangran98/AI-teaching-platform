@@ -12,7 +12,7 @@ export const useGetFormValues = (form: AnyFormApi, formSchemas: FormSchema[]) =>
 
   const getFormValues = useCallback((
     {
-      needCheckValidatedValues = true,
+      needCheckValidatedValues,
       needTransformWhenSecretFieldIsPristine,
     }: GetValuesOptions,
   ) => {
@@ -20,7 +20,7 @@ export const useGetFormValues = (form: AnyFormApi, formSchemas: FormSchema[]) =>
     if (!needCheckValidatedValues) {
       return {
         values,
-        isCheckValidated: true,
+        isCheckValidated: false,
       }
     }
 

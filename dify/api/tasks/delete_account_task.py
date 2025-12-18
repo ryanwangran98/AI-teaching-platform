@@ -1,10 +1,9 @@
 import logging
 
-from celery import shared_task
+from celery import shared_task  # type: ignore
 
-from configs import dify_config
 from extensions.ext_database import db
-from models import Account
+from models.account import Account
 from services.billing_service import BillingService
 from tasks.mail_account_deletion_task import send_deletion_success_task
 
@@ -15,9 +14,8 @@ logger = logging.getLogger(__name__)
 def delete_account_task(account_id):
     account = db.session.query(Account).where(Account.id == account_id).first()
     try:
-        if dify_config.BILLING_ENABLED:
-            BillingService.delete_account(account_id)
-    except Exception:
+        BillingService.delete_account(account_id)
+    except Exception as e:
         logger.exception("Failed to delete account %s from billing service.", account_id)
         raise
 

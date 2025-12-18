@@ -36,10 +36,10 @@ class Keyword:
     def text_exists(self, id: str) -> bool:
         return self._keyword_processor.text_exists(id)
 
-    def delete_by_ids(self, ids: list[str]):
+    def delete_by_ids(self, ids: list[str]) -> None:
         self._keyword_processor.delete_by_ids(ids)
 
-    def delete(self):
+    def delete(self) -> None:
         self._keyword_processor.delete()
 
     def search(self, query: str, **kwargs: Any) -> list[Document]:

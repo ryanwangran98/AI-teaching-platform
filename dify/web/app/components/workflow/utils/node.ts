@@ -105,7 +105,7 @@ export function getLoopStartNode(loopId: string): Node {
 
 export const genNewNodeTitleFromOld = (oldTitle: string) => {
   const regex = /^(.+?)\s*\((\d+)\)\s*$/
-  const match = regex.exec(oldTitle)
+  const match = oldTitle.match(regex)
 
   if (match) {
     const title = match[1]
@@ -132,13 +132,6 @@ export const getTopLeftNodePosition = (nodes: Node[]) => {
   return {
     x: minX,
     y: minY,
-  }
-}
-
-export const getNestedNodePosition = (node: Node, parentNode: Node) => {
-  return {
-    x: node.position.x - parentNode.position.x,
-    y: node.position.y - parentNode.position.y,
   }
 }
 

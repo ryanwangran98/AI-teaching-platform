@@ -3,8 +3,9 @@ from collections.abc import Mapping, Sequence
 from typing import Any, Protocol
 
 from core.variables import Variable
-from core.variables.consts import SELECTORS_LENGTH
-from core.workflow.runtime import VariablePool
+from core.variables.consts import MIN_SELECTORS_LENGTH
+from core.workflow.entities.variable_pool import VariablePool
+from core.workflow.utils import variable_utils
 
 
 class VariableLoader(Protocol):
@@ -66,8 +67,8 @@ def load_into_variable_pool(
         # NOTE(QuantumGhost): this logic needs to be in sync with
         # `WorkflowEntry.mapping_user_inputs_to_variable_pool`.
         node_variable_list = key.split(".")
-        if len(node_variable_list) < 2:
-            raise ValueError(f"Invalid variable key: {key}. It should have at least two elements.")
+        if len(node_variable_list) < 1:
+            raise ValueError(f"Invalid variable key: {key}. It should have at least one element.")
         if key in user_inputs:
             continue
         node_variable_key = ".".join(node_variable_list[1:])
@@ -77,7 +78,7 @@ def load_into_variable_pool(
             variables_to_load.append(list(selector))
     loaded = variable_loader.load_variables(variables_to_load)
     for var in loaded:
-        assert len(var.selector) >= SELECTORS_LENGTH, f"Invalid variable {var}"
-        # Add variable directly to the pool
-        # The variable pool expects 2-element selectors [node_id, variable_name]
-        variable_pool.add([var.selector[0], var.selector[1]], var)
+        assert len(var.selector) >= MIN_SELECTORS_LENGTH, f"Invalid variable {var}"
+        variable_utils.append_variables_recursively(
+            variable_pool, node_id=var.selector[0], variable_key_list=list(var.selector[1:]), variable_value=var
+        )

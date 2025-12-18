@@ -2,7 +2,7 @@
 import type { FC } from 'react'
 import React from 'react'
 import { useContext } from 'use-context-selector'
-import { produce } from 'immer'
+import produce from 'immer'
 import { useFormattingChangedDispatcher } from '../debug/hooks'
 import DatasetConfig from '../dataset-config'
 import HistoryPanel from '../config-prompt/conversation-history/history-panel'
@@ -14,7 +14,8 @@ import ConfigContext from '@/context/debug-configuration'
 import ConfigPrompt from '@/app/components/app/configuration/config-prompt'
 import ConfigVar from '@/app/components/app/configuration/config-var'
 import type { ModelConfig, PromptVariable } from '@/models/debug'
-import { AppModeEnum, ModelModeType } from '@/types/app'
+import type { AppType } from '@/types/app'
+import { ModelModeType } from '@/types/app'
 
 const Config: FC = () => {
   const {
@@ -28,7 +29,7 @@ const Config: FC = () => {
     setModelConfig,
     setPrevPromptConfig,
   } = useContext(ConfigContext)
-  const isChatApp = [AppModeEnum.ADVANCED_CHAT, AppModeEnum.AGENT_CHAT, AppModeEnum.CHAT].includes(mode)
+  const isChatApp = ['advanced-chat', 'agent-chat', 'chat'].includes(mode)
   const formattingChangedDispatcher = useFormattingChangedDispatcher()
 
   const promptTemplate = modelConfig.configs.prompt_template
@@ -61,7 +62,7 @@ const Config: FC = () => {
       >
         {/* Template */}
         <ConfigPrompt
-          mode={mode}
+          mode={mode as AppType}
           promptTemplate={promptTemplate}
           promptVariables={promptVariables}
           onChange={handlePromptChange}

@@ -10,7 +10,6 @@ import type {
 import {
   DEFAULT_WEIGHTED_SCORE,
   RerankingModeEnum,
-  WeightedScoreEnum,
 } from '@/models/datasets'
 import { RETRIEVE_METHOD } from '@/types/app'
 import { DATASET_DEFAULT } from '@/config'
@@ -94,12 +93,10 @@ export const getMultipleRetrievalConfig = (
   multipleRetrievalConfig: MultipleRetrievalConfig,
   selectedDatasets: DataSet[],
   originalDatasets: DataSet[],
-  fallbackRerankModel?: { provider?: string; model?: string }, // fallback rerank model
+  validRerankModel?: { provider?: string; model?: string },
 ) => {
-  // Check if the selected datasets are different from the original datasets
-  const isDatasetsChanged = xorBy(selectedDatasets, originalDatasets, 'id').length > 0
-  // Check if the rerank model is valid
-  const isFallbackRerankModelValid = !!(fallbackRerankModel?.provider && fallbackRerankModel?.model)
+  const shouldSetWeightDefaultValue = xorBy(selectedDatasets, originalDatasets, 'id').length > 0
+  const rerankModelIsValid = validRerankModel?.provider && validRerankModel?.model
 
   const {
     allHighQuality,
@@ -128,16 +125,14 @@ export const getMultipleRetrievalConfig = (
     reranking_mode,
     reranking_model,
     weights,
-    reranking_enable,
+    reranking_enable: ((allInternal && allEconomic) || allExternal) ? reranking_enable : shouldSetWeightDefaultValue,
   }
 
   const setDefaultWeights = () => {
     result.weights = {
-      weight_type: WeightedScoreEnum.Customized,
       vector_setting: {
         vector_weight: allHighQualityVectorSearch
           ? DEFAULT_WEIGHTED_SCORE.allHighQualityVectorSearch.semantic
-          // eslint-disable-next-line sonarjs/no-nested-conditional
           : allHighQualityFullTextSearch
             ? DEFAULT_WEIGHTED_SCORE.allHighQualityFullTextSearch.semantic
             : DEFAULT_WEIGHTED_SCORE.other.semantic,
@@ -147,7 +142,6 @@ export const getMultipleRetrievalConfig = (
       keyword_setting: {
         keyword_weight: allHighQualityVectorSearch
           ? DEFAULT_WEIGHTED_SCORE.allHighQualityVectorSearch.keyword
-          // eslint-disable-next-line sonarjs/no-nested-conditional
           : allHighQualityFullTextSearch
             ? DEFAULT_WEIGHTED_SCORE.allHighQualityFullTextSearch.keyword
             : DEFAULT_WEIGHTED_SCORE.other.keyword,
@@ -155,106 +149,65 @@ export const getMultipleRetrievalConfig = (
     }
   }
 
-  /**
-   * In this case, user can manually toggle reranking
-   * So should keep the reranking_enable value
-   * But the default reranking_model should be set
-   */
-  if ((allEconomic && allInternal) || allExternal) {
+  if (allEconomic || mixtureHighQualityAndEconomic || inconsistentEmbeddingModel || allExternal || mixtureInternalAndExternal) {
     result.reranking_mode = RerankingModeEnum.RerankingModel
-    // Need to check if the reranking model should be set to default when first time initialized
-    if ((!result.reranking_model?.provider || !result.reranking_model?.model) && isFallbackRerankModelValid) {
-      result.reranking_model = {
-        provider: fallbackRerankModel.provider || '',
-        model: fallbackRerankModel.model || '',
-      }
-    }
-    result.reranking_enable = reranking_enable
-  }
-
-  /**
-   * In this case, reranking_enable must be true
-   * And if rerank model is not set, should set the default rerank model
-   */
-  if (mixtureHighQualityAndEconomic || inconsistentEmbeddingModel || mixtureInternalAndExternal) {
-    result.reranking_mode = RerankingModeEnum.RerankingModel
-    // Need to check if the reranking model should be set to default when first time initialized
-    if ((!result.reranking_model?.provider || !result.reranking_model?.model) && isFallbackRerankModelValid) {
-      result.reranking_model = {
-        provider: fallbackRerankModel.provider || '',
-        model: fallbackRerankModel.model || '',
-      }
-    }
-    result.reranking_enable = true
-  }
-
-  /**
-   * In this case, user can choose to use weighted score or rerank model
-   * But if the reranking_mode is not initialized, should set the default rerank model and reranking_enable to true
-   * and set reranking_mode to reranking_model
-   */
-  if (allHighQuality && !inconsistentEmbeddingModel && allInternal) {
-    // If not initialized, check if the default rerank model is valid
-    if (!reranking_mode) {
-      if (isFallbackRerankModelValid) {
-        result.reranking_mode = RerankingModeEnum.RerankingModel
-        result.reranking_enable = true
+    if (!result.reranking_model?.provider || !result.reranking_model?.model) {
+      if (rerankModelIsValid) {
+        result.reranking_enable = reranking_enable !== false
 
         result.reranking_model = {
-          provider: fallbackRerankModel.provider || '',
-          model: fallbackRerankModel.model || '',
+          provider: validRerankModel?.provider || '',
+          model: validRerankModel?.model || '',
+        }
+      }
+      else {
+        result.reranking_model = {
+          provider: '',
+          model: '',
+        }
+      }
+    }
+    else {
+      result.reranking_enable = reranking_enable !== false
+    }
+  }
+
+  if (allHighQuality && !inconsistentEmbeddingModel && allInternal) {
+    if (!reranking_mode) {
+      if (validRerankModel?.provider && validRerankModel?.model) {
+        result.reranking_mode = RerankingModeEnum.RerankingModel
+        result.reranking_enable = reranking_enable !== false
+
+        result.reranking_model = {
+          provider: validRerankModel.provider,
+          model: validRerankModel.model,
         }
       }
       else {
         result.reranking_mode = RerankingModeEnum.WeightedScore
-        result.reranking_enable = false
         setDefaultWeights()
       }
     }
 
-    // After initialization, if datasets has no change, make sure the config has correct value
-    if (reranking_mode === RerankingModeEnum.WeightedScore) {
-      result.reranking_enable = false
-      if (!weights)
-        setDefaultWeights()
-    }
-    if (reranking_mode === RerankingModeEnum.RerankingModel) {
-      if ((!result.reranking_model?.provider || !result.reranking_model?.model) && isFallbackRerankModelValid) {
-        result.reranking_model = {
-          provider: fallbackRerankModel.provider || '',
-          model: fallbackRerankModel.model || '',
-        }
-      }
-      result.reranking_enable = true
-    }
+    if (reranking_mode === RerankingModeEnum.WeightedScore && !weights)
+      setDefaultWeights()
 
-    // Need to check if reranking_mode should be set to reranking_model when datasets changed
-    if (reranking_mode === RerankingModeEnum.WeightedScore && weights && isDatasetsChanged) {
-      if ((result.reranking_model?.provider && result.reranking_model?.model) || isFallbackRerankModelValid) {
+    if (reranking_mode === RerankingModeEnum.WeightedScore && weights && shouldSetWeightDefaultValue) {
+      if (rerankModelIsValid) {
         result.reranking_mode = RerankingModeEnum.RerankingModel
-        result.reranking_enable = true
+        result.reranking_enable = reranking_enable !== false
 
-        // eslint-disable-next-line sonarjs/nested-control-flow
-        if ((!result.reranking_model?.provider || !result.reranking_model?.model) && isFallbackRerankModelValid) {
-          result.reranking_model = {
-            provider: fallbackRerankModel.provider || '',
-            model: fallbackRerankModel.model || '',
-          }
+        result.reranking_model = {
+          provider: validRerankModel.provider || '',
+          model: validRerankModel.model || '',
         }
       }
       else {
         setDefaultWeights()
       }
     }
-    // Need to switch to weighted score when reranking model is not valid and datasets changed
-    if (
-      reranking_mode === RerankingModeEnum.RerankingModel
-      && (!result.reranking_model?.provider || !result.reranking_model?.model)
-      && !isFallbackRerankModelValid
-      && isDatasetsChanged
-    ) {
+    if (reranking_mode === RerankingModeEnum.RerankingModel && !rerankModelIsValid && shouldSetWeightDefaultValue) {
       result.reranking_mode = RerankingModeEnum.WeightedScore
-      result.reranking_enable = false
       setDefaultWeights()
     }
   }
@@ -262,7 +215,7 @@ export const getMultipleRetrievalConfig = (
   return result
 }
 
-export const checkoutRerankModelConfiguredInRetrievalSettings = (
+export const checkoutRerankModelConfigedInRetrievalSettings = (
   datasets: DataSet[],
   multipleRetrievalConfig?: MultipleRetrievalConfig,
 ) => {
@@ -272,7 +225,6 @@ export const checkoutRerankModelConfiguredInRetrievalSettings = (
   const {
     allEconomic,
     allExternal,
-    allInternal,
   } = getSelectedDatasetsMode(datasets)
 
   const {
@@ -281,8 +233,12 @@ export const checkoutRerankModelConfiguredInRetrievalSettings = (
     reranking_model,
   } = multipleRetrievalConfig
 
-  if (reranking_mode === RerankingModeEnum.RerankingModel && (!reranking_model?.provider || !reranking_model?.model))
-    return ((allEconomic && allInternal) || allExternal) && !reranking_enable
+  if (reranking_mode === RerankingModeEnum.RerankingModel && (!reranking_model?.provider || !reranking_model?.model)) {
+    if ((allEconomic || allExternal) && !reranking_enable)
+      return true
+
+    return false
+  }
 
   return true
 }

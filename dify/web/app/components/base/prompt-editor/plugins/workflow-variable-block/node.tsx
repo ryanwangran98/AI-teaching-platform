@@ -13,7 +13,6 @@ export type SerializedNode = SerializedLexicalNode & {
   getVarType?: GetVarType
   environmentVariables?: Var[]
   conversationVariables?: Var[]
-  ragVariables?: Var[]
 }
 
 export class WorkflowVariableBlockNode extends DecoratorNode<React.JSX.Element> {
@@ -22,21 +21,20 @@ export class WorkflowVariableBlockNode extends DecoratorNode<React.JSX.Element> 
   __getVarType?: GetVarType
   __environmentVariables?: Var[]
   __conversationVariables?: Var[]
-  __ragVariables?: Var[]
 
   static getType(): string {
     return 'workflow-variable-block'
   }
 
   static clone(node: WorkflowVariableBlockNode): WorkflowVariableBlockNode {
-    return new WorkflowVariableBlockNode(node.__variables, node.__workflowNodesMap, node.__getVarType, node.__key, node.__environmentVariables, node.__conversationVariables, node.__ragVariables)
+    return new WorkflowVariableBlockNode(node.__variables, node.__workflowNodesMap, node.__getVarType, node.__key, node.__environmentVariables, node.__conversationVariables)
   }
 
   isInline(): boolean {
     return true
   }
 
-  constructor(variables: string[], workflowNodesMap: WorkflowNodesMap, getVarType: any, key?: NodeKey, environmentVariables?: Var[], conversationVariables?: Var[], ragVariables?: Var[]) {
+  constructor(variables: string[], workflowNodesMap: WorkflowNodesMap, getVarType: any, key?: NodeKey, environmentVariables?: Var[], conversationVariables?: Var[]) {
     super(key)
 
     this.__variables = variables
@@ -44,7 +42,6 @@ export class WorkflowVariableBlockNode extends DecoratorNode<React.JSX.Element> 
     this.__getVarType = getVarType
     this.__environmentVariables = environmentVariables
     this.__conversationVariables = conversationVariables
-    this.__ragVariables = ragVariables
   }
 
   createDOM(): HTMLElement {
@@ -66,13 +63,12 @@ export class WorkflowVariableBlockNode extends DecoratorNode<React.JSX.Element> 
         getVarType={this.__getVarType!}
         environmentVariables={this.__environmentVariables}
         conversationVariables={this.__conversationVariables}
-        ragVariables={this.__ragVariables}
       />
     )
   }
 
   static importJSON(serializedNode: SerializedNode): WorkflowVariableBlockNode {
-    const node = $createWorkflowVariableBlockNode(serializedNode.variables, serializedNode.workflowNodesMap, serializedNode.getVarType, serializedNode.environmentVariables, serializedNode.conversationVariables, serializedNode.ragVariables)
+    const node = $createWorkflowVariableBlockNode(serializedNode.variables, serializedNode.workflowNodesMap, serializedNode.getVarType, serializedNode.environmentVariables, serializedNode.conversationVariables)
 
     return node
   }
@@ -86,7 +82,6 @@ export class WorkflowVariableBlockNode extends DecoratorNode<React.JSX.Element> 
       getVarType: this.getVarType(),
       environmentVariables: this.getEnvironmentVariables(),
       conversationVariables: this.getConversationVariables(),
-      ragVariables: this.getRagVariables(),
     }
   }
 
@@ -115,17 +110,12 @@ export class WorkflowVariableBlockNode extends DecoratorNode<React.JSX.Element> 
     return self.__conversationVariables
   }
 
-  getRagVariables(): any {
-    const self = this.getLatest()
-    return self.__ragVariables
-  }
-
   getTextContent(): string {
     return `{{#${this.getVariables().join('.')}#}}`
   }
 }
-export function $createWorkflowVariableBlockNode(variables: string[], workflowNodesMap: WorkflowNodesMap, getVarType?: GetVarType, environmentVariables?: Var[], conversationVariables?: Var[], ragVariables?: Var[]): WorkflowVariableBlockNode {
-  return new WorkflowVariableBlockNode(variables, workflowNodesMap, getVarType, undefined, environmentVariables, conversationVariables, ragVariables)
+export function $createWorkflowVariableBlockNode(variables: string[], workflowNodesMap: WorkflowNodesMap, getVarType?: GetVarType, environmentVariables?: Var[], conversationVariables?: Var[]): WorkflowVariableBlockNode {
+  return new WorkflowVariableBlockNode(variables, workflowNodesMap, getVarType, undefined, environmentVariables, conversationVariables)
 }
 
 export function $isWorkflowVariableBlockNode(

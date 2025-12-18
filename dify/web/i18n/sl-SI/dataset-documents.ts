@@ -31,6 +31,7 @@ const translation = {
       sync: 'Sinhroniziraj',
       pause: 'Zaustavi',
       resume: 'Nadaljuj',
+      download: 'Prenesi datoteko',
     },
     index: {
       enable: 'Omogoči',
@@ -81,10 +82,6 @@ const translation = {
       ok: 'V redu',
     },
     learnMore: 'Izvedi več',
-    sort: {
-      uploadTime: 'Čas nalaganja',
-      hitCount: 'Število priklicev',
-    },
   },
   metadata: {
     title: 'Metapodatki',
@@ -103,9 +100,6 @@ const translation = {
       upload_file: 'Naloži datoteko',
       notion: 'Sinhroniziraj iz Notion',
       github: 'Sinhroniziraj iz Github',
-      local_file: 'Lokalna datoteka',
-      online_document: 'Spletni dokument',
-      website_crawl: 'Iskanje po spletnih mestih',
     },
     type: {
       book: 'Knjiga',
@@ -343,13 +337,13 @@ const translation = {
     childMaxTokens: 'Otrok',
     pause: 'Zaustavi',
     parentMaxTokens: 'Starš',
-    waiting: 'Čakanje na zajemanje...',
   },
   segment: {
     paragraphs: 'Odstavki',
     keywords: 'Ključne besede',
     addKeyWord: 'Dodaj ključno besedo',
     keywordError: 'Največja dolžina ključne besede je 20',
+    characters: 'znakov',
     hitCount: 'Število pridobitev',
     vectorHash: 'Vektorski hash: ',
     questionPlaceholder: 'dodajte vprašanje tukaj',
@@ -401,7 +395,6 @@ const translation = {
     childChunkAdded: 'Dodan je 1 kos otroka',
     keywordDuplicate: 'Ključna beseda že obstaja',
     keywordEmpty: 'Ključna beseda ne more biti prazna',
-    allFilesUploaded: 'Vse datoteke je treba naložiti, preden shranite',
   },
 }
 

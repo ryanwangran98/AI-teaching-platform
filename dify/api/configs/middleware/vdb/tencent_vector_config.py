@@ -1,3 +1,5 @@
+from typing import Optional
+
 from pydantic import Field, NonNegativeInt, PositiveInt
 from pydantic_settings import BaseSettings
 
@@ -7,12 +9,12 @@ class TencentVectorDBConfig(BaseSettings):
     Configuration settings for Tencent Vector Database
     """
 
-    TENCENT_VECTOR_DB_URL: str | None = Field(
+    TENCENT_VECTOR_DB_URL: Optional[str] = Field(
         description="URL of the Tencent Vector Database service (e.g., 'https://vectordb.tencentcloudapi.com')",
         default=None,
     )
 
-    TENCENT_VECTOR_DB_API_KEY: str | None = Field(
+    TENCENT_VECTOR_DB_API_KEY: Optional[str] = Field(
         description="API key for authenticating with the Tencent Vector Database service",
         default=None,
     )
@@ -22,12 +24,12 @@ class TencentVectorDBConfig(BaseSettings):
         default=30,
     )
 
-    TENCENT_VECTOR_DB_USERNAME: str | None = Field(
+    TENCENT_VECTOR_DB_USERNAME: Optional[str] = Field(
         description="Username for authenticating with the Tencent Vector Database (if required)",
         default=None,
     )
 
-    TENCENT_VECTOR_DB_PASSWORD: str | None = Field(
+    TENCENT_VECTOR_DB_PASSWORD: Optional[str] = Field(
         description="Password for authenticating with the Tencent Vector Database (if required)",
         default=None,
     )
@@ -42,7 +44,7 @@ class TencentVectorDBConfig(BaseSettings):
         default=2,
     )
 
-    TENCENT_VECTOR_DB_DATABASE: str | None = Field(
+    TENCENT_VECTOR_DB_DATABASE: Optional[str] = Field(
         description="Name of the specific Tencent Vector Database to connect to",
         default=None,
     )

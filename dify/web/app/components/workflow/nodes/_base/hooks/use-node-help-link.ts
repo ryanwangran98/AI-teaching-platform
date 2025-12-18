@@ -1,15 +1,67 @@
 import { useMemo } from 'react'
-import type { BlockEnum } from '@/app/components/workflow/types'
-import { useNodesMetaData } from '@/app/components/workflow/hooks'
+import { useDocLink, useGetLanguage } from '@/context/i18n'
+import { BlockEnum } from '@/app/components/workflow/types'
 
 export const useNodeHelpLink = (nodeType: BlockEnum) => {
-  const availableNodesMetaData = useNodesMetaData()
+  const language = useGetLanguage()
+  const docLink = useDocLink()
+  const prefixLink = useMemo(() => {
+    return docLink('/guides/workflow/node/')
+  }, [language])
+  const linkMap = useMemo(() => {
+    if (language === 'zh_Hans') {
+      return {
+        [BlockEnum.Start]: 'start',
+        [BlockEnum.End]: 'end',
+        [BlockEnum.Answer]: 'answer',
+        [BlockEnum.LLM]: 'llm',
+        [BlockEnum.KnowledgeRetrieval]: 'knowledge-retrieval',
+        [BlockEnum.QuestionClassifier]: 'question-classifier',
+        [BlockEnum.IfElse]: 'ifelse',
+        [BlockEnum.Code]: 'code',
+        [BlockEnum.TemplateTransform]: 'template',
+        [BlockEnum.VariableAssigner]: 'variable-assigner',
+        [BlockEnum.VariableAggregator]: 'variable-aggregator',
+        [BlockEnum.Assigner]: 'variable-assigner',
+        [BlockEnum.Iteration]: 'iteration',
+        [BlockEnum.Loop]: 'loop',
+        [BlockEnum.ParameterExtractor]: 'parameter-extractor',
+        [BlockEnum.HttpRequest]: 'http-request',
+        [BlockEnum.Tool]: 'tools',
+        [BlockEnum.DocExtractor]: 'doc-extractor',
+        [BlockEnum.ListFilter]: 'list-operator',
+        [BlockEnum.Agent]: 'agent',
+      }
+    }
 
-  const link = useMemo(() => {
-    const result = availableNodesMetaData?.nodesMap?.[nodeType]?.metaData.helpLinkUri || ''
+    return {
+      [BlockEnum.Start]: 'start',
+      [BlockEnum.End]: 'end',
+      [BlockEnum.Answer]: 'answer',
+      [BlockEnum.LLM]: 'llm',
+      [BlockEnum.KnowledgeRetrieval]: 'knowledge-retrieval',
+      [BlockEnum.QuestionClassifier]: 'question-classifier',
+      [BlockEnum.IfElse]: 'ifelse',
+      [BlockEnum.Code]: 'code',
+      [BlockEnum.TemplateTransform]: 'template',
+      [BlockEnum.VariableAssigner]: 'variable-assigner',
+      [BlockEnum.VariableAggregator]: 'variable-aggregator',
+      [BlockEnum.Assigner]: 'variable-assigner',
+      [BlockEnum.Iteration]: 'iteration',
+      [BlockEnum.Loop]: 'loop',
+      [BlockEnum.ParameterExtractor]: 'parameter-extractor',
+      [BlockEnum.HttpRequest]: 'http-request',
+      [BlockEnum.Tool]: 'tools',
+      [BlockEnum.DocExtractor]: 'doc-extractor',
+      [BlockEnum.ListFilter]: 'list-operator',
+      [BlockEnum.Agent]: 'agent',
+    }
+  }, [language]) as Record<string, string>
 
-    return result
-  }, [availableNodesMetaData, nodeType])
+  const link = linkMap[nodeType]
 
-  return link
+  if (!link)
+    return ''
+
+  return `${prefixLink}${link}`
 }

@@ -8,8 +8,6 @@ import NoData from './no-data'
 import { useLastRun } from '@/service/use-workflow'
 import { RiLoader2Line } from '@remixicon/react'
 import type { NodeTracing } from '@/types/workflow'
-import { useHooksStore } from '@/app/components/workflow/hooks-store'
-import { FlowType } from '@/types/common'
 
 type Props = {
   appId: string
@@ -25,19 +23,18 @@ type Props = {
 } & Partial<ResultPanelProps>
 
 const LastRun: FC<Props> = ({
-  appId: _appId,
+  appId,
   nodeId,
   canSingleRun,
   isRunAfterSingleRun,
   updateNodeRunningStatus,
-  nodeInfo: _nodeInfo,
+  nodeInfo,
   runningStatus: oneStepRunRunningStatus,
   onSingleRunClicked,
   singleRunResult,
   isPaused,
   ...otherResultPanelProps
 }) => {
-  const configsMap = useHooksStore(s => s.configsMap)
   const isOneStepRunSucceed = oneStepRunRunningStatus === NodeRunningStatus.Succeeded
   const isOneStepRunFailed = oneStepRunRunningStatus === NodeRunningStatus.Failed
   // hide page and return to page would lost the oneStepRunRunningStatus
@@ -47,7 +44,7 @@ const LastRun: FC<Props> = ({
 
   const hidePageOneStepRunFinished = [NodeRunningStatus.Succeeded, NodeRunningStatus.Failed].includes(hidePageOneStepFinishedStatus!)
   const canRunLastRun = !isRunAfterSingleRun || isOneStepRunSucceed || isOneStepRunFailed || (pageHasHide && hidePageOneStepRunFinished)
-  const { data: lastRunResult, isFetching, error } = useLastRun(configsMap?.flowType || FlowType.appFlow, configsMap?.flowId || '', nodeId, canRunLastRun)
+  const { data: lastRunResult, isFetching, error } = useLastRun(appId, nodeId, canRunLastRun)
   const isRunning = useMemo(() => {
     if(isPaused)
       return false
@@ -60,19 +57,6 @@ const LastRun: FC<Props> = ({
   const noLastRun = (error as any)?.status === 404
   const runResult = (canRunLastRun ? lastRunResult : singleRunResult) || lastRunResult || {}
 
-  const resolvedStatus = useMemo(() => {
-    if (isPaused)
-      return NodeRunningStatus.Stopped
-
-    if (oneStepRunRunningStatus === NodeRunningStatus.Stopped)
-      return NodeRunningStatus.Stopped
-
-    if (oneStepRunRunningStatus === NodeRunningStatus.Listening)
-      return NodeRunningStatus.Listening
-
-    return (runResult as any).status || otherResultPanelProps.status
-  }, [isPaused, oneStepRunRunningStatus, runResult, otherResultPanelProps.status])
-
   const resetHidePageStatus = useCallback(() => {
     setPageHasHide(false)
     setPageShowed(false)
@@ -83,6 +67,7 @@ const LastRun: FC<Props> = ({
       updateNodeRunningStatus(hidePageOneStepFinishedStatus)
       resetHidePageStatus()
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOneStepRunSucceed, isOneStepRunFailed, oneStepRunRunningStatus])
 
   useEffect(() => {
@@ -92,14 +77,15 @@ const LastRun: FC<Props> = ({
 
   useEffect(() => {
     resetHidePageStatus()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [nodeId])
 
   const handlePageVisibilityChange = useCallback(() => {
-    if (document.visibilityState === 'hidden')
-      setPageHasHide(true)
-    else
-      setPageShowed(true)
-  }, [])
+      if (document.visibilityState === 'hidden')
+        setPageHasHide(true)
+      else
+        setPageShowed(true)
+    }, [])
   useEffect(() => {
     document.addEventListener('visibilitychange', handlePageVisibilityChange)
 
@@ -117,21 +103,21 @@ const LastRun: FC<Props> = ({
 
   if (isRunning)
     return <ResultPanel status='running' showSteps={false} />
+
   if (!isPaused && (noLastRun || !runResult)) {
     return (
       <NoData canSingleRun={canSingleRun} onSingleRun={onSingleRunClicked} />
     )
   }
-
   return (
     <div>
       <ResultPanel
         {...runResult as any}
         {...otherResultPanelProps}
-        status={resolvedStatus}
+        status={isPaused ? NodeRunningStatus.Stopped : ((runResult as any).status || otherResultPanelProps.status)}
         total_tokens={(runResult as any)?.execution_metadata?.total_tokens || otherResultPanelProps?.total_tokens}
         created_by={(runResult as any)?.created_by_account?.created_by || otherResultPanelProps?.created_by}
-        nodeInfo={runResult as NodeTracing}
+        nodeInfo={nodeInfo}
         showSteps={false}
       />
     </div>

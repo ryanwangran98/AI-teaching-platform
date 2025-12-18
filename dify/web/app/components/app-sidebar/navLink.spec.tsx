@@ -25,7 +25,7 @@ const MockIcon = ({ className }: { className?: string }) => (
   <svg className={className} data-testid="nav-icon" />
 )
 
-describe('NavLink Animation and Layout Issues', () => {
+describe('NavLink Text Animation Issues', () => {
   const mockProps: NavLinkProps = {
     name: 'Orchestrate',
     href: '/app/123/workflow',
@@ -61,129 +61,108 @@ describe('NavLink Animation and Layout Issues', () => {
       const textElement = screen.getByText('Orchestrate')
       expect(textElement).toBeInTheDocument()
       expect(textElement).toHaveClass('opacity-0')
-      expect(textElement).toHaveClass('max-w-0')
+      expect(textElement).toHaveClass('w-0')
       expect(textElement).toHaveClass('overflow-hidden')
 
       // Icon should still be present
       expect(screen.getByTestId('nav-icon')).toBeInTheDocument()
 
-      // Check consistent padding in collapse mode
+      // Check padding in collapse mode
       const linkElement = screen.getByTestId('nav-link')
-      expect(linkElement).toHaveClass('pl-3')
-      expect(linkElement).toHaveClass('pr-1')
+      expect(linkElement).toHaveClass('px-2.5')
 
-      // Switch to expand mode - should have smooth text transition
+      // Switch to expand mode - this is where the squeeze effect occurs
       rerender(<NavLink {...mockProps} mode="expand" />)
 
-      // Text should now be visible with opacity animation
+      // Text should now appear
       expect(screen.getByText('Orchestrate')).toBeInTheDocument()
 
-      // Check padding remains consistent - no layout shift
-      expect(linkElement).toHaveClass('pl-3')
-      expect(linkElement).toHaveClass('pr-1')
+      // Check padding change - this contributes to the squeeze effect
+      expect(linkElement).toHaveClass('px-3')
 
-      // Fixed: text now uses max-width animation instead of abrupt show/hide
+      // The bug: text appears abruptly without smooth transition
+      // This test documents the current behavior that causes the squeeze effect
       const expandedTextElement = screen.getByText('Orchestrate')
       expect(expandedTextElement).toBeInTheDocument()
-      expect(expandedTextElement).toHaveClass('max-w-none')
-      expect(expandedTextElement).toHaveClass('opacity-100')
 
-      // The fix provides:
+      // In a properly animated version, we would expect:
       // - Opacity transition from 0 to 1
-      // - Max-width transition from 0 to none (prevents squashing)
-      // - No layout shift from consistent padding
+      // - Width transition from 0 to auto
+      // - No layout shift from padding changes
     })
 
-    it('should maintain icon position consistency using wrapper div', () => {
+    it('should maintain icon position consistency during text appearance', () => {
       const { rerender } = render(<NavLink {...mockProps} mode="collapse" />)
 
       const iconElement = screen.getByTestId('nav-icon')
-      const iconWrapper = iconElement.parentElement
+      const initialIconClasses = iconElement.className
 
-      // Icon wrapper should have -ml-1 micro-adjustment in collapse mode for centering
-      expect(iconWrapper).toHaveClass('-ml-1')
+      // Icon should have mr-0 in collapse mode
+      expect(iconElement).toHaveClass('mr-0')
 
       rerender(<NavLink {...mockProps} mode="expand" />)
 
-      // In expand mode, wrapper should not have the micro-adjustment
-      const expandedIconWrapper = screen.getByTestId('nav-icon').parentElement
-      expect(expandedIconWrapper).not.toHaveClass('-ml-1')
+      const expandedIconClasses = iconElement.className
 
-      // Icon itself maintains consistent classes - no margin changes
-      expect(iconElement).toHaveClass('h-4')
-      expect(iconElement).toHaveClass('w-4')
-      expect(iconElement).toHaveClass('shrink-0')
+      // Icon should have mr-2 in expand mode - this shift contributes to the squeeze effect
+      expect(iconElement).toHaveClass('mr-2')
 
-      // This wrapper approach eliminates the icon margin shift issue
+      console.log('Collapsed icon classes:', initialIconClasses)
+      console.log('Expanded icon classes:', expandedIconClasses)
+
+      // This margin change causes the icon to shift when text appears
     })
 
-    it('should provide smooth text transition with max-width animation', () => {
+    it('should document the abrupt text rendering issue', () => {
       const { rerender } = render(<NavLink {...mockProps} mode="collapse" />)
 
-      // Text is always in DOM but controlled via CSS classes
+      // Text is present in DOM but hidden via CSS classes
       const collapsedText = screen.getByText('Orchestrate')
       expect(collapsedText).toBeInTheDocument()
       expect(collapsedText).toHaveClass('opacity-0')
-      expect(collapsedText).toHaveClass('max-w-0')
-      expect(collapsedText).toHaveClass('overflow-hidden')
+      expect(collapsedText).toHaveClass('pointer-events-none')
 
       rerender(<NavLink {...mockProps} mode="expand" />)
 
-      // Text smoothly transitions to visible state
-      const expandedText = screen.getByText('Orchestrate')
-      expect(expandedText).toBeInTheDocument()
-      expect(expandedText).toHaveClass('opacity-100')
-      expect(expandedText).toHaveClass('max-w-none')
+      // Text suddenly appears in DOM - no transition
+      expect(screen.getByText('Orchestrate')).toBeInTheDocument()
 
-      // Fixed: Always present in DOM with smooth CSS transitions
-      // instead of abrupt conditional rendering
+      // The issue: {mode === 'expand' && name} causes abrupt show/hide
+      // instead of smooth opacity/width transition
     })
   })
 
-  describe('Layout Consistency Improvements', () => {
-    it('should maintain consistent padding across all states', () => {
+  describe('Layout Shift Issues', () => {
+    it('should detect padding differences causing layout shifts', () => {
       const { rerender } = render(<NavLink {...mockProps} mode="collapse" />)
 
       const linkElement = screen.getByTestId('nav-link')
 
-      // Consistent padding in collapsed state
-      expect(linkElement).toHaveClass('pl-3')
-      expect(linkElement).toHaveClass('pr-1')
+      // Collapsed state padding
+      expect(linkElement).toHaveClass('px-2.5')
 
       rerender(<NavLink {...mockProps} mode="expand" />)
 
-      // Same padding in expanded state - no layout shift
-      expect(linkElement).toHaveClass('pl-3')
-      expect(linkElement).toHaveClass('pr-1')
+      // Expanded state padding - different value causes layout shift
+      expect(linkElement).toHaveClass('px-3')
 
-      // This consistency eliminates the layout shift issue
+      // This 2px difference (10px vs 12px) contributes to the squeeze effect
     })
 
-    it('should use wrapper-based icon positioning instead of margin changes', () => {
+    it('should detect icon margin changes causing shifts', () => {
       const { rerender } = render(<NavLink {...mockProps} mode="collapse" />)
 
       const iconElement = screen.getByTestId('nav-icon')
-      const iconWrapper = iconElement.parentElement
 
-      // Collapsed: wrapper has micro-adjustment for centering
-      expect(iconWrapper).toHaveClass('-ml-1')
-
-      // Icon itself has consistent classes
-      expect(iconElement).toHaveClass('h-4')
-      expect(iconElement).toHaveClass('w-4')
-      expect(iconElement).toHaveClass('shrink-0')
+      // Collapsed: no right margin
+      expect(iconElement).toHaveClass('mr-0')
 
       rerender(<NavLink {...mockProps} mode="expand" />)
 
-      const expandedIconWrapper = screen.getByTestId('nav-icon').parentElement
+      // Expanded: 8px right margin (mr-2)
+      expect(iconElement).toHaveClass('mr-2')
 
-      // Expanded: no wrapper adjustment needed
-      expect(expandedIconWrapper).not.toHaveClass('-ml-1')
-
-      // Icon classes remain consistent - no margin shifts
-      expect(iconElement).toHaveClass('h-4')
-      expect(iconElement).toHaveClass('w-4')
-      expect(iconElement).toHaveClass('shrink-0')
+      // This sudden margin appearance causes the squeeze effect
     })
   })
 
@@ -193,7 +172,7 @@ describe('NavLink Animation and Layout Issues', () => {
       const { rerender } = render(<NavLink {...mockProps} mode="collapse" />)
 
       let linkElement = screen.getByTestId('nav-link')
-      expect(linkElement).not.toHaveClass('bg-components-menu-item-bg-active')
+      expect(linkElement).not.toHaveClass('bg-state-accent-active')
 
       // Test with active state (when href matches current segment)
       const activeProps = {
@@ -204,63 +183,7 @@ describe('NavLink Animation and Layout Issues', () => {
       rerender(<NavLink {...activeProps} mode="expand" />)
 
       linkElement = screen.getByTestId('nav-link')
-      expect(linkElement).toHaveClass('bg-components-menu-item-bg-active')
-      expect(linkElement).toHaveClass('text-text-accent-light-mode-only')
-    })
-  })
-
-  describe('Text Animation Classes', () => {
-    it('should have proper text classes in collapsed mode', () => {
-      render(<NavLink {...mockProps} mode="collapse" />)
-
-      const textElement = screen.getByText('Orchestrate')
-
-      expect(textElement).toHaveClass('overflow-hidden')
-      expect(textElement).toHaveClass('whitespace-nowrap')
-      expect(textElement).toHaveClass('transition-all')
-      expect(textElement).toHaveClass('duration-200')
-      expect(textElement).toHaveClass('ease-in-out')
-      expect(textElement).toHaveClass('ml-0')
-      expect(textElement).toHaveClass('max-w-0')
-      expect(textElement).toHaveClass('opacity-0')
-    })
-
-    it('should have proper text classes in expanded mode', () => {
-      render(<NavLink {...mockProps} mode="expand" />)
-
-      const textElement = screen.getByText('Orchestrate')
-
-      expect(textElement).toHaveClass('overflow-hidden')
-      expect(textElement).toHaveClass('whitespace-nowrap')
-      expect(textElement).toHaveClass('transition-all')
-      expect(textElement).toHaveClass('duration-200')
-      expect(textElement).toHaveClass('ease-in-out')
-      expect(textElement).toHaveClass('ml-2')
-      expect(textElement).toHaveClass('max-w-none')
-      expect(textElement).toHaveClass('opacity-100')
-    })
-  })
-
-  describe('Disabled State', () => {
-    it('should render as button when disabled', () => {
-      render(<NavLink {...mockProps} mode="expand" disabled={true} />)
-
-      const buttonElement = screen.getByRole('button')
-      expect(buttonElement).toBeInTheDocument()
-      expect(buttonElement).toBeDisabled()
-      expect(buttonElement).toHaveClass('cursor-not-allowed')
-      expect(buttonElement).toHaveClass('opacity-30')
-    })
-
-    it('should maintain consistent styling in disabled state', () => {
-      render(<NavLink {...mockProps} mode="collapse" disabled={true} />)
-
-      const buttonElement = screen.getByRole('button')
-      expect(buttonElement).toHaveClass('pl-3')
-      expect(buttonElement).toHaveClass('pr-1')
-
-      const iconWrapper = screen.getByTestId('nav-icon').parentElement
-      expect(iconWrapper).toHaveClass('-ml-1')
+      expect(linkElement).toHaveClass('bg-state-accent-active')
     })
   })
 })

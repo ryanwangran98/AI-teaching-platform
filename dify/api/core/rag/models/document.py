@@ -1,10 +1,8 @@
 from abc import ABC, abstractmethod
 from collections.abc import Sequence
-from typing import Any
+from typing import Any, Optional
 
-from pydantic import BaseModel, Field
-
-from core.file import File
+from pydantic import BaseModel
 
 
 class ChildDocument(BaseModel):
@@ -12,24 +10,12 @@ class ChildDocument(BaseModel):
 
     page_content: str
 
-    vector: list[float] | None = None
+    vector: Optional[list[float]] = None
 
     """Arbitrary metadata about the page content (e.g., source, relationships to other
         documents, etc.).
     """
-    metadata: dict[str, Any] = Field(default_factory=dict)
-
-
-class AttachmentDocument(BaseModel):
-    """Class for storing a piece of text and associated metadata."""
-
-    page_content: str
-
-    provider: str | None = "dify"
-
-    vector: list[float] | None = None
-
-    metadata: dict[str, Any] = Field(default_factory=dict)
+    metadata: dict = {}
 
 
 class Document(BaseModel):
@@ -37,79 +23,16 @@ class Document(BaseModel):
 
     page_content: str
 
-    vector: list[float] | None = None
+    vector: Optional[list[float]] = None
 
     """Arbitrary metadata about the page content (e.g., source, relationships to other
         documents, etc.).
     """
-    metadata: dict[str, Any] = Field(default_factory=dict)
+    metadata: dict = {}
 
-    provider: str | None = "dify"
+    provider: Optional[str] = "dify"
 
-    children: list[ChildDocument] | None = None
-
-    attachments: list[AttachmentDocument] | None = None
-
-
-class GeneralChunk(BaseModel):
-    """
-    General Chunk.
-    """
-
-    content: str
-    files: list[File] | None = None
-
-
-class MultimodalGeneralStructureChunk(BaseModel):
-    """
-    Multimodal General Structure Chunk.
-    """
-
-    general_chunks: list[GeneralChunk]
-
-
-class GeneralStructureChunk(BaseModel):
-    """
-    General Structure Chunk.
-    """
-
-    general_chunks: list[str]
-
-
-class ParentChildChunk(BaseModel):
-    """
-    Parent Child Chunk.
-    """
-
-    parent_content: str
-    child_contents: list[str]
-    files: list[File] | None = None
-
-
-class ParentChildStructureChunk(BaseModel):
-    """
-    Parent Child Structure Chunk.
-    """
-
-    parent_child_chunks: list[ParentChildChunk]
-    parent_mode: str = "paragraph"
-
-
-class QAChunk(BaseModel):
-    """
-    QA Chunk.
-    """
-
-    question: str
-    answer: str
-
-
-class QAStructureChunk(BaseModel):
-    """
-    QAStructureChunk.
-    """
-
-    qa_chunks: list[QAChunk]
+    children: Optional[list[ChildDocument]] = None
 
 
 class BaseDocumentTransformer(ABC):

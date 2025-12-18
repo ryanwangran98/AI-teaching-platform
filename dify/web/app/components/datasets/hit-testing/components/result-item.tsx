@@ -1,5 +1,6 @@
 'use client'
-import React, { useMemo } from 'react'
+import type { FC } from 'react'
+import React from 'react'
 import { useTranslation } from 'react-i18next'
 import { RiArrowDownSLine, RiArrowRightSLine } from '@remixicon/react'
 import { useBoolean } from 'ahooks'
@@ -13,18 +14,17 @@ import type { FileAppearanceTypeEnum } from '@/app/components/base/file-uploader
 import Tag from '@/app/components/datasets/documents/detail/completed/common/tag'
 import { extensionToFileType } from '@/app/components/datasets/hit-testing/utils/extension-to-file-type'
 import { Markdown } from '@/app/components/base/markdown'
-import ImageList from '../../common/image-list'
 
 const i18nPrefix = 'datasetHitTesting'
-type ResultItemProps = {
+type Props = {
   payload: HitTesting
 }
 
-const ResultItem = ({
+const ResultItem: FC<Props> = ({
   payload,
-}: ResultItemProps) => {
+}) => {
   const { t } = useTranslation()
-  const { segment, score, child_chunks, files } = payload
+  const { segment, score, child_chunks } = payload
   const data = segment
   const { position, word_count, content, sign_content, keywords, document } = data
   const isParentChildRetrieval = !!(child_chunks && child_chunks.length > 0)
@@ -40,17 +40,6 @@ const ResultItem = ({
     setFalse: hideDetailModal,
   }] = useBoolean(false)
 
-  const images = useMemo(() => {
-    if (!files) return []
-    return files.map(file => ({
-      name: file.name,
-      mimeType: file.mime_type,
-      sourceUrl: file.source_url,
-      size: file.size,
-      extension: file.extension,
-    }))
-  }, [files])
-
   return (
     <div className={cn('cursor-pointer rounded-xl bg-chat-bubble-bg pt-3 hover:shadow-lg')} onClick={showDetailModal}>
       {/* Meta info */}
@@ -58,14 +47,11 @@ const ResultItem = ({
 
       {/* Main */}
       <div className='mt-1 px-3'>
-        {<Markdown
+        <Markdown
           className='line-clamp-2'
           content={sign_content || content}
           customDisallowedElements={['input']}
-        />}
-        {images.length > 0 && (
-          <ImageList images={images} size='md' className='py-1' />
-        )}
+        />
         {isParentChildRetrieval && (
           <div className='mt-1'>
             <div

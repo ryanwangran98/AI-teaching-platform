@@ -25,6 +25,7 @@ import Compliance from './compliance'
 import PremiumBadge from '@/app/components/base/premium-badge'
 import Avatar from '@/app/components/base/avatar'
 import ThemeSwitcher from '@/app/components/base/theme-switcher'
+import { logout } from '@/service/common'
 import { useAppContext } from '@/context/app-context'
 import { useProviderContext } from '@/context/provider-context'
 import { useModalContext } from '@/context/modal-context'
@@ -32,9 +33,6 @@ import { IS_CLOUD_EDITION } from '@/config'
 import cn from '@/utils/classnames'
 import { useGlobalPublicStore } from '@/context/global-public-context'
 import { useDocLink } from '@/context/i18n'
-import { useLogout } from '@/service/use-common'
-import { ACCOUNT_SETTING_TAB } from '@/app/components/header/account-setting/constants'
-import { resetUser } from '@/app/components/base/amplitude/utils'
 
 export default function AppSelector() {
   const itemClassName = `
@@ -51,17 +49,15 @@ export default function AppSelector() {
   const { isEducationAccount } = useProviderContext()
   const { setShowAccountSettingModal } = useModalContext()
 
-  const { mutateAsync: logout } = useLogout()
   const handleLogout = async () => {
-    await logout()
-    resetUser()
-    localStorage.removeItem('setup_status')
-    // Tokens are now stored in cookies and cleared by backend
+    await logout({
+      url: '/logout',
+      params: {},
+    })
 
-    // To avoid use other account's education notice info
-    localStorage.removeItem('education-reverify-prev-expire-at')
-    localStorage.removeItem('education-reverify-has-noticed')
-    localStorage.removeItem('education-expired-has-noticed')
+    localStorage.removeItem('setup_status')
+    localStorage.removeItem('console_token')
+    localStorage.removeItem('refresh_token')
 
     router.push('/signin')
   }
@@ -70,7 +66,7 @@ export default function AppSelector() {
     <div className="">
       <Menu as="div" className="relative inline-block text-left">
         {
-          ({ open, close }) => (
+          ({ open }) => (
             <>
               <MenuButton className={cn('inline-flex items-center rounded-[20px] p-0.5 hover:bg-background-default-dodge', open && 'bg-background-default-dodge')}>
                 <Avatar avatar={userProfile.avatar_url} name={userProfile.name} size={36} />
@@ -124,7 +120,7 @@ export default function AppSelector() {
                     <MenuItem>
                       <div className={cn(itemClassName,
                         'data-[active]:bg-state-base-hover',
-                      )} onClick={() => setShowAccountSettingModal({ payload: ACCOUNT_SETTING_TAB.MEMBERS })}>
+                      )} onClick={() => setShowAccountSettingModal({ payload: 'members' })}>
                         <RiSettings3Line className='size-4 shrink-0 text-text-tertiary' />
                         <div className='system-md-regular grow px-1 text-text-secondary'>{t('common.userProfile.settings')}</div>
                       </div>
@@ -144,7 +140,7 @@ export default function AppSelector() {
                           <RiArrowRightUpLine className='size-[14px] shrink-0 text-text-tertiary' />
                         </Link>
                       </MenuItem>
-                      <Support closeAccountDropdown={close} />
+                      <Support />
                       {IS_CLOUD_EDITION && isCurrentWorkspaceOwner && <Compliance />}
                     </div>
                     <div className='p-1'>

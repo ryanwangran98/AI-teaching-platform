@@ -1,33 +1,32 @@
+import datetime
 import logging
 import time
+from typing import Optional
 
 import click
-from celery import shared_task
+from celery import shared_task  # type: ignore
 
 from core.rag.index_processor.index_processor_factory import IndexProcessorFactory
 from core.rag.models.document import Document
 from extensions.ext_database import db
 from extensions.ext_redis import redis_client
-from libs.datetime_utils import naive_utc_now
 from models.dataset import DocumentSegment
-
-logger = logging.getLogger(__name__)
 
 
 @shared_task(queue="dataset")
-def create_segment_to_index_task(segment_id: str, keywords: list[str] | None = None):
+def create_segment_to_index_task(segment_id: str, keywords: Optional[list[str]] = None):
     """
     Async create segment to index
     :param segment_id:
     :param keywords:
     Usage: create_segment_to_index_task.delay(segment_id)
     """
-    logger.info(click.style(f"Start create segment to index: {segment_id}", fg="green"))
+    logging.info(click.style(f"Start create segment to index: {segment_id}", fg="green"))
     start_at = time.perf_counter()
 
     segment = db.session.query(DocumentSegment).where(DocumentSegment.id == segment_id).first()
     if not segment:
-        logger.info(click.style(f"Segment not found: {segment_id}", fg="red"))
+        logging.info(click.style(f"Segment not found: {segment_id}", fg="red"))
         db.session.close()
         return
 
@@ -42,7 +41,7 @@ def create_segment_to_index_task(segment_id: str, keywords: list[str] | None = N
         db.session.query(DocumentSegment).filter_by(id=segment.id).update(
             {
                 DocumentSegment.status: "indexing",
-                DocumentSegment.indexing_at: naive_utc_now(),
+                DocumentSegment.indexing_at: datetime.datetime.now(datetime.UTC).replace(tzinfo=None),
             }
         )
         db.session.commit()
@@ -59,17 +58,17 @@ def create_segment_to_index_task(segment_id: str, keywords: list[str] | None = N
         dataset = segment.dataset
 
         if not dataset:
-            logger.info(click.style(f"Segment {segment.id} has no dataset, pass.", fg="cyan"))
+            logging.info(click.style(f"Segment {segment.id} has no dataset, pass.", fg="cyan"))
             return
 
         dataset_document = segment.document
 
         if not dataset_document:
-            logger.info(click.style(f"Segment {segment.id} has no document, pass.", fg="cyan"))
+            logging.info(click.style(f"Segment {segment.id} has no document, pass.", fg="cyan"))
             return
 
         if not dataset_document.enabled or dataset_document.archived or dataset_document.indexing_status != "completed":
-            logger.info(click.style(f"Segment {segment.id} document status is invalid, pass.", fg="cyan"))
+            logging.info(click.style(f"Segment {segment.id} document status is invalid, pass.", fg="cyan"))
             return
 
         index_type = dataset.doc_form
@@ -80,17 +79,17 @@ def create_segment_to_index_task(segment_id: str, keywords: list[str] | None = N
         db.session.query(DocumentSegment).filter_by(id=segment.id).update(
             {
                 DocumentSegment.status: "completed",
-                DocumentSegment.completed_at: naive_utc_now(),
+                DocumentSegment.completed_at: datetime.datetime.now(datetime.UTC).replace(tzinfo=None),
             }
         )
         db.session.commit()
 
         end_at = time.perf_counter()
-        logger.info(click.style(f"Segment created to index: {segment.id} latency: {end_at - start_at}", fg="green"))
+        logging.info(click.style(f"Segment created to index: {segment.id} latency: {end_at - start_at}", fg="green"))
     except Exception as e:
-        logger.exception("create segment to index failed")
+        logging.exception("create segment to index failed")
         segment.enabled = False
-        segment.disabled_at = naive_utc_now()
+        segment.disabled_at = datetime.datetime.now(datetime.UTC).replace(tzinfo=None)
         segment.status = "error"
         segment.error = str(e)
         db.session.commit()

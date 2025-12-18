@@ -1,28 +1,28 @@
 from collections.abc import Generator, Mapping, Sequence
-from typing import TYPE_CHECKING, Any
+from typing import Any, Optional, cast
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from core.callback_handler.workflow_tool_callback_handler import DifyWorkflowCallbackHandler
 from core.file import File, FileTransferMethod
-from core.model_runtime.entities.llm_entities import LLMUsage
-from core.tools.__base.tool import Tool
+from core.plugin.impl.exc import PluginDaemonClientSideError, PluginInvokeError
+from core.plugin.impl.plugin import PluginInstaller
 from core.tools.entities.tool_entities import ToolInvokeMessage, ToolParameter
 from core.tools.errors import ToolInvokeError
 from core.tools.tool_engine import ToolEngine
 from core.tools.utils.message_transformer import ToolFileMessageTransformer
 from core.variables.segments import ArrayAnySegment, ArrayFileSegment
 from core.variables.variables import ArrayAnyVariable
-from core.workflow.enums import (
-    NodeType,
-    SystemVariableKey,
-    WorkflowNodeExecutionMetadataKey,
-    WorkflowNodeExecutionStatus,
-)
-from core.workflow.node_events import NodeEventBase, NodeRunResult, StreamChunkEvent, StreamCompletedEvent
-from core.workflow.nodes.base.node import Node
-from core.workflow.nodes.base.variable_template_parser import VariableTemplateParser
+from core.workflow.entities.node_entities import NodeRunResult
+from core.workflow.entities.variable_pool import VariablePool
+from core.workflow.entities.workflow_node_execution import WorkflowNodeExecutionMetadataKey, WorkflowNodeExecutionStatus
+from core.workflow.enums import SystemVariableKey
+from core.workflow.nodes.base import BaseNode
+from core.workflow.nodes.base.entities import BaseNodeData, RetryConfig
+from core.workflow.nodes.enums import ErrorStrategy, NodeType
+from core.workflow.nodes.event import RunCompletedEvent, RunStreamChunkEvent
+from core.workflow.utils.variable_template_parser import VariableTemplateParser
 from extensions.ext_database import db
 from factories import file_factory
 from models import ToolFile
@@ -35,32 +35,35 @@ from .exc import (
     ToolParameterError,
 )
 
-if TYPE_CHECKING:
-    from core.workflow.runtime import VariablePool
 
-
-class ToolNode(Node[ToolNodeData]):
+class ToolNode(BaseNode):
     """
     Tool Node
     """
 
-    node_type = NodeType.TOOL
+    _node_type = NodeType.TOOL
+
+    _node_data: ToolNodeData
+
+    def init_node_data(self, data: Mapping[str, Any]) -> None:
+        self._node_data = ToolNodeData.model_validate(data)
 
     @classmethod
     def version(cls) -> str:
         return "1"
 
-    def _run(self) -> Generator[NodeEventBase, None, None]:
+    def _run(self) -> Generator:
         """
         Run the tool node
         """
-        from core.plugin.impl.exc import PluginDaemonClientSideError, PluginInvokeError
+
+        node_data = cast(ToolNodeData, self._node_data)
 
         # fetch tool icon
         tool_info = {
-            "provider_type": self.node_data.provider_type.value,
-            "provider_id": self.node_data.provider_id,
-            "plugin_unique_identifier": self.node_data.plugin_unique_identifier,
+            "provider_type": node_data.provider_type.value,
+            "provider_id": node_data.provider_id,
+            "plugin_unique_identifier": node_data.plugin_unique_identifier,
         }
 
         # get tool runtime
@@ -72,14 +75,14 @@ class ToolNode(Node[ToolNodeData]):
             # But for backward compatibility with historical data
             # this version field judgment is still preserved here.
             variable_pool: VariablePool | None = None
-            if self.node_data.version != "1" or self.node_data.tool_node_version is not None:
+            if node_data.version != "1" or node_data.tool_node_version != "1":
                 variable_pool = self.graph_runtime_state.variable_pool
             tool_runtime = ToolManager.get_workflow_tool_runtime(
-                self.tenant_id, self.app_id, self._node_id, self.node_data, self.invoke_from, variable_pool
+                self.tenant_id, self.app_id, self.node_id, self._node_data, self.invoke_from, variable_pool
             )
         except ToolNodeError as e:
-            yield StreamCompletedEvent(
-                node_run_result=NodeRunResult(
+            yield RunCompletedEvent(
+                run_result=NodeRunResult(
                     status=WorkflowNodeExecutionStatus.FAILED,
                     inputs={},
                     metadata={WorkflowNodeExecutionMetadataKey.TOOL_INFO: tool_info},
@@ -94,12 +97,12 @@ class ToolNode(Node[ToolNodeData]):
         parameters = self._generate_parameters(
             tool_parameters=tool_parameters,
             variable_pool=self.graph_runtime_state.variable_pool,
-            node_data=self.node_data,
+            node_data=self._node_data,
         )
         parameters_for_log = self._generate_parameters(
             tool_parameters=tool_parameters,
             variable_pool=self.graph_runtime_state.variable_pool,
-            node_data=self.node_data,
+            node_data=self._node_data,
             for_log=True,
         )
         # get conversation id
@@ -112,12 +115,13 @@ class ToolNode(Node[ToolNodeData]):
                 user_id=self.user_id,
                 workflow_tool_callback=DifyWorkflowCallbackHandler(),
                 workflow_call_depth=self.workflow_call_depth,
+                thread_pool_id=self.thread_pool_id,
                 app_id=self.app_id,
                 conversation_id=conversation_id.text if conversation_id else None,
             )
         except ToolNodeError as e:
-            yield StreamCompletedEvent(
-                node_run_result=NodeRunResult(
+            yield RunCompletedEvent(
+                run_result=NodeRunResult(
                     status=WorkflowNodeExecutionStatus.FAILED,
                     inputs=parameters_for_log,
                     metadata={WorkflowNodeExecutionMetadataKey.TOOL_INFO: tool_info},
@@ -129,38 +133,40 @@ class ToolNode(Node[ToolNodeData]):
 
         try:
             # convert tool messages
-            _ = yield from self._transform_message(
+            yield from self._transform_message(
                 messages=message_stream,
                 tool_info=tool_info,
                 parameters_for_log=parameters_for_log,
                 user_id=self.user_id,
                 tenant_id=self.tenant_id,
-                node_id=self._node_id,
-                tool_runtime=tool_runtime,
+                node_id=self.node_id,
             )
         except ToolInvokeError as e:
-            yield StreamCompletedEvent(
-                node_run_result=NodeRunResult(
+            yield RunCompletedEvent(
+                run_result=NodeRunResult(
                     status=WorkflowNodeExecutionStatus.FAILED,
                     inputs=parameters_for_log,
                     metadata={WorkflowNodeExecutionMetadataKey.TOOL_INFO: tool_info},
-                    error=f"Failed to invoke tool {self.node_data.provider_name}: {str(e)}",
+                    error=f"Failed to invoke tool {node_data.provider_name}: {str(e)}",
                     error_type=type(e).__name__,
                 )
             )
         except PluginInvokeError as e:
-            yield StreamCompletedEvent(
-                node_run_result=NodeRunResult(
+            yield RunCompletedEvent(
+                run_result=NodeRunResult(
                     status=WorkflowNodeExecutionStatus.FAILED,
                     inputs=parameters_for_log,
                     metadata={WorkflowNodeExecutionMetadataKey.TOOL_INFO: tool_info},
-                    error=e.to_user_friendly_error(plugin_name=self.node_data.provider_name),
+                    error="An error occurred in the plugin, "
+                    f"please contact the author of {node_data.provider_name} for help, "
+                    f"error type: {e.get_error_type()}, "
+                    f"error details: {e.get_error_message()}",
                     error_type=type(e).__name__,
                 )
             )
         except PluginDaemonClientSideError as e:
-            yield StreamCompletedEvent(
-                node_run_result=NodeRunResult(
+            yield RunCompletedEvent(
+                run_result=NodeRunResult(
                     status=WorkflowNodeExecutionStatus.FAILED,
                     inputs=parameters_for_log,
                     metadata={WorkflowNodeExecutionMetadataKey.TOOL_INFO: tool_info},
@@ -173,7 +179,7 @@ class ToolNode(Node[ToolNodeData]):
         self,
         *,
         tool_parameters: Sequence[ToolParameter],
-        variable_pool: "VariablePool",
+        variable_pool: VariablePool,
         node_data: ToolNodeData,
         for_log: bool = False,
     ) -> dict[str, Any]:
@@ -214,8 +220,8 @@ class ToolNode(Node[ToolNodeData]):
 
         return result
 
-    def _fetch_files(self, variable_pool: "VariablePool") -> list[File]:
-        variable = variable_pool.get(["sys", SystemVariableKey.FILES])
+    def _fetch_files(self, variable_pool: VariablePool) -> list[File]:
+        variable = variable_pool.get(["sys", SystemVariableKey.FILES.value])
         assert isinstance(variable, ArrayAnyVariable | ArrayAnySegment)
         return list(variable.value) if variable else []
 
@@ -227,14 +233,11 @@ class ToolNode(Node[ToolNodeData]):
         user_id: str,
         tenant_id: str,
         node_id: str,
-        tool_runtime: Tool,
-    ) -> Generator[NodeEventBase, None, LLMUsage]:
+    ) -> Generator:
         """
         Convert ToolInvokeMessages into tuple[plain_text, files]
         """
         # transform message and handle file storage
-        from core.plugin.impl.plugin import PluginInstaller
-
         message_stream = ToolFileMessageTransformer.transform_tool_invoke_messages(
             messages=messages,
             user_id=user_id,
@@ -307,33 +310,44 @@ class ToolNode(Node[ToolNodeData]):
             elif message.type == ToolInvokeMessage.MessageType.TEXT:
                 assert isinstance(message.message, ToolInvokeMessage.TextMessage)
                 text += message.message.text
-                yield StreamChunkEvent(
-                    selector=[node_id, "text"],
-                    chunk=message.message.text,
-                    is_final=False,
-                )
+                yield RunStreamChunkEvent(chunk_content=message.message.text, from_variable_selector=[node_id, "text"])
             elif message.type == ToolInvokeMessage.MessageType.JSON:
                 assert isinstance(message.message, ToolInvokeMessage.JsonMessage)
                 # JSON message handling for tool node
-                if message.message.json_object:
+                if message.message.json_object is not None:
                     json.append(message.message.json_object)
             elif message.type == ToolInvokeMessage.MessageType.LINK:
                 assert isinstance(message.message, ToolInvokeMessage.TextMessage)
 
-                # Check if this LINK message is a file link
-                file_obj = (message.meta or {}).get("file")
-                if isinstance(file_obj, File):
-                    files.append(file_obj)
-                    stream_text = f"File: {message.message.text}\n"
+                if message.meta:
+                    transfer_method = message.meta.get("transfer_method", FileTransferMethod.TOOL_FILE)
                 else:
-                    stream_text = f"Link: {message.message.text}\n"
+                    transfer_method = FileTransferMethod.TOOL_FILE
 
-                text += stream_text
-                yield StreamChunkEvent(
-                    selector=[node_id, "text"],
-                    chunk=stream_text,
-                    is_final=False,
+                tool_file_id = message.message.text.split("/")[-1].split(".")[0]
+
+                with Session(db.engine) as session:
+                    stmt = select(ToolFile).where(ToolFile.id == tool_file_id)
+                    tool_file = session.scalar(stmt)
+                    if tool_file is None:
+                        raise ToolFileError(f"Tool file {tool_file_id} does not exist")
+
+                mapping = {
+                    "tool_file_id": tool_file_id,
+                    "type": file_factory.get_file_type_by_mime_type(tool_file.mimetype),
+                    "transfer_method": transfer_method,
+                    "url": message.message.text,
+                }
+
+                file = file_factory.build_from_mapping(
+                    mapping=mapping,
+                    tenant_id=self.tenant_id,
                 )
+                files.append(file)
+
+                stream_text = f"Link: {message.message.text}\n"
+                text += stream_text
+                yield RunStreamChunkEvent(chunk_content=stream_text, from_variable_selector=[node_id, "text"])
             elif message.type == ToolInvokeMessage.MessageType.VARIABLE:
                 assert isinstance(message.message, ToolInvokeMessage.VariableMessage)
                 variable_name = message.message.variable_name
@@ -345,10 +359,8 @@ class ToolNode(Node[ToolNodeData]):
                         variables[variable_name] = ""
                     variables[variable_name] += variable_value
 
-                    yield StreamChunkEvent(
-                        selector=[node_id, variable_name],
-                        chunk=variable_value,
-                        is_final=False,
+                    yield RunStreamChunkEvent(
+                        chunk_content=variable_value, from_variable_selector=[node_id, variable_name]
                     )
                 else:
                     variables[variable_name] = variable_value
@@ -408,58 +420,16 @@ class ToolNode(Node[ToolNodeData]):
         else:
             json_output.append({"data": []})
 
-        # Send final chunk events for all streamed outputs
-        # Final chunk for text stream
-        yield StreamChunkEvent(
-            selector=[self._node_id, "text"],
-            chunk="",
-            is_final=True,
-        )
-
-        # Final chunks for any streamed variables
-        for var_name in variables:
-            yield StreamChunkEvent(
-                selector=[self._node_id, var_name],
-                chunk="",
-                is_final=True,
-            )
-
-        usage = self._extract_tool_usage(tool_runtime)
-
-        metadata: dict[WorkflowNodeExecutionMetadataKey, Any] = {
-            WorkflowNodeExecutionMetadataKey.TOOL_INFO: tool_info,
-        }
-        if isinstance(usage.total_tokens, int) and usage.total_tokens > 0:
-            metadata[WorkflowNodeExecutionMetadataKey.TOTAL_TOKENS] = usage.total_tokens
-            metadata[WorkflowNodeExecutionMetadataKey.TOTAL_PRICE] = usage.total_price
-            metadata[WorkflowNodeExecutionMetadataKey.CURRENCY] = usage.currency
-
-        yield StreamCompletedEvent(
-            node_run_result=NodeRunResult(
+        yield RunCompletedEvent(
+            run_result=NodeRunResult(
                 status=WorkflowNodeExecutionStatus.SUCCEEDED,
                 outputs={"text": text, "files": ArrayFileSegment(value=files), "json": json_output, **variables},
-                metadata=metadata,
+                metadata={
+                    WorkflowNodeExecutionMetadataKey.TOOL_INFO: tool_info,
+                },
                 inputs=parameters_for_log,
-                llm_usage=usage,
             )
         )
-
-        return usage
-
-    @staticmethod
-    def _extract_tool_usage(tool_runtime: Tool) -> LLMUsage:
-        # Avoid importing WorkflowTool at module import time; rely on duck typing
-        # Some runtimes expose `latest_usage`; mocks may synthesize arbitrary attributes.
-        latest = getattr(tool_runtime, "latest_usage", None)
-        # Normalize into a concrete LLMUsage. MagicMock returns truthy attribute objects
-        # for any name, so we must type-check here.
-        if isinstance(latest, LLMUsage):
-            return latest
-        if isinstance(latest, dict):
-            # Allow dict payloads from external runtimes
-            return LLMUsage.model_validate(latest)
-        # Fallback to empty usage when attribute is missing or not a valid payload
-        return LLMUsage.empty_usage()
 
     @classmethod
     def _extract_variable_selector_to_variable_mapping(
@@ -488,8 +458,7 @@ class ToolNode(Node[ToolNodeData]):
                 for selector in selectors:
                     result[selector.variable] = selector.value_selector
             elif input.type == "variable":
-                selector_key = ".".join(input.value)
-                result[f"#{selector_key}#"] = input.value
+                result[parameter_name] = input.value
             elif input.type == "constant":
                 pass
 
@@ -497,6 +466,28 @@ class ToolNode(Node[ToolNodeData]):
 
         return result
 
+    def _get_error_strategy(self) -> Optional[ErrorStrategy]:
+        return self._node_data.error_strategy
+
+    def _get_retry_config(self) -> RetryConfig:
+        return self._node_data.retry_config
+
+    def _get_title(self) -> str:
+        return self._node_data.title
+
+    def _get_description(self) -> Optional[str]:
+        return self._node_data.desc
+
+    def _get_default_value_dict(self) -> dict[str, Any]:
+        return self._node_data.default_value_dict
+
+    def get_base_node_data(self) -> BaseNodeData:
+        return self._node_data
+
+    @property
+    def continue_on_error(self) -> bool:
+        return self._node_data.error_strategy is not None
+
     @property
     def retry(self) -> bool:
-        return self.node_data.retry_config.retry_enabled
+        return self._node_data.retry_config.retry_enabled

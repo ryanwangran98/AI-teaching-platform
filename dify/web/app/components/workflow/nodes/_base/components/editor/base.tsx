@@ -16,10 +16,8 @@ import useToggleExpend from '@/app/components/workflow/nodes/_base/hooks/use-tog
 import type { FileEntity } from '@/app/components/base/file-uploader/types'
 import FileListInLog from '@/app/components/base/file-uploader/file-list-in-log'
 import ActionButton from '@/app/components/base/action-button'
-import type { Node, NodeOutPutVar } from '@/app/components/workflow/types'
 
 type Props = {
-  nodeId?: string
   className?: string
   title: React.JSX.Element | string
   headerRight?: React.JSX.Element
@@ -37,13 +35,9 @@ type Props = {
   showFileList?: boolean
   showCodeGenerator?: boolean
   tip?: React.JSX.Element
-  nodesOutputVars?: NodeOutPutVar[]
-  availableNodes?: Node[]
-  footer?: React.ReactNode
 }
 
 const Base: FC<Props> = ({
-  nodeId,
   className,
   title,
   headerRight,
@@ -58,7 +52,6 @@ const Base: FC<Props> = ({
   showFileList,
   showCodeGenerator = false,
   tip,
-  footer,
 }) => {
   const ref = useRef<HTMLDivElement>(null)
   const {
@@ -93,12 +86,7 @@ const Base: FC<Props> = ({
             {headerRight}
             {showCodeGenerator && codeLanguages && (
               <div className='ml-1'>
-                <CodeGeneratorButton
-                  onGenerated={onGenerated}
-                  codeLanguages={codeLanguages}
-                  currentCode={value}
-                  nodeId={nodeId!}
-                />
+                <CodeGeneratorButton onGenerated={onGenerated} codeLanguages={codeLanguages} />
               </div>
             )}
             <ActionButton className='ml-1' onClick={handleCopy}>
@@ -130,7 +118,6 @@ const Base: FC<Props> = ({
         {showFileList && fileList.length > 0 && (
           <FileListInLog fileList={fileList} />
         )}
-        {footer}
       </div>
     </Wrap>
   )

@@ -1,8 +1,10 @@
-import React, { useCallback, useEffect, useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { usePathname } from 'next/navigation'
 import { useShallow } from 'zustand/react/shallow'
+import { RiLayoutLeft2Line, RiLayoutRight2Line } from '@remixicon/react'
 import NavLink from './navLink'
 import type { NavIcon } from './navLink'
+import AppBasic from './basic'
 import AppInfo from './app-info'
 import DatasetInfo from './dataset-info'
 import AppSidebarDropdown from './app-sidebar-dropdown'
@@ -10,48 +12,39 @@ import useBreakpoints, { MediaType } from '@/hooks/use-breakpoints'
 import { useStore as useAppStore } from '@/app/components/app/store'
 import { useEventEmitterContextContext } from '@/context/event-emitter'
 import cn from '@/utils/classnames'
-import Divider from '../base/divider'
-import { useHover, useKeyPress } from 'ahooks'
-import ToggleButton from './toggle-button'
-import { getKeyboardKeyCodeBySystem } from '../workflow/utils'
-import DatasetSidebarDropdown from './dataset-sidebar-dropdown'
 
 export type IAppDetailNavProps = {
-  iconType?: 'app' | 'dataset'
+  iconType?: 'app' | 'dataset' | 'notion'
+  title: string
+  desc: string
+  isExternal?: boolean
+  icon: string
+  icon_background: string | null
   navigation: Array<{
     name: string
     href: string
     icon: NavIcon
     selectedIcon: NavIcon
-    disabled?: boolean
   }>
   extraInfo?: (modeState: string) => React.ReactNode
 }
 
-const AppDetailNav = ({
-  navigation,
-  extraInfo,
-  iconType = 'app',
-}: IAppDetailNavProps) => {
-  const { appSidebarExpand, setAppSidebarExpand } = useAppStore(useShallow(state => ({
+const AppDetailNav = ({ title, desc, isExternal, icon, icon_background, navigation, extraInfo, iconType = 'app' }: IAppDetailNavProps) => {
+  const { appSidebarExpand, setAppSiderbarExpand } = useAppStore(useShallow(state => ({
     appSidebarExpand: state.appSidebarExpand,
-    setAppSidebarExpand: state.setAppSidebarExpand,
+    setAppSiderbarExpand: state.setAppSiderbarExpand,
   })))
-  const sidebarRef = React.useRef<HTMLDivElement>(null)
   const media = useBreakpoints()
   const isMobile = media === MediaType.mobile
   const expand = appSidebarExpand === 'expand'
 
-  const handleToggle = useCallback(() => {
-    setAppSidebarExpand(appSidebarExpand === 'expand' ? 'collapse' : 'expand')
-  }, [appSidebarExpand, setAppSidebarExpand])
+  const handleToggle = (state: string) => {
+    setAppSiderbarExpand(state === 'expand' ? 'collapse' : 'expand')
+  }
 
-  const isHoveringSidebar = useHover(sidebarRef)
-
-  // Check if the current path is a workflow canvas & fullscreen
+  // // Check if the current path is a workflow canvas & fullscreen
   const pathname = usePathname()
   const inWorkflowCanvas = pathname.endsWith('/workflow')
-  const isPipelineCanvas = pathname.endsWith('/pipeline')
   const workflowCanvasMaximize = localStorage.getItem('workflow-canvas-maximize') === 'true'
   const [hideHeader, setHideHeader] = useState(workflowCanvasMaximize)
   const { eventEmitter } = useEventEmitterContextContext()
@@ -64,91 +57,88 @@ const AppDetailNav = ({
   useEffect(() => {
     if (appSidebarExpand) {
       localStorage.setItem('app-detail-collapse-or-expand', appSidebarExpand)
-      setAppSidebarExpand(appSidebarExpand)
+      setAppSiderbarExpand(appSidebarExpand)
     }
-  }, [appSidebarExpand, setAppSidebarExpand])
-
-  useKeyPress(`${getKeyboardKeyCodeBySystem('ctrl')}.b`, (e) => {
-    e.preventDefault()
-    handleToggle()
-  }, { exactMatch: true, useCapture: true })
+  }, [appSidebarExpand, setAppSiderbarExpand])
 
   if (inWorkflowCanvas && hideHeader) {
-    return (
+ return (
       <div className='flex w-0 shrink-0'>
         <AppSidebarDropdown navigation={navigation} />
       </div>
     )
-  }
-
-  if (isPipelineCanvas && hideHeader) {
-    return (
-      <div className='flex w-0 shrink-0'>
-        <DatasetSidebarDropdown navigation={navigation} />
-      </div>
-    )
-  }
+}
 
   return (
     <div
-      ref={sidebarRef}
-      className={cn(
-        'flex shrink-0 flex-col border-r border-divider-burn bg-background-default-subtle transition-all',
-        expand ? 'w-[216px]' : 'w-14',
-      )}
+      className={`
+        flex shrink-0 flex-col border-r border-divider-burn bg-background-default-subtle transition-all
+        ${expand ? 'w-[216px]' : 'w-14'}
+      `}
     >
       <div
-        className={cn(
-          'shrink-0',
-          expand ? 'p-2' : 'p-1',
-        )}
+        className={`
+          shrink-0
+          ${expand ? 'p-2' : 'p-1'}
+        `}
       >
         {iconType === 'app' && (
           <AppInfo expand={expand} />
         )}
-        {iconType !== 'app' && (
-          <DatasetInfo expand={expand} />
-        )}
-      </div>
-      <div className='relative px-4 py-2'>
-        <Divider
-          type='horizontal'
-          bgStyle={expand ? 'gradient' : 'solid'}
-          className={cn(
-            'my-0 h-px',
-            expand
-              ? 'bg-gradient-to-r from-divider-subtle to-background-gradient-mask-transparent'
-              : 'bg-divider-subtle',
-          )}
-        />
-        {!isMobile && isHoveringSidebar && (
-          <ToggleButton
-            className='absolute -right-3 top-[-3.5px] z-20'
+        {iconType === 'dataset' && (
+          <DatasetInfo
+            name={title}
+            description={desc}
+            isExternal={isExternal}
             expand={expand}
-            handleToggle={handleToggle}
+            extraInfo={extraInfo && extraInfo(appSidebarExpand)}
+          />
+        )}
+        {!['app', 'dataset'].includes(iconType) && (
+          <AppBasic
+            mode={appSidebarExpand}
+            iconType={iconType}
+            icon={icon}
+            icon_background={icon_background}
+            name={title}
+            type={desc}
+            isExternal={isExternal}
           />
         )}
       </div>
+      <div className='px-4'>
+        <div className={cn('mx-auto mt-1 h-[1px] bg-divider-subtle', !expand && 'w-6')} />
+      </div>
       <nav
-        className={cn(
-          'flex grow flex-col gap-y-0.5',
-          expand ? 'px-3 py-2' : 'p-3',
-        )}
+        className={`
+          grow space-y-1
+          ${expand ? 'p-4' : 'px-2.5 py-4'}
+        `}
       >
         {navigation.map((item, index) => {
           return (
-            <NavLink
-              key={index}
-              mode={appSidebarExpand}
-              iconMap={{ selected: item.selectedIcon, normal: item.icon }}
-              name={item.name}
-              href={item.href}
-              disabled={!!item.disabled}
-            />
+            <NavLink key={index} mode={appSidebarExpand} iconMap={{ selected: item.selectedIcon, normal: item.icon }} name={item.name} href={item.href} />
           )
         })}
       </nav>
-      {iconType !== 'app' && extraInfo && extraInfo(appSidebarExpand)}
+      {
+        !isMobile && (
+          <div
+            className="shrink-0 px-4 py-3"
+          >
+            <div
+              className='flex h-6 w-6 cursor-pointer items-center justify-center'
+              onClick={() => handleToggle(appSidebarExpand)}
+            >
+              {
+                expand
+                  ? <RiLayoutRight2Line className='h-5 w-5 text-components-menu-item-text' />
+                  : <RiLayoutLeft2Line className='h-5 w-5 text-components-menu-item-text' />
+              }
+            </div>
+          </div>
+        )
+      }
     </div>
   )
 }

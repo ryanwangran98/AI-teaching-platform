@@ -10,7 +10,9 @@ const usePagination = ({
   edgePageCount,
   middlePagesSiblingCount,
 }: IPaginationProps): IUsePagination => {
-  const pages = React.useMemo(() => Array.from({ length: totalPages }, (_, i) => i + 1), [totalPages])
+  const pages = new Array(totalPages)
+    .fill(0)
+    .map((_, i) => i + 1)
 
   const hasPreviousPage = currentPage > 1
   const hasNextPage = currentPage < totalPages

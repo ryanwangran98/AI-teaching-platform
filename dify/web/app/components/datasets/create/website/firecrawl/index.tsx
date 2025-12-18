@@ -7,14 +7,13 @@ import OptionsWrap from '../base/options-wrap'
 import CrawledResult from '../base/crawled-result'
 import Crawling from '../base/crawling'
 import ErrorMessage from '../base/error-message'
+import Header from './header'
 import Options from './options'
-import { useModalContextSelector } from '@/context/modal-context'
+import { useModalContext } from '@/context/modal-context'
 import type { CrawlOptions, CrawlResultItem } from '@/models/datasets'
 import Toast from '@/app/components/base/toast'
 import { checkFirecrawlTaskStatus, createFirecrawlTask } from '@/service/datasets'
 import { sleep } from '@/utils'
-import Header from '../base/header'
-import { ACCOUNT_SETTING_TAB } from '@/app/components/header/account-setting/constants'
 
 const ERROR_I18N_PREFIX = 'common.errorMsg'
 const I18N_PREFIX = 'datasetCreation.stepOne.website'
@@ -49,10 +48,10 @@ const FireCrawl: FC<Props> = ({
     if (step !== Step.init)
       setControlFoldOptions(Date.now())
   }, [step])
-  const setShowAccountSettingModal = useModalContextSelector(s => s.setShowAccountSettingModal)
+  const { setShowAccountSettingModal } = useModalContext()
   const handleSetting = useCallback(() => {
     setShowAccountSettingModal({
-      payload: ACCOUNT_SETTING_TAB.DATA_SOURCE,
+      payload: 'data-source',
     })
   }, [setShowAccountSettingModal])
 
@@ -113,10 +112,6 @@ const FireCrawl: FC<Props> = ({
           },
         }
       }
-      res.data = res.data.map((item: any) => ({
-        ...item,
-        content: item.markdown,
-      }))
       // update the progress
       setCrawlResult({
         ...res,
@@ -136,7 +131,7 @@ const FireCrawl: FC<Props> = ({
         },
       }
     }
-  }, [crawlOptions.limit, onCheckedCrawlResultChange])
+  }, [crawlOptions.limit])
 
   const handleRun = useCallback(async (url: string) => {
     const { isValid, errorMsg } = checkValid(url)
@@ -178,17 +173,11 @@ const FireCrawl: FC<Props> = ({
     finally {
       setStep(Step.finished)
     }
-  }, [checkValid, crawlOptions, onJobIdChange, t, waitForCrawlFinished, onCheckedCrawlResultChange])
+  }, [checkValid, crawlOptions, onJobIdChange, t, waitForCrawlFinished])
 
   return (
     <div>
-      <Header
-        onClickConfiguration={handleSetting}
-        title={t(`${I18N_PREFIX}.firecrawlTitle`)}
-        buttonText={t(`${I18N_PREFIX}.configureFirecrawl`)}
-        docTitle={t(`${I18N_PREFIX}.firecrawlDoc`)}
-        docLink={'https://docs.firecrawl.dev/introduction'}
-      />
+      <Header onSetting={handleSetting} />
       <div className='mt-2 rounded-xl border border-components-panel-border bg-background-default-subtle p-4 pb-0'>
         <UrlInput onRun={handleRun} isRunning={isRunning} />
         <OptionsWrap

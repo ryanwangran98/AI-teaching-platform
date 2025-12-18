@@ -5,7 +5,7 @@ import copy from 'copy-to-clipboard'
 import { useTranslation } from 'react-i18next'
 import { useContext } from 'use-context-selector'
 import { useBoolean } from 'ahooks'
-import { produce } from 'immer'
+import produce from 'immer'
 import {
   RiDeleteBinLine,
   RiErrorWarningFill,
@@ -25,7 +25,7 @@ import Tooltip from '@/app/components/base/tooltip'
 import PromptEditor from '@/app/components/base/prompt-editor'
 import ConfigContext from '@/context/debug-configuration'
 import { getNewVar, getVars } from '@/utils/var'
-import { AppModeEnum } from '@/types/app'
+import { AppType } from '@/types/app'
 import { useModalContext } from '@/context/modal-context'
 import type { ExternalDataTool } from '@/models/common'
 import { useToastContext } from '@/app/components/base/toast'
@@ -78,9 +78,7 @@ const AdvancedPromptInput: FC<Props> = ({
   const handleOpenExternalDataToolModal = () => {
     setShowExternalDataToolModal({
       payload: {},
-      onSaveCallback: (newExternalDataTool?: ExternalDataTool) => {
-        if (!newExternalDataTool)
-          return
+      onSaveCallback: (newExternalDataTool: ExternalDataTool) => {
         eventEmitter?.emit({
           type: ADD_EXTERNAL_DATA_TOOL,
           payload: newExternalDataTool,
@@ -102,7 +100,7 @@ const AdvancedPromptInput: FC<Props> = ({
       },
     })
   }
-  const isChatApp = mode !== AppModeEnum.COMPLETION
+  const isChatApp = mode !== AppType.completion
   const [isCopied, setIsCopied] = React.useState(false)
 
   const promptVariablesObj = (() => {

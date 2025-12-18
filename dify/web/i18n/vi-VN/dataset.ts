@@ -19,6 +19,7 @@ const translation = {
   intro5: 'có thể được tạo',
   intro6: ' dưới dạng một plugin chỉ mục ChatGPT độc lập để xuất bản',
   unavailable: 'Không khả dụng',
+  unavailableTip: 'Mô hình nhúng không khả dụng, cần cấu hình mô hình nhúng mặc định',
   datasets: 'BỘ KIẾN THỨC',
   datasetsApi: 'API',
   retrieval: {
@@ -36,13 +37,11 @@ const translation = {
       recommend: 'Đề xuất',
     },
     invertedIndex: {
+      title: 'Chỉ mục Ngược',
+      description: 'Chỉ mục Ngược là một cấu trúc được sử dụng cho việc truy xuất hiệu quả. Nó được tổ chức theo thuật ngữ, mỗi thuật ngữ trỏ đến tài liệu hoặc trang web chứa nó.',
     },
     change: 'Thay đổi',
     changeRetrievalMethod: 'Thay đổi phương pháp truy xuất',
-    keyword_search: {
-      title: 'Chỉ số đảo ngược',
-      description: 'Chỉ số đảo ngược là một cấu trúc được sử dụng để truy xuất hiệu quả. Được sắp xếp theo thuật ngữ, mỗi thuật ngữ trỏ đến các tài liệu hoặc trang web có chứa nó.',
-    },
   },
   docsFailedNotice: 'tài liệu không được lập chỉ mục',
   retry: 'Thử lại',
@@ -150,8 +149,6 @@ const translation = {
   chunkingMode: {
     general: 'Tổng quát',
     parentChild: 'Cha mẹ-con cái',
-    graph: 'Đồ thị',
-    qa: 'Hỏi & Đáp',
   },
   parentMode: {
     paragraph: 'Đoạn',
@@ -220,34 +217,6 @@ const translation = {
     metadata: 'Siêu dữ liệu',
   },
   embeddingModelNotAvailable: 'Mô hình nhúng không khả dụng.',
-  updated: 'Cập nhật',
-  createFromPipeline: 'Tạo từ quy trình kiến thức',
-  externalKnowledgeBase: 'Cơ sở kiến thức bên ngoài',
-  serviceApi: {
-    card: {
-      title: 'API dịch vụ backend',
-      endpoint: 'Điểm cuối API dịch vụ',
-      apiKey: 'Khóa API',
-      apiReference: 'Tham chiếu API',
-    },
-    enabled: 'Đang phục vụ',
-    disabled: 'Vô hiệu hóa',
-    title: 'Giao diện lập trình dịch vụ',
-  },
-  docAllEnabled_one: 'Tài liệu {{count}} đã được kích hoạt',
-  docAllEnabled_other: 'Tất cả các tài liệu {{count}} đã được kích hoạt',
-  partialEnabled_one: 'Tổng cộng {{count}} tài liệu, {{num}} có sẵn',
-  partialEnabled_other: 'Tổng cộng {{count}} tài liệu, {{num}} có sẵn',
-  cornerLabel: {
-    unavailable: 'Không khả dụng',
-    pipeline: 'Đường ống',
-  },
-  multimodal: 'Đa phương thức',
-  imageUploader: {
-    button: 'Kéo và thả tệp hoặc thư mục, hoặc',
-    browse: 'Duyệt',
-    tip: '{{supportTypes}} (Tối đa {{batchCount}}, {{size}}MB mỗi cái)',
-  },
 }
 
 export default translation

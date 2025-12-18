@@ -13,28 +13,17 @@ import type {
 } from '@floating-ui/react'
 import AllTools from '@/app/components/workflow/block-selector/all-tools'
 import type { ToolDefaultValue, ToolValue } from './types'
-import type { BlockEnum, OnSelectBlock } from '@/app/components/workflow/types'
+import type { BlockEnum } from '@/app/components/workflow/types'
 import SearchBox from '@/app/components/plugins/marketplace/search-box'
 import { useTranslation } from 'react-i18next'
 import { useBoolean } from 'ahooks'
-import EditCustomToolModal from '@/app/components/tools/edit-custom-collection-modal'
+import EditCustomToolModal from '@/app/components/tools/edit-custom-collection-modal/modal'
 import {
   createCustomCollection,
 } from '@/service/tools'
 import type { CustomCollectionBackend } from '@/app/components/tools/types'
 import Toast from '@/app/components/base/toast'
-import {
-  useAllBuiltInTools,
-  useAllCustomTools,
-  useAllMCPTools,
-  useAllWorkflowTools,
-  useInvalidateAllBuiltInTools,
-  useInvalidateAllCustomTools,
-  useInvalidateAllMCPTools,
-  useInvalidateAllWorkflowTools,
-} from '@/service/use-tools'
-import { useFeaturedToolsRecommendations } from '@/service/use-plugins'
-import { useGlobalPublicStore } from '@/context/global-public-context'
+import { useAllBuiltInTools, useAllCustomTools, useAllMCPTools, useAllWorkflowTools, useInvalidateAllCustomTools } from '@/service/use-tools'
 import cn from '@/utils/classnames'
 
 type Props = {
@@ -72,20 +61,11 @@ const ToolPicker: FC<Props> = ({
   const [searchText, setSearchText] = useState('')
   const [tags, setTags] = useState<string[]>([])
 
-  const { enable_marketplace } = useGlobalPublicStore(s => s.systemFeatures)
   const { data: buildInTools } = useAllBuiltInTools()
   const { data: customTools } = useAllCustomTools()
   const invalidateCustomTools = useInvalidateAllCustomTools()
   const { data: workflowTools } = useAllWorkflowTools()
   const { data: mcpTools } = useAllMCPTools()
-  const invalidateBuiltInTools = useInvalidateAllBuiltInTools()
-  const invalidateWorkflowTools = useInvalidateAllWorkflowTools()
-  const invalidateMcpTools = useInvalidateAllMCPTools()
-
-  const {
-    plugins: featuredPlugins = [],
-    isLoading: isFeaturedLoading,
-  } = useFeaturedToolsRecommendations(enable_marketplace)
 
   const { builtinToolList, customToolList, workflowToolList } = useMemo(() => {
     if (scope === 'plugins') {
@@ -149,7 +129,7 @@ const ToolPicker: FC<Props> = ({
   if (isShowEditCollectionToolModal) {
     return (
       <EditCustomToolModal
-        dialogClassName='bg-background-overlay'
+        positionLeft
         payload={null}
         onHide={hideEditCustomCollectionModal}
         onAdd={doCreateCustomToolCollection}
@@ -178,11 +158,13 @@ const ToolPicker: FC<Props> = ({
               onSearchChange={setSearchText}
               tags={tags}
               onTagsChange={setTags}
+              size='small'
               placeholder={t('plugin.searchTools')!}
               supportAddCustomTool={supportAddCustomTool}
               onAddedCustomTool={handleAddedCustomTool}
               onShowAddCustomCollectionModal={showEditCustomCollectionModal}
               inputClassName='grow'
+
             />
           </div>
           <AllTools
@@ -190,7 +172,7 @@ const ToolPicker: FC<Props> = ({
             toolContentClassName='max-w-[100%]'
             tags={tags}
             searchText={searchText}
-            onSelect={handleSelect as OnSelectBlock}
+            onSelect={handleSelect}
             onSelectMultiple={handleSelectMultiple}
             buildInTools={builtinToolList || []}
             customTools={customToolList || []}
@@ -198,16 +180,6 @@ const ToolPicker: FC<Props> = ({
             mcpTools={mcpTools || []}
             selectedTools={selectedTools}
             canChooseMCPTool={canChooseMCPTool}
-            onTagsChange={setTags}
-            featuredPlugins={featuredPlugins}
-            featuredLoading={isFeaturedLoading}
-            showFeatured={scope === 'all' && enable_marketplace}
-            onFeaturedInstallSuccess={async () => {
-              invalidateBuiltInTools()
-              invalidateCustomTools()
-              invalidateWorkflowTools()
-              invalidateMcpTools()
-            }}
           />
         </div>
       </PortalToFollowElemContent>

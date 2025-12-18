@@ -24,7 +24,7 @@ import { fetchAppDetailDirect } from '@/service/apps'
 import { useAppContext } from '@/context/app-context'
 import Loading from '@/app/components/base/loading'
 import useBreakpoints, { MediaType } from '@/hooks/use-breakpoints'
-import { type App, AppModeEnum } from '@/types/app'
+import type { App } from '@/types/app'
 import useDocumentTitle from '@/hooks/use-document-title'
 import { useStore as useTagStore } from '@/app/components/base/tag-management/store'
 import dynamic from 'next/dynamic'
@@ -49,10 +49,10 @@ const AppDetailLayout: FC<IAppDetailLayoutProps> = (props) => {
   const media = useBreakpoints()
   const isMobile = media === MediaType.mobile
   const { isCurrentWorkspaceEditor, isLoadingCurrentWorkspace, currentWorkspace } = useAppContext()
-  const { appDetail, setAppDetail, setAppSidebarExpand } = useStore(useShallow(state => ({
+  const { appDetail, setAppDetail, setAppSiderbarExpand } = useStore(useShallow(state => ({
     appDetail: state.appDetail,
     setAppDetail: state.setAppDetail,
-    setAppSidebarExpand: state.setAppSidebarExpand,
+    setAppSiderbarExpand: state.setAppSiderbarExpand,
   })))
   const showTagManagementModal = useTagStore(s => s.showTagManagementModal)
   const [isLoadingAppDetail, setIsLoadingAppDetail] = useState(false)
@@ -64,12 +64,12 @@ const AppDetailLayout: FC<IAppDetailLayoutProps> = (props) => {
     selectedIcon: NavIcon
   }>>([])
 
-  const getNavigationConfig = useCallback((appId: string, isCurrentWorkspaceEditor: boolean, mode: AppModeEnum) => {
-    const navConfig = [
+  const getNavigations = useCallback((appId: string, isCurrentWorkspaceEditor: boolean, mode: string) => {
+    const navs = [
       ...(isCurrentWorkspaceEditor
         ? [{
           name: t('common.appMenus.promptEng'),
-          href: `/app/${appId}/${(mode === AppModeEnum.WORKFLOW || mode === AppModeEnum.ADVANCED_CHAT) ? 'workflow' : 'configuration'}`,
+          href: `/app/${appId}/${(mode === 'workflow' || mode === 'advanced-chat') ? 'workflow' : 'configuration'}`,
           icon: RiTerminalWindowLine,
           selectedIcon: RiTerminalWindowFill,
         }]
@@ -83,7 +83,7 @@ const AppDetailLayout: FC<IAppDetailLayoutProps> = (props) => {
       },
       ...(isCurrentWorkspaceEditor
         ? [{
-          name: mode !== AppModeEnum.WORKFLOW
+          name: mode !== 'workflow'
             ? t('common.appMenus.logAndAnn')
             : t('common.appMenus.logs'),
           href: `/app/${appId}/logs`,
@@ -99,8 +99,8 @@ const AppDetailLayout: FC<IAppDetailLayoutProps> = (props) => {
         selectedIcon: RiDashboard2Fill,
       },
     ]
-    return navConfig
-  }, [t])
+    return navs
+  }, [])
 
   useDocumentTitle(appDetail?.name || t('common.menus.appDetail'))
 
@@ -108,10 +108,10 @@ const AppDetailLayout: FC<IAppDetailLayoutProps> = (props) => {
     if (appDetail) {
       const localeMode = localStorage.getItem('app-detail-collapse-or-expand') || 'expand'
       const mode = isMobile ? 'collapse' : 'expand'
-      setAppSidebarExpand(isMobile ? mode : localeMode)
+      setAppSiderbarExpand(isMobile ? mode : localeMode)
       // TODO: consider screen size and mode
-      // if ((appDetail.mode === AppModeEnum.ADVANCED_CHAT || appDetail.mode === 'workflow') && (pathname).endsWith('workflow'))
-      //   setAppSidebarExpand('collapse')
+      // if ((appDetail.mode === 'advanced-chat' || appDetail.mode === 'workflow') && (pathname).endsWith('workflow'))
+      //   setAppSiderbarExpand('collapse')
     }
   }, [appDetail, isMobile])
 
@@ -138,15 +138,15 @@ const AppDetailLayout: FC<IAppDetailLayoutProps> = (props) => {
       router.replace(`/app/${appId}/overview`)
       return
     }
-    if ((res.mode === AppModeEnum.WORKFLOW || res.mode === AppModeEnum.ADVANCED_CHAT) && (pathname).endsWith('configuration')) {
+    if ((res.mode === 'workflow' || res.mode === 'advanced-chat') && (pathname).endsWith('configuration')) {
       router.replace(`/app/${appId}/workflow`)
     }
-    else if ((res.mode !== AppModeEnum.WORKFLOW && res.mode !== AppModeEnum.ADVANCED_CHAT) && (pathname).endsWith('workflow')) {
+    else if ((res.mode !== 'workflow' && res.mode !== 'advanced-chat') && (pathname).endsWith('workflow')) {
       router.replace(`/app/${appId}/configuration`)
     }
     else {
       setAppDetail({ ...res, enable_sso: false })
-      setNavigation(getNavigationConfig(appId, isCurrentWorkspaceEditor, res.mode))
+      setNavigation(getNavigations(appId, isCurrentWorkspaceEditor, res.mode))
     }
   }, [appDetailRes, isCurrentWorkspaceEditor, isLoadingAppDetail, isLoadingCurrentWorkspace])
 
@@ -165,9 +165,7 @@ const AppDetailLayout: FC<IAppDetailLayoutProps> = (props) => {
   return (
     <div className={cn(s.app, 'relative flex', 'overflow-hidden')}>
       {appDetail && (
-        <AppSideBar
-          navigation={navigation}
-        />
+        <AppSideBar title={appDetail.name} icon={appDetail.icon} icon_background={appDetail.icon_background as string} desc={appDetail.mode} navigation={navigation} />
       )}
       <div className="grow overflow-hidden bg-components-panel-bg">
         {children}

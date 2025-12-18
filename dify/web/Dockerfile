@@ -5,14 +5,10 @@ LABEL maintainer="takatost@gmail.com"
 # if you located in China, you can use aliyun mirror to speed up
 # RUN sed -i 's/dl-cdn.alpinelinux.org/mirrors.aliyun.com/g' /etc/apk/repositories
 
-# if you located in China, you can use taobao registry to speed up
-# RUN npm config set registry https://registry.npmmirror.com
-
 RUN apk add --no-cache tzdata
-RUN corepack enable
+RUN npm install -g pnpm@10.13.1
 ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
-ENV NEXT_PUBLIC_BASE_PATH=""
 
 
 # install packages
@@ -20,10 +16,11 @@ FROM base AS packages
 
 WORKDIR /app/web
 
-COPY package.json pnpm-lock.yaml /app/web/
+COPY package.json .
+COPY pnpm-lock.yaml .
 
-# Use packageManager from package.json
-RUN corepack install
+# if you located in China, you can use taobao registry to speed up
+# RUN pnpm install --frozen-lockfile --registry https://registry.npmmirror.com/
 
 RUN pnpm install --frozen-lockfile
 
@@ -34,7 +31,7 @@ COPY --from=packages /app/web/ .
 COPY . .
 
 ENV NODE_OPTIONS="--max-old-space-size=4096"
-RUN pnpm build:docker
+RUN pnpm build
 
 
 # production stage
@@ -56,30 +53,24 @@ ENV TZ=UTC
 RUN ln -s /usr/share/zoneinfo/${TZ} /etc/localtime \
     && echo ${TZ} > /etc/timezone
 
-# global runtime packages
-RUN pnpm add -g pm2
-
-
-# Create non-root user
-ARG dify_uid=1001
-RUN addgroup -S -g ${dify_uid} dify && \
-    adduser -S -u ${dify_uid} -G dify -s /bin/ash -h /home/dify dify && \
-    mkdir /app && \
-    mkdir /.pm2 && \
-    chown -R dify:dify /app /.pm2
-
 
 WORKDIR /app/web
+COPY --from=builder /app/web/public ./public
+COPY --from=builder /app/web/.next/standalone ./
+COPY --from=builder /app/web/.next/static ./.next/static
 
-COPY --from=builder --chown=dify:dify /app/web/public ./public
-COPY --from=builder --chown=dify:dify /app/web/.next/standalone ./
-COPY --from=builder --chown=dify:dify /app/web/.next/static ./.next/static
+COPY docker/entrypoint.sh ./entrypoint.sh
 
-COPY --chown=dify:dify --chmod=755 docker/entrypoint.sh ./entrypoint.sh
+
+# global runtime packages
+RUN pnpm add -g pm2 \
+    && mkdir /.pm2 \
+    && chown -R 1001:0 /.pm2 /app/web \
+    && chmod -R g=u /.pm2 /app/web
 
 ARG COMMIT_SHA
 ENV COMMIT_SHA=${COMMIT_SHA}
 
-USER dify
+USER 1001
 EXPOSE 3000
 ENTRYPOINT ["/bin/sh", "./entrypoint.sh"]

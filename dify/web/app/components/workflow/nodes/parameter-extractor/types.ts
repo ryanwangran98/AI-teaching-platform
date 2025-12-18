@@ -3,12 +3,11 @@ import type { CommonNodeType, Memory, ModelConfig, ValueSelector, VisionSetting 
 export enum ParamType {
   string = 'string',
   number = 'number',
-  bool = 'boolean',
+  bool = 'bool',
   select = 'select',
   arrayString = 'array[string]',
   arrayNumber = 'array[number]',
   arrayObject = 'array[object]',
-  arrayBool = 'array[boolean]',
 }
 
 export type Param = {

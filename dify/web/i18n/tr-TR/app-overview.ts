@@ -114,11 +114,6 @@ const translation = {
         },
       },
       launch: 'Başlat',
-      enableTooltip: {
-        description: 'Bu özelliği etkinleştirmek için lütfen tuvale bir Kullanıcı Girişi düğümü ekleyin. (Taslakta zaten mevcut olabilir, yayınlandıktan sonra geçerli olur)',
-        learnMore: 'Daha fazla bilgi edin',
-      },
-      title: 'Web Uygulaması',
     },
     apiInfo: {
       title: 'Arka Uç Servis API\'si',
@@ -129,17 +124,6 @@ const translation = {
     status: {
       running: 'Hizmette',
       disable: 'Devre Dışı',
-    },
-    triggerInfo: {
-      title: 'Tetikleyiciler',
-      explanation: 'İş akışı tetikleyici yönetimi',
-      triggersAdded: '{{count}} Tetikleyiciler eklendi',
-      noTriggerAdded: 'Hiç tetikleyici eklenmedi',
-      triggerStatusDescription: 'Tetikleyici düğüm durumu burada görünür. (Zaten taslakta mevcut olabilir, yayımlandıktan sonra geçerli olur)',
-      learnAboutTriggers: 'Tetikleyiciler hakkında bilgi edinin',
-    },
-    disableTooltip: {
-      triggerMode: 'Trigger Düğümü modunda {{feature}} özelliği desteklenmiyor.',
     },
   },
   analysis: {

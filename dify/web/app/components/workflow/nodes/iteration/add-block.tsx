@@ -33,11 +33,11 @@ const AddBlock = ({
   const { handleNodeAdd } = useNodesInteractions()
   const { availableNextBlocks } = useAvailableBlocks(BlockEnum.Start, true)
 
-  const handleSelect = useCallback<OnSelectBlock>((type, pluginDefaultValue) => {
+  const handleSelect = useCallback<OnSelectBlock>((type, toolDefaultValue) => {
     handleNodeAdd(
       {
         nodeType: type,
-        pluginDefaultValue,
+        toolDefaultValue,
       },
       {
         prevNodeId: iterationNodeData.start_node_id,

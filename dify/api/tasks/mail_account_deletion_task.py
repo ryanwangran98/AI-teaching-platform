@@ -2,16 +2,14 @@ import logging
 import time
 
 import click
-from celery import shared_task
+from celery import shared_task  # type: ignore
 
 from extensions.ext_mail import mail
 from libs.email_i18n import EmailType, get_email_i18n_service
 
-logger = logging.getLogger(__name__)
-
 
 @shared_task(queue="mail")
-def send_deletion_success_task(to: str, language: str = "en-US"):
+def send_deletion_success_task(to: str, language: str = "en-US") -> None:
     """
     Send account deletion success email with internationalization support.
 
@@ -22,7 +20,7 @@ def send_deletion_success_task(to: str, language: str = "en-US"):
     if not mail.is_inited():
         return
 
-    logger.info(click.style(f"Start send account deletion success email to {to}", fg="green"))
+    logging.info(click.style(f"Start send account deletion success email to {to}", fg="green"))
     start_at = time.perf_counter()
 
     try:
@@ -38,15 +36,15 @@ def send_deletion_success_task(to: str, language: str = "en-US"):
         )
 
         end_at = time.perf_counter()
-        logger.info(
+        logging.info(
             click.style(f"Send account deletion success email to {to}: latency: {end_at - start_at}", fg="green")
         )
     except Exception:
-        logger.exception("Send account deletion success email to %s failed", to)
+        logging.exception("Send account deletion success email to %s failed", to)
 
 
 @shared_task(queue="mail")
-def send_account_deletion_verification_code(to: str, code: str, language: str = "en-US"):
+def send_account_deletion_verification_code(to: str, code: str, language: str = "en-US") -> None:
     """
     Send account deletion verification code email with internationalization support.
 
@@ -58,7 +56,7 @@ def send_account_deletion_verification_code(to: str, code: str, language: str = 
     if not mail.is_inited():
         return
 
-    logger.info(click.style(f"Start send account deletion verification code email to {to}", fg="green"))
+    logging.info(click.style(f"Start send account deletion verification code email to {to}", fg="green"))
     start_at = time.perf_counter()
 
     try:
@@ -74,7 +72,7 @@ def send_account_deletion_verification_code(to: str, code: str, language: str = 
         )
 
         end_at = time.perf_counter()
-        logger.info(
+        logging.info(
             click.style(
                 "Send account deletion verification code email to {} succeeded: latency: {}".format(
                     to, end_at - start_at
@@ -83,4 +81,4 @@ def send_account_deletion_verification_code(to: str, code: str, language: str = 
             )
         )
     except Exception:
-        logger.exception("Send account deletion verification code email to %s failed", to)
+        logging.exception("Send account deletion verification code email to %s failed", to)

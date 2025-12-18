@@ -1,5 +1,5 @@
 from collections.abc import Generator, Sequence
-from typing import Union
+from typing import Union, cast
 
 from core.app.entities.app_invoke_entities import ModelConfigWithCredentialsEntity
 from core.model_manager import ModelInstance
@@ -58,15 +58,15 @@ class ReactMultiDatasetRouter:
         model_instance: ModelInstance,
         user_id: str,
         tenant_id: str,
-    ) -> tuple[Union[str, None], LLMUsage]:
+    ) -> Union[str, None]:
         """Given input, decided what to do.
         Returns:
             Action specifying what tool to use.
         """
         if len(dataset_tools) == 0:
-            return None, LLMUsage.empty_usage()
+            return None
         elif len(dataset_tools) == 1:
-            return dataset_tools[0].name, LLMUsage.empty_usage()
+            return dataset_tools[0].name
 
         try:
             return self._react_invoke(
@@ -77,8 +77,8 @@ class ReactMultiDatasetRouter:
                 user_id=user_id,
                 tenant_id=tenant_id,
             )
-        except Exception:
-            return None, LLMUsage.empty_usage()
+        except Exception as e:
+            return None
 
     def _react_invoke(
         self,
@@ -91,7 +91,7 @@ class ReactMultiDatasetRouter:
         prefix: str = PREFIX,
         suffix: str = SUFFIX,
         format_instructions: str = FORMAT_INSTRUCTIONS,
-    ) -> tuple[Union[str, None], LLMUsage]:
+    ) -> Union[str, None]:
         prompt: Union[list[ChatModelMessage], CompletionModelPromptTemplate]
         if model_config.mode == "chat":
             prompt = self.create_chat_prompt(
@@ -131,8 +131,8 @@ class ReactMultiDatasetRouter:
         output_parser = StructuredChatOutputParser()
         react_decision = output_parser.parse(result_text)
         if isinstance(react_decision, ReactAction):
-            return react_decision.tool, usage
-        return None, usage
+            return react_decision.tool
+        return None
 
     def _invoke_llm(
         self,
@@ -150,12 +150,15 @@ class ReactMultiDatasetRouter:
         :param stop: stop
         :return:
         """
-        invoke_result: Generator[LLMResult, None, None] = model_instance.invoke_llm(
-            prompt_messages=prompt_messages,
-            model_parameters=completion_param,
-            stop=stop,
-            stream=True,
-            user=user_id,
+        invoke_result = cast(
+            Generator[LLMResult, None, None],
+            model_instance.invoke_llm(
+                prompt_messages=prompt_messages,
+                model_parameters=completion_param,
+                stop=stop,
+                stream=True,
+                user=user_id,
+            ),
         )
 
         # handle invoke result

@@ -24,11 +24,11 @@ class BaseKeyword(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def delete_by_ids(self, ids: list[str]):
+    def delete_by_ids(self, ids: list[str]) -> None:
         raise NotImplementedError
 
     @abstractmethod
-    def delete(self):
+    def delete(self) -> None:
         raise NotImplementedError
 
     @abstractmethod

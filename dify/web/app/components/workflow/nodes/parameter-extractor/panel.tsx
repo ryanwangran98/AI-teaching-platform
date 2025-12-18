@@ -67,6 +67,7 @@ const Panel: FC<NodePanelProps<ParameterExtractorNodeType>> = ({
             popupClassName='!w-[387px]'
             isInWorkflow
             isAdvancedMode={true}
+            mode={model?.mode}
             provider={model?.provider}
             completionParams={model?.completion_params}
             modelId={model?.name}

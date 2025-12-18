@@ -1,6 +1,5 @@
 import hashlib
 import socket
-from typing import Any
 
 from .python_3x import url_encode
 
@@ -11,7 +10,7 @@ NAMESPACE_NAME = "namespaceName"
 
 
 # add timestamps uris and keys
-def signature(timestamp: str, uri: str, secret: str) -> str:
+def signature(timestamp, uri, secret):
     import base64
     import hmac
 
@@ -20,16 +19,16 @@ def signature(timestamp: str, uri: str, secret: str) -> str:
     return base64.b64encode(hmac_code).decode()
 
 
-def url_encode_wrapper(params: dict[str, Any]) -> str:
+def url_encode_wrapper(params):
     return url_encode(params)
 
 
-def no_key_cache_key(namespace: str, key: str) -> str:
+def no_key_cache_key(namespace, key):
     return f"{namespace}{len(namespace)}{key}"
 
 
 # Returns whether the obtained value is obtained, and None if it does not
-def get_value_from_dict(namespace_cache: dict[str, Any] | None, key: str) -> Any:
+def get_value_from_dict(namespace_cache, key):
     if namespace_cache:
         kv_data = namespace_cache.get(CONFIGURATIONS)
         if kv_data is None:
@@ -39,7 +38,7 @@ def get_value_from_dict(namespace_cache: dict[str, Any] | None, key: str) -> Any
     return None
 
 
-def init_ip() -> str:
+def init_ip():
     ip = ""
     s = None
     try:

@@ -6,14 +6,7 @@ type Props = {
 }
 
 const AudioGallery: React.FC<Props> = ({ srcs }) => {
-  const validSrcs = srcs.filter(src => src)
-  if (validSrcs.length === 0) return null
-
-  return (
-    <div className="my-3">
-      <AudioPlayer srcs={validSrcs} />
-    </div>
-  )
+  return (<><br/>{srcs.map((src, index) => (<AudioPlayer key={`audio_${index}`} src={src}/>))}</>)
 }
 
 export default React.memo(AudioGallery)

@@ -3,7 +3,7 @@ import type { FC } from 'react'
 import React, { useCallback } from 'react'
 import Slider from '@/app/components/base/slider'
 
-export type InputNumberWithSliderProps = {
+type Props = {
   value: number
   defaultValue?: number
   min?: number
@@ -12,7 +12,7 @@ export type InputNumberWithSliderProps = {
   onChange: (value: number) => void
 }
 
-const InputNumberWithSlider: FC<InputNumberWithSliderProps> = ({
+const InputNumberWithSlider: FC<Props> = ({
   value,
   defaultValue = 0,
   min,

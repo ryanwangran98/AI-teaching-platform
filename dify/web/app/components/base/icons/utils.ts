@@ -3,13 +3,13 @@ import React from 'react'
 export type AbstractNode = {
   name: string
   attributes: {
-    [key: string]: string | undefined
+    [key: string]: string
   }
   children?: AbstractNode[]
 }
 
 export type Attrs = {
-  [key: string]: string | undefined
+  [key: string]: string
 }
 
 export function normalizeAttrs(attrs: Attrs = {}): Attrs {
@@ -24,9 +24,6 @@ export function normalizeAttrs(attrs: Attrs = {}): Attrs {
       return acc
 
     const val = attrs[key]
-    if (val === undefined)
-      return acc
-
     key = key.replace(/([-]\w)/g, (g: string) => g[1].toUpperCase())
     key = key.replace(/([:]\w)/g, (g: string) => g[1].toUpperCase())
 

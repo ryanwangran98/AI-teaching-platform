@@ -18,7 +18,7 @@ type ConditionNumberProps = {
   nodesOutputVars: NodeOutPutVar[]
   availableNodes: Node[]
   isCommonVariable?: boolean
-  commonVariables: { name: string; type: string; value: string }[]
+  commonVariables: { name: string, type: string }[]
 } & ConditionValueMethodProps
 const ConditionNumber = ({
   value,

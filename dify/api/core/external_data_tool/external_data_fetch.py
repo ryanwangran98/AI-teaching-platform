@@ -1,7 +1,7 @@
 import logging
 from collections.abc import Mapping
 from concurrent.futures import Future, ThreadPoolExecutor, as_completed
-from typing import Any
+from typing import Any, Optional
 
 from flask import Flask, current_app
 
@@ -63,7 +63,7 @@ class ExternalDataFetch:
         external_data_tool: ExternalDataVariableEntity,
         inputs: Mapping[str, Any],
         query: str,
-    ) -> tuple[str | None, str | None]:
+    ) -> tuple[Optional[str], Optional[str]]:
         """
         Query external data tool.
         :param flask_app: flask app

@@ -1,5 +1,6 @@
 import { ValidatedStatus } from '../key-validator/declarations'
 import type {
+  CredentialFormSchemaRadio,
   CredentialFormSchemaTextInput,
   FormValue,
   ModelLoadBalancingConfig,
@@ -81,14 +82,12 @@ export const saveCredentials = async (predefined: boolean, provider: string, v: 
   let body, url
 
   if (predefined) {
-    const { __authorization_name__, ...rest } = v
     body = {
       config_from: ConfigurationMethodEnum.predefinedModel,
-      credentials: rest,
+      credentials: v,
       load_balancing: loadBalancing,
-      name: __authorization_name__,
     }
-    url = `/workspaces/current/model-providers/${provider}/credentials`
+    url = `/workspaces/current/model-providers/${provider}`
   }
   else {
     const { __model_name, __model_type, ...credentials } = v
@@ -118,17 +117,12 @@ export const savePredefinedLoadBalancingConfig = async (provider: string, v: For
   return setModelProvider({ url, body })
 }
 
-export const removeCredentials = async (predefined: boolean, provider: string, v: FormValue, credentialId?: string) => {
+export const removeCredentials = async (predefined: boolean, provider: string, v: FormValue) => {
   let url = ''
   let body
 
   if (predefined) {
-    url = `/workspaces/current/model-providers/${provider}/credentials`
-    if (credentialId) {
-      body = {
-        credential_id: credentialId,
-      }
-    }
+    url = `/workspaces/current/model-providers/${provider}`
   }
   else {
     if (v) {
@@ -161,7 +155,7 @@ export const modelTypeFormat = (modelType: ModelTypeEnum) => {
 
 export const genModelTypeFormSchema = (modelTypes: ModelTypeEnum[]) => {
   return {
-    type: FormTypeEnum.select,
+    type: FormTypeEnum.radio,
     label: {
       zh_Hans: '模型类型',
       en_US: 'Model Type',
@@ -180,7 +174,7 @@ export const genModelTypeFormSchema = (modelTypes: ModelTypeEnum[]) => {
         show_on: [],
       }
     }),
-  } as any
+  } as CredentialFormSchemaRadio
 }
 
 export const genModelNameFormSchema = (model?: Pick<CredentialFormSchemaTextInput, 'label' | 'placeholder'>) => {
@@ -197,5 +191,5 @@ export const genModelNameFormSchema = (model?: Pick<CredentialFormSchemaTextInpu
       zh_Hans: '请输入模型名称',
       en_US: 'Please enter model name',
     },
-  } as any
+  } as CredentialFormSchemaTextInput
 }

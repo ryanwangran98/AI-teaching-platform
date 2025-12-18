@@ -60,17 +60,6 @@ const translation = {
     downloadSuccess: 'دانلود کامل شد.',
     selectAll: 'انتخاب همه',
     deSelectAll: 'همه را انتخاب نکنید',
-    config: 'تنظیمات',
-    no: 'نه',
-    deleteConfirmTitle: 'حذف شود؟',
-    yes: 'بله',
-    confirmAction: 'لطفاً اقدام خود را تأیید کنید.',
-    noSearchResults: 'هیچ {{content}} یافت نشد',
-    resetKeywords: 'بازنشانی کلمات کلیدی',
-    selectCount: '{{count}} انتخاب شد',
-    searchCount: 'یافتن {{count}} {{content}}',
-    noSearchCount: '0 {{content}}',
-    now: 'الان',
   },
   errorMsg: {
     fieldRequired: '{{field}} الزامی است',
@@ -79,7 +68,6 @@ const translation = {
   placeholder: {
     input: 'لطفا وارد کنید',
     select: 'لطفا انتخاب کنید',
-    search: 'جستجو...',
   },
   voice: {
     language: {
@@ -103,8 +91,6 @@ const translation = {
       hiIN: 'هندی',
       trTR: 'ترکی',
       faIR: 'فارسی',
-      slSI: 'اسلوونیایی',
-      arTN: 'عربی تونسی',
     },
   },
   unit: {
@@ -174,6 +160,7 @@ const translation = {
     workspace: 'فضای کاری',
     createWorkspace: 'ایجاد فضای کاری',
     helpCenter: 'راهنما',
+    communityFeedback: 'بازخورد',
     roadmap: 'نقشه راه',
     community: 'انجمن',
     about: 'درباره',
@@ -181,8 +168,6 @@ const translation = {
     github: 'گیت‌هاب',
     compliance: 'انطباق',
     support: 'پشتیبانی',
-    contactUs: 'با ما تماس بگیرید',
-    forum: 'انجمن',
   },
   settings: {
     accountGroup: 'حساب کاربری',
@@ -216,6 +201,7 @@ const translation = {
     showAppLength: 'نمایش {{length}} برنامه',
     delete: 'حذف حساب کاربری',
     deleteTip: 'حذف حساب کاربری شما تمام داده‌های شما را به طور دائمی پاک می‌کند و قابل بازیابی نیست.',
+    deleteConfirmTip: 'برای تأیید، لطفاً موارد زیر را از ایمیل ثبت‌نام شده خود به این آدرس ارسال کنید ',
     account: 'حساب',
     myAccount: 'حساب من',
     studio: 'استودیو Dify',
@@ -487,39 +473,6 @@ const translation = {
     installProvider: 'نصب ارائه دهندگان مدل',
     discoverMore: 'اطلاعات بیشتر در',
     emptyProviderTip: 'لطفا ابتدا یک ارائه دهنده مدل نصب کنید.',
-    auth: {
-      apiKeyModal: {
-        title: 'پیکربندی مجوز کلید API',
-        addModel: 'مدل اضافه کنید',
-        desc: 'پس از پیکربندی اعتبارنامه‌ها، تمامی اعضای درون فضای کاری می‌توانند از این مدل هنگام نظم‌دهی به برنامه‌ها استفاده کنند.',
-      },
-      authorizationError: 'خطای مجوز',
-      unAuthorized: 'بدون مجوز',
-      configModel: 'مدل پیکربندی',
-      apiKeys: 'کلیدهای API',
-      addCredential: 'مدرک اضافه کنید',
-      addNewModel: 'مدل جدید اضافه کن',
-      addApiKey: 'کلید API را اضافه کنید',
-      authRemoved: 'منبع حذف شد',
-      configLoadBalancing: 'پیکربندی بارگذاری متوازن',
-      specifyModelCredential: 'مدل اعتبارنامه را مشخص کنید',
-      providerManaged: 'مدیریت شده توسط ارائه‌دهنده',
-      addModelCredential: 'مدرک مدل را اضافه کنید',
-      specifyModelCredentialTip: 'از اعتبارنامه مدل پیکربندی شده استفاده کنید.',
-      providerManagedTip: 'تنظیمات فعلی توسط ارائه‌دهنده میزبانی می‌شود.',
-      modelCredentials: 'مدل اعتبارنامه',
-      manageCredentials: 'مدیریت اعتبارنامه ها',
-      addModel: 'افزودن مدل',
-      removeModel: 'حذف مدل',
-      modelCredential: 'اعتبار مدل',
-      selectModelCredential: 'یک اعتبار مدل را انتخاب کنید',
-      editModelCredential: 'اعتبار مدل را ویرایش کنید',
-      addNewModelCredential: 'افزودن اعتبار مدل جدید',
-      customModelCredentials: 'اعتبار مدل سفارشی',
-      customModelCredentialsDeleteTip: 'اعتبار در حال استفاده است و قابل حذف نیست',
-    },
-    parametersInvalidRemoved: 'برخی پارامترها نامعتبر هستند و حذف شده‌اند',
-    installDataSourceProvider: 'نصب ارائه‌دهندگان منبع داده',
   },
   dataSource: {
     add: 'افزودن منبع داده',
@@ -618,7 +571,6 @@ const translation = {
     viewDoc: 'مشاهده مستندات',
     relatedApp: 'برنامه‌های مرتبط',
     noRelatedApp: 'هیچ برنامه پیوندی وجود ندارد',
-    pipeline: 'خط لوله',
   },
   voiceInput: {
     speaking: 'اکنون صحبت کنید...',
@@ -735,8 +687,6 @@ const translation = {
     uploadFromComputerUploadError: 'آپلود فایل انجام نشد، لطفا دوباره آپلود کنید.',
     pasteFileLink: 'پیوند فایل را جایگذاری کنید',
     uploadFromComputerLimit: 'آپلود فایل نمی تواند از {{size}} تجاوز کند',
-    fileExtensionBlocked: 'این نوع فایل به دلایل امنیتی مسدود شده است',
-    uploadDisabled: 'بارگذاری فایل غیرفعال است',
   },
   license: {
     expiring_plural: 'انقضا در {{count}} روز',
@@ -766,26 +716,6 @@ const translation = {
     browse: 'مرورگر',
   },
   you: 'تو',
-  avatar: {
-    deleteTitle: 'حذف آواتار',
-    deleteDescription: 'آیا مطمئن هستید که می‌خواهید تصویر پروفایل خود را حذف کنید؟ حساب شما از آواتار اولیه پیش‌فرض استفاده خواهد کرد.',
-  },
-  feedback: {
-    title: 'بازخورد ارائه دهید',
-    subtitle: 'لطفاً به ما بگویید که چه مشکلی در این پاسخ پیش آمده است.',
-    content: 'محتوای بازخورد',
-    placeholder: 'لطفاً توضیح دهید که چه مشکلی پیش آمد یا چگونه می‌توانیم بهبود پیدا کنیم...',
-  },
-  label: {
-    optional: '(اختیاری)',
-  },
-  noData: 'بدون داده',
-  dynamicSelect: {
-    error: 'بارگیری گزینه‌ها ناموفق بود',
-    noData: 'هیچ گزینه‌ای در دسترس نیست',
-    loading: 'در حال بارگذاری گزینه‌ها...',
-    selected: '{{count}} انتخاب شد',
-  },
 }
 
 export default translation

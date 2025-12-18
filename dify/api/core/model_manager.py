@@ -10,9 +10,9 @@ from core.errors.error import ProviderTokenNotInitError
 from core.model_runtime.callbacks.base_callback import Callback
 from core.model_runtime.entities.llm_entities import LLMResult
 from core.model_runtime.entities.message_entities import PromptMessage, PromptMessageTool
-from core.model_runtime.entities.model_entities import ModelFeature, ModelType
+from core.model_runtime.entities.model_entities import ModelType
 from core.model_runtime.entities.rerank_entities import RerankResult
-from core.model_runtime.entities.text_embedding_entities import EmbeddingResult
+from core.model_runtime.entities.text_embedding_entities import TextEmbeddingResult
 from core.model_runtime.errors.invoke import InvokeAuthorizationError, InvokeConnectionError, InvokeRateLimitError
 from core.model_runtime.model_providers.__base.large_language_model import LargeLanguageModel
 from core.model_runtime.model_providers.__base.moderation_model import ModerationModel
@@ -23,7 +23,6 @@ from core.model_runtime.model_providers.__base.tts_model import TTSModel
 from core.provider_manager import ProviderManager
 from extensions.ext_redis import redis_client
 from models.provider import ProviderType
-from services.enterprise.plugin_manager_service import PluginCredentialType
 
 logger = logging.getLogger(__name__)
 
@@ -33,7 +32,7 @@ class ModelInstance:
     Model instance class
     """
 
-    def __init__(self, provider_model_bundle: ProviderModelBundle, model: str):
+    def __init__(self, provider_model_bundle: ProviderModelBundle, model: str) -> None:
         self.provider_model_bundle = provider_model_bundle
         self.model = model
         self.provider = provider_model_bundle.configuration.provider.provider
@@ -47,7 +46,7 @@ class ModelInstance:
         )
 
     @staticmethod
-    def _fetch_credentials_from_bundle(provider_model_bundle: ProviderModelBundle, model: str):
+    def _fetch_credentials_from_bundle(provider_model_bundle: ProviderModelBundle, model: str) -> dict:
         """
         Fetch credentials from provider model bundle
         :param provider_model_bundle: provider model bundle
@@ -103,47 +102,47 @@ class ModelInstance:
     def invoke_llm(
         self,
         prompt_messages: Sequence[PromptMessage],
-        model_parameters: dict | None = None,
+        model_parameters: Optional[dict] = None,
         tools: Sequence[PromptMessageTool] | None = None,
-        stop: list[str] | None = None,
+        stop: Optional[list[str]] = None,
         stream: Literal[True] = True,
-        user: str | None = None,
-        callbacks: list[Callback] | None = None,
+        user: Optional[str] = None,
+        callbacks: Optional[list[Callback]] = None,
     ) -> Generator: ...
 
     @overload
     def invoke_llm(
         self,
         prompt_messages: list[PromptMessage],
-        model_parameters: dict | None = None,
+        model_parameters: Optional[dict] = None,
         tools: Sequence[PromptMessageTool] | None = None,
-        stop: list[str] | None = None,
+        stop: Optional[list[str]] = None,
         stream: Literal[False] = False,
-        user: str | None = None,
-        callbacks: list[Callback] | None = None,
+        user: Optional[str] = None,
+        callbacks: Optional[list[Callback]] = None,
     ) -> LLMResult: ...
 
     @overload
     def invoke_llm(
         self,
         prompt_messages: list[PromptMessage],
-        model_parameters: dict | None = None,
+        model_parameters: Optional[dict] = None,
         tools: Sequence[PromptMessageTool] | None = None,
-        stop: list[str] | None = None,
+        stop: Optional[list[str]] = None,
         stream: bool = True,
-        user: str | None = None,
-        callbacks: list[Callback] | None = None,
+        user: Optional[str] = None,
+        callbacks: Optional[list[Callback]] = None,
     ) -> Union[LLMResult, Generator]: ...
 
     def invoke_llm(
         self,
         prompt_messages: Sequence[PromptMessage],
-        model_parameters: dict | None = None,
+        model_parameters: Optional[dict] = None,
         tools: Sequence[PromptMessageTool] | None = None,
-        stop: Sequence[str] | None = None,
+        stop: Optional[Sequence[str]] = None,
         stream: bool = True,
-        user: str | None = None,
-        callbacks: list[Callback] | None = None,
+        user: Optional[str] = None,
+        callbacks: Optional[list[Callback]] = None,
     ) -> Union[LLMResult, Generator]:
         """
         Invoke large language model
@@ -159,6 +158,8 @@ class ModelInstance:
         """
         if not isinstance(self.model_type_instance, LargeLanguageModel):
             raise Exception("Model type instance is not LargeLanguageModel")
+
+        self.model_type_instance = cast(LargeLanguageModel, self.model_type_instance)
         return cast(
             Union[LLMResult, Generator],
             self._round_robin_invoke(
@@ -176,7 +177,7 @@ class ModelInstance:
         )
 
     def get_llm_num_tokens(
-        self, prompt_messages: Sequence[PromptMessage], tools: Sequence[PromptMessageTool] | None = None
+        self, prompt_messages: Sequence[PromptMessage], tools: Optional[Sequence[PromptMessageTool]] = None
     ) -> int:
         """
         Get number of tokens for llm
@@ -187,6 +188,8 @@ class ModelInstance:
         """
         if not isinstance(self.model_type_instance, LargeLanguageModel):
             raise Exception("Model type instance is not LargeLanguageModel")
+
+        self.model_type_instance = cast(LargeLanguageModel, self.model_type_instance)
         return cast(
             int,
             self._round_robin_invoke(
@@ -199,8 +202,8 @@ class ModelInstance:
         )
 
     def invoke_text_embedding(
-        self, texts: list[str], user: str | None = None, input_type: EmbeddingInputType = EmbeddingInputType.DOCUMENT
-    ) -> EmbeddingResult:
+        self, texts: list[str], user: Optional[str] = None, input_type: EmbeddingInputType = EmbeddingInputType.DOCUMENT
+    ) -> TextEmbeddingResult:
         """
         Invoke large language model
 
@@ -211,41 +214,15 @@ class ModelInstance:
         """
         if not isinstance(self.model_type_instance, TextEmbeddingModel):
             raise Exception("Model type instance is not TextEmbeddingModel")
+
+        self.model_type_instance = cast(TextEmbeddingModel, self.model_type_instance)
         return cast(
-            EmbeddingResult,
+            TextEmbeddingResult,
             self._round_robin_invoke(
                 function=self.model_type_instance.invoke,
                 model=self.model,
                 credentials=self.credentials,
                 texts=texts,
-                user=user,
-                input_type=input_type,
-            ),
-        )
-
-    def invoke_multimodal_embedding(
-        self,
-        multimodel_documents: list[dict],
-        user: str | None = None,
-        input_type: EmbeddingInputType = EmbeddingInputType.DOCUMENT,
-    ) -> EmbeddingResult:
-        """
-        Invoke large language model
-
-        :param multimodel_documents: multimodel documents to embed
-        :param user: unique user id
-        :param input_type: input type
-        :return: embeddings result
-        """
-        if not isinstance(self.model_type_instance, TextEmbeddingModel):
-            raise Exception("Model type instance is not TextEmbeddingModel")
-        return cast(
-            EmbeddingResult,
-            self._round_robin_invoke(
-                function=self.model_type_instance.invoke,
-                model=self.model,
-                credentials=self.credentials,
-                multimodel_documents=multimodel_documents,
                 user=user,
                 input_type=input_type,
             ),
@@ -260,6 +237,8 @@ class ModelInstance:
         """
         if not isinstance(self.model_type_instance, TextEmbeddingModel):
             raise Exception("Model type instance is not TextEmbeddingModel")
+
+        self.model_type_instance = cast(TextEmbeddingModel, self.model_type_instance)
         return cast(
             list[int],
             self._round_robin_invoke(
@@ -274,9 +253,9 @@ class ModelInstance:
         self,
         query: str,
         docs: list[str],
-        score_threshold: float | None = None,
-        top_n: int | None = None,
-        user: str | None = None,
+        score_threshold: Optional[float] = None,
+        top_n: Optional[int] = None,
+        user: Optional[str] = None,
     ) -> RerankResult:
         """
         Invoke rerank model
@@ -290,6 +269,8 @@ class ModelInstance:
         """
         if not isinstance(self.model_type_instance, RerankModel):
             raise Exception("Model type instance is not RerankModel")
+
+        self.model_type_instance = cast(RerankModel, self.model_type_instance)
         return cast(
             RerankResult,
             self._round_robin_invoke(
@@ -304,41 +285,7 @@ class ModelInstance:
             ),
         )
 
-    def invoke_multimodal_rerank(
-        self,
-        query: dict,
-        docs: list[dict],
-        score_threshold: float | None = None,
-        top_n: int | None = None,
-        user: str | None = None,
-    ) -> RerankResult:
-        """
-        Invoke rerank model
-
-        :param query: search query
-        :param docs: docs for reranking
-        :param score_threshold: score threshold
-        :param top_n: top n
-        :param user: unique user id
-        :return: rerank result
-        """
-        if not isinstance(self.model_type_instance, RerankModel):
-            raise Exception("Model type instance is not RerankModel")
-        return cast(
-            RerankResult,
-            self._round_robin_invoke(
-                function=self.model_type_instance.invoke_multimodal_rerank,
-                model=self.model,
-                credentials=self.credentials,
-                query=query,
-                docs=docs,
-                score_threshold=score_threshold,
-                top_n=top_n,
-                user=user,
-            ),
-        )
-
-    def invoke_moderation(self, text: str, user: str | None = None) -> bool:
+    def invoke_moderation(self, text: str, user: Optional[str] = None) -> bool:
         """
         Invoke moderation model
 
@@ -348,6 +295,8 @@ class ModelInstance:
         """
         if not isinstance(self.model_type_instance, ModerationModel):
             raise Exception("Model type instance is not ModerationModel")
+
+        self.model_type_instance = cast(ModerationModel, self.model_type_instance)
         return cast(
             bool,
             self._round_robin_invoke(
@@ -359,7 +308,7 @@ class ModelInstance:
             ),
         )
 
-    def invoke_speech2text(self, file: IO[bytes], user: str | None = None) -> str:
+    def invoke_speech2text(self, file: IO[bytes], user: Optional[str] = None) -> str:
         """
         Invoke large language model
 
@@ -369,6 +318,8 @@ class ModelInstance:
         """
         if not isinstance(self.model_type_instance, Speech2TextModel):
             raise Exception("Model type instance is not Speech2TextModel")
+
+        self.model_type_instance = cast(Speech2TextModel, self.model_type_instance)
         return cast(
             str,
             self._round_robin_invoke(
@@ -380,7 +331,7 @@ class ModelInstance:
             ),
         )
 
-    def invoke_tts(self, content_text: str, tenant_id: str, voice: str, user: str | None = None) -> Iterable[bytes]:
+    def invoke_tts(self, content_text: str, tenant_id: str, voice: str, user: Optional[str] = None) -> Iterable[bytes]:
         """
         Invoke large language tts model
 
@@ -392,6 +343,8 @@ class ModelInstance:
         """
         if not isinstance(self.model_type_instance, TTSModel):
             raise Exception("Model type instance is not TTSModel")
+
+        self.model_type_instance = cast(TTSModel, self.model_type_instance)
         return cast(
             Iterable[bytes],
             self._round_robin_invoke(
@@ -405,7 +358,7 @@ class ModelInstance:
             ),
         )
 
-    def _round_robin_invoke(self, function: Callable[..., Any], *args, **kwargs):
+    def _round_robin_invoke(self, function: Callable[..., Any], *args, **kwargs) -> Any:
         """
         Round-robin invoke
         :param function: function to invoke
@@ -425,23 +378,6 @@ class ModelInstance:
                 else:
                     raise last_exception
 
-            # Additional policy compliance check as fallback (in case fetch_next didn't catch it)
-            try:
-                from core.helper.credential_utils import check_credential_policy_compliance
-
-                if lb_config.credential_id:
-                    check_credential_policy_compliance(
-                        credential_id=lb_config.credential_id,
-                        provider=self.provider,
-                        credential_type=PluginCredentialType.MODEL,
-                    )
-            except Exception as e:
-                logger.warning(
-                    "Load balancing config %s failed policy compliance check in round-robin: %s", lb_config.id, str(e)
-                )
-                self.load_balancing_manager.cooldown(lb_config, expire=60)
-                continue
-
             try:
                 if "credentials" in kwargs:
                     del kwargs["credentials"]
@@ -459,7 +395,7 @@ class ModelInstance:
             except Exception as e:
                 raise e
 
-    def get_tts_voices(self, language: str | None = None):
+    def get_tts_voices(self, language: Optional[str] = None) -> list:
         """
         Invoke large language tts model voices
 
@@ -468,13 +404,15 @@ class ModelInstance:
         """
         if not isinstance(self.model_type_instance, TTSModel):
             raise Exception("Model type instance is not TTSModel")
+
+        self.model_type_instance = cast(TTSModel, self.model_type_instance)
         return self.model_type_instance.get_tts_model_voices(
             model=self.model, credentials=self.credentials, language=language
         )
 
 
 class ModelManager:
-    def __init__(self):
+    def __init__(self) -> None:
         self._provider_manager = ProviderManager()
 
     def get_model_instance(self, tenant_id: str, provider: str, model_type: ModelType, model: str) -> ModelInstance:
@@ -523,32 +461,6 @@ class ModelManager:
             model=default_model_entity.model,
         )
 
-    def check_model_support_vision(self, tenant_id: str, provider: str, model: str, model_type: ModelType) -> bool:
-        """
-        Check if model supports vision
-        :param tenant_id: tenant id
-        :param provider: provider name
-        :param model: model name
-        :return: True if model supports vision, False otherwise
-        """
-        model_instance = self.get_model_instance(tenant_id, provider, model_type, model)
-        model_type_instance = model_instance.model_type_instance
-        match model_type:
-            case ModelType.LLM:
-                model_type_instance = cast(LargeLanguageModel, model_type_instance)
-            case ModelType.TEXT_EMBEDDING:
-                model_type_instance = cast(TextEmbeddingModel, model_type_instance)
-            case ModelType.RERANK:
-                model_type_instance = cast(RerankModel, model_type_instance)
-            case _:
-                raise ValueError(f"Model type {model_type} is not supported")
-        model_schema = model_type_instance.get_model_schema(model, model_instance.credentials)
-        if not model_schema:
-            return False
-        if model_schema.features and ModelFeature.VISION in model_schema.features:
-            return True
-        return False
-
 
 class LBModelManager:
     def __init__(
@@ -558,8 +470,8 @@ class LBModelManager:
         model_type: ModelType,
         model: str,
         load_balancing_configs: list[ModelLoadBalancingConfiguration],
-        managed_credentials: dict | None = None,
-    ):
+        managed_credentials: Optional[dict] = None,
+    ) -> None:
         """
         Load balancing model manager
         :param tenant_id: tenant_id
@@ -583,7 +495,7 @@ class LBModelManager:
                 else:
                     load_balancing_config.credentials = managed_credentials
 
-    def fetch_next(self) -> ModelLoadBalancingConfiguration | None:
+    def fetch_next(self) -> Optional[ModelLoadBalancingConfiguration]:
         """
         Get next model load balancing config
         Strategy: Round Robin
@@ -621,24 +533,6 @@ class LBModelManager:
 
                 continue
 
-            # Check policy compliance for the selected configuration
-            try:
-                from core.helper.credential_utils import check_credential_policy_compliance
-
-                if config.credential_id:
-                    check_credential_policy_compliance(
-                        credential_id=config.credential_id,
-                        provider=self._provider,
-                        credential_type=PluginCredentialType.MODEL,
-                    )
-            except Exception as e:
-                logger.warning("Load balancing config %s failed policy compliance check: %s", config.id, str(e))
-                cooldown_load_balancing_configs.append(config)
-                if len(cooldown_load_balancing_configs) >= len(self._load_balancing_configs):
-                    # all configs are in cooldown or failed policy compliance
-                    return None
-                continue
-
             if dify_config.DEBUG:
                 logger.info(
                     """Model LB
@@ -658,7 +552,7 @@ model: %s""",
 
             return config
 
-    def cooldown(self, config: ModelLoadBalancingConfiguration, expire: int = 60):
+    def cooldown(self, config: ModelLoadBalancingConfiguration, expire: int = 60) -> None:
         """
         Cooldown model load balancing config
         :param config: model load balancing config

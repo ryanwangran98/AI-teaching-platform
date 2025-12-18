@@ -75,8 +75,7 @@ const parseCurl = (curlCommand: string): { node: HttpNodeType | null; error: str
 
         // To support command like `curl -F "file=@/path/to/file;type=application/zip"`
         // the `;type=application/zip` should translate to `Content-Type: application/zip`
-        const typeRegex = /^(.+?);type=(.+)$/
-        const typeMatch = typeRegex.exec(value)
+        const typeMatch = value.match(/^(.+?);type=(.+)$/)
         if (typeMatch) {
           const [, actualValue, mimeType] = typeMatch
           value = actualValue

@@ -17,7 +17,6 @@ const translation = {
     other: 'Khác',
     travel: 'Du lịch',
     entertainment: 'Giải trí',
-    rag: 'GIẺ',
   },
   searchTags: 'Thẻ tìm kiếm',
   allTags: 'Tất cả thẻ',

@@ -1,28 +1,22 @@
-from collections.abc import Callable
 from functools import wraps
-from typing import ParamSpec, TypeVar
 
+from flask_login import current_user
 from sqlalchemy.orm import Session
 from werkzeug.exceptions import Forbidden
 
 from extensions.ext_database import db
-from libs.login import current_account_with_tenant
 from models.account import TenantPluginPermission
-
-P = ParamSpec("P")
-R = TypeVar("R")
 
 
 def plugin_permission_required(
     install_required: bool = False,
     debug_required: bool = False,
 ):
-    def interceptor(view: Callable[P, R]):
+    def interceptor(view):
         @wraps(view)
-        def decorated(*args: P.args, **kwargs: P.kwargs):
-            current_user, current_tenant_id = current_account_with_tenant()
+        def decorated(*args, **kwargs):
             user = current_user
-            tenant_id = current_tenant_id
+            tenant_id = user.current_tenant_id
 
             with Session(db.engine) as session:
                 permission = (

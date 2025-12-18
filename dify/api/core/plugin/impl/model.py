@@ -1,12 +1,12 @@
 import binascii
 from collections.abc import Generator, Sequence
-from typing import IO
+from typing import IO, Optional
 
 from core.model_runtime.entities.llm_entities import LLMResultChunk
 from core.model_runtime.entities.message_entities import PromptMessage, PromptMessageTool
 from core.model_runtime.entities.model_entities import AIModelEntity
 from core.model_runtime.entities.rerank_entities import RerankResult
-from core.model_runtime.entities.text_embedding_entities import EmbeddingResult
+from core.model_runtime.entities.text_embedding_entities import TextEmbeddingResult
 from core.model_runtime.utils.encoders import jsonable_encoder
 from core.plugin.entities.plugin_daemon import (
     PluginBasicBooleanResponse,
@@ -151,9 +151,9 @@ class PluginModelClient(BasePluginClient):
         model: str,
         credentials: dict,
         prompt_messages: list[PromptMessage],
-        model_parameters: dict | None = None,
-        tools: list[PromptMessageTool] | None = None,
-        stop: list[str] | None = None,
+        model_parameters: Optional[dict] = None,
+        tools: Optional[list[PromptMessageTool]] = None,
+        stop: Optional[list[str]] = None,
         stream: bool = True,
     ) -> Generator[LLMResultChunk, None, None]:
         """
@@ -162,7 +162,7 @@ class PluginModelClient(BasePluginClient):
         response = self._request_with_plugin_daemon_response_stream(
             method="POST",
             path=f"plugin/{tenant_id}/dispatch/llm/invoke",
-            type_=LLMResultChunk,
+            type=LLMResultChunk,
             data=jsonable_encoder(
                 {
                     "user_id": user_id,
@@ -200,7 +200,7 @@ class PluginModelClient(BasePluginClient):
         model: str,
         credentials: dict,
         prompt_messages: list[PromptMessage],
-        tools: list[PromptMessageTool] | None = None,
+        tools: Optional[list[PromptMessageTool]] = None,
     ) -> int:
         """
         Get number of tokens for llm
@@ -208,7 +208,7 @@ class PluginModelClient(BasePluginClient):
         response = self._request_with_plugin_daemon_response_stream(
             method="POST",
             path=f"plugin/{tenant_id}/dispatch/llm/num_tokens",
-            type_=PluginLLMNumTokensResponse,
+            type=PluginLLMNumTokensResponse,
             data=jsonable_encoder(
                 {
                     "user_id": user_id,
@@ -243,14 +243,14 @@ class PluginModelClient(BasePluginClient):
         credentials: dict,
         texts: list[str],
         input_type: str,
-    ) -> EmbeddingResult:
+    ) -> TextEmbeddingResult:
         """
         Invoke text embedding
         """
         response = self._request_with_plugin_daemon_response_stream(
             method="POST",
             path=f"plugin/{tenant_id}/dispatch/text_embedding/invoke",
-            type_=EmbeddingResult,
+            type=TextEmbeddingResult,
             data=jsonable_encoder(
                 {
                     "user_id": user_id,
@@ -275,48 +275,6 @@ class PluginModelClient(BasePluginClient):
 
         raise ValueError("Failed to invoke text embedding")
 
-    def invoke_multimodal_embedding(
-        self,
-        tenant_id: str,
-        user_id: str,
-        plugin_id: str,
-        provider: str,
-        model: str,
-        credentials: dict,
-        documents: list[dict],
-        input_type: str,
-    ) -> EmbeddingResult:
-        """
-        Invoke file embedding
-        """
-        response = self._request_with_plugin_daemon_response_stream(
-            method="POST",
-            path=f"plugin/{tenant_id}/dispatch/multimodal_embedding/invoke",
-            type_=EmbeddingResult,
-            data=jsonable_encoder(
-                {
-                    "user_id": user_id,
-                    "data": {
-                        "provider": provider,
-                        "model_type": "text-embedding",
-                        "model": model,
-                        "credentials": credentials,
-                        "documents": documents,
-                        "input_type": input_type,
-                    },
-                }
-            ),
-            headers={
-                "X-Plugin-ID": plugin_id,
-                "Content-Type": "application/json",
-            },
-        )
-
-        for resp in response:
-            return resp
-
-        raise ValueError("Failed to invoke file embedding")
-
     def get_text_embedding_num_tokens(
         self,
         tenant_id: str,
@@ -333,7 +291,7 @@ class PluginModelClient(BasePluginClient):
         response = self._request_with_plugin_daemon_response_stream(
             method="POST",
             path=f"plugin/{tenant_id}/dispatch/text_embedding/num_tokens",
-            type_=PluginTextEmbeddingNumTokensResponse,
+            type=PluginTextEmbeddingNumTokensResponse,
             data=jsonable_encoder(
                 {
                     "user_id": user_id,
@@ -367,8 +325,8 @@ class PluginModelClient(BasePluginClient):
         credentials: dict,
         query: str,
         docs: list[str],
-        score_threshold: float | None = None,
-        top_n: int | None = None,
+        score_threshold: Optional[float] = None,
+        top_n: Optional[int] = None,
     ) -> RerankResult:
         """
         Invoke rerank
@@ -376,7 +334,7 @@ class PluginModelClient(BasePluginClient):
         response = self._request_with_plugin_daemon_response_stream(
             method="POST",
             path=f"plugin/{tenant_id}/dispatch/rerank/invoke",
-            type_=RerankResult,
+            type=RerankResult,
             data=jsonable_encoder(
                 {
                     "user_id": user_id,
@@ -403,51 +361,6 @@ class PluginModelClient(BasePluginClient):
 
         raise ValueError("Failed to invoke rerank")
 
-    def invoke_multimodal_rerank(
-        self,
-        tenant_id: str,
-        user_id: str,
-        plugin_id: str,
-        provider: str,
-        model: str,
-        credentials: dict,
-        query: dict,
-        docs: list[dict],
-        score_threshold: float | None = None,
-        top_n: int | None = None,
-    ) -> RerankResult:
-        """
-        Invoke multimodal rerank
-        """
-        response = self._request_with_plugin_daemon_response_stream(
-            method="POST",
-            path=f"plugin/{tenant_id}/dispatch/multimodal_rerank/invoke",
-            type_=RerankResult,
-            data=jsonable_encoder(
-                {
-                    "user_id": user_id,
-                    "data": {
-                        "provider": provider,
-                        "model_type": "rerank",
-                        "model": model,
-                        "credentials": credentials,
-                        "query": query,
-                        "docs": docs,
-                        "score_threshold": score_threshold,
-                        "top_n": top_n,
-                    },
-                }
-            ),
-            headers={
-                "X-Plugin-ID": plugin_id,
-                "Content-Type": "application/json",
-            },
-        )
-        for resp in response:
-            return resp
-
-        raise ValueError("Failed to invoke multimodal rerank")
-
     def invoke_tts(
         self,
         tenant_id: str,
@@ -465,7 +378,7 @@ class PluginModelClient(BasePluginClient):
         response = self._request_with_plugin_daemon_response_stream(
             method="POST",
             path=f"plugin/{tenant_id}/dispatch/tts/invoke",
-            type_=PluginStringResultResponse,
+            type=PluginStringResultResponse,
             data=jsonable_encoder(
                 {
                     "user_id": user_id,
@@ -501,15 +414,15 @@ class PluginModelClient(BasePluginClient):
         provider: str,
         model: str,
         credentials: dict,
-        language: str | None = None,
-    ):
+        language: Optional[str] = None,
+    ) -> list[dict]:
         """
         Get tts model voices
         """
         response = self._request_with_plugin_daemon_response_stream(
             method="POST",
             path=f"plugin/{tenant_id}/dispatch/tts/model/voices",
-            type_=PluginVoicesResponse,
+            type=PluginVoicesResponse,
             data=jsonable_encoder(
                 {
                     "user_id": user_id,
@@ -553,7 +466,7 @@ class PluginModelClient(BasePluginClient):
         response = self._request_with_plugin_daemon_response_stream(
             method="POST",
             path=f"plugin/{tenant_id}/dispatch/speech2text/invoke",
-            type_=PluginStringResultResponse,
+            type=PluginStringResultResponse,
             data=jsonable_encoder(
                 {
                     "user_id": user_id,
@@ -593,7 +506,7 @@ class PluginModelClient(BasePluginClient):
         response = self._request_with_plugin_daemon_response_stream(
             method="POST",
             path=f"plugin/{tenant_id}/dispatch/moderation/invoke",
-            type_=PluginBasicBooleanResponse,
+            type=PluginBasicBooleanResponse,
             data=jsonable_encoder(
                 {
                     "user_id": user_id,

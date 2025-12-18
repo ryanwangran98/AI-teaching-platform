@@ -1,3 +1,5 @@
+from typing import Optional
+
 from pydantic import Field, NonNegativeInt, PositiveInt
 from pydantic_settings import BaseSettings
 
@@ -7,12 +9,12 @@ class QdrantConfig(BaseSettings):
     Configuration settings for Qdrant vector database
     """
 
-    QDRANT_URL: str | None = Field(
+    QDRANT_URL: Optional[str] = Field(
         description="URL of the Qdrant server (e.g., 'http://localhost:6333' or 'https://qdrant.example.com')",
         default=None,
     )
 
-    QDRANT_API_KEY: str | None = Field(
+    QDRANT_API_KEY: Optional[str] = Field(
         description="API key for authenticating with the Qdrant server",
         default=None,
     )

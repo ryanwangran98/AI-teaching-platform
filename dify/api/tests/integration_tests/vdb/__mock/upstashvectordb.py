@@ -1,5 +1,6 @@
 import os
 from collections import UserDict
+from typing import Optional
 
 import pytest
 from _pytest.monkeypatch import MonkeyPatch
@@ -33,7 +34,7 @@ class MockIndex:
         include_vectors: bool = False,
         include_metadata: bool = False,
         filter: str = "",
-        data: str | None = None,
+        data: Optional[str] = None,
         namespace: str = "",
         include_data: bool = False,
     ):

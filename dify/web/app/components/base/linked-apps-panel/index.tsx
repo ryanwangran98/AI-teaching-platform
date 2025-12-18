@@ -2,11 +2,11 @@
 import type { FC } from 'react'
 import React from 'react'
 import Link from 'next/link'
+import { useTranslation } from 'react-i18next'
 import { RiArrowRightUpLine } from '@remixicon/react'
 import cn from '@/utils/classnames'
 import AppIcon from '@/app/components/base/app-icon'
 import type { RelatedApp } from '@/models/datasets'
-import { AppModeEnum } from '@/types/app'
 
 type ILikedItemProps = {
   appStatus?: boolean
@@ -15,11 +15,11 @@ type ILikedItemProps = {
 }
 
 const appTypeMap = {
-  [AppModeEnum.CHAT]: 'Chatbot',
-  [AppModeEnum.COMPLETION]: 'Completion',
-  [AppModeEnum.AGENT_CHAT]: 'Agent',
-  [AppModeEnum.ADVANCED_CHAT]: 'Chatflow',
-  [AppModeEnum.WORKFLOW]: 'Workflow',
+  'chat': 'Chatbot',
+  'completion': 'Completion',
+  'agent-chat': 'Agent',
+  'advanced-chat': 'Chatflow',
+  'workflow': 'Workflow',
 }
 
 const LikedItem = ({
@@ -49,8 +49,10 @@ const LinkedAppsPanel: FC<Props> = ({
   relatedApps,
   isMobile,
 }) => {
+  const { t } = useTranslation()
   return (
-    <div className='w-[320px] rounded-xl border-[0.5px] border-components-panel-border bg-components-panel-bg-blur p-1 shadow-lg backdrop-blur-[5px]'>
+    <div className='w-[320px] rounded-xl border-[0.5px] border-components-panel-border bg-components-panel-bg-blur p-1 shadow-lg  backdrop-blur-[5px]'>
+      <div className='system-xs-medium-uppercase mb-0.5 mt-1 pl-2 text-text-tertiary'>{relatedApps.length || '--'} {t('common.datasetMenus.relatedApp')}</div>
       {relatedApps.map((item, index) => (
         <LikedItem key={index} detail={item} isMobile={isMobile} />
       ))}

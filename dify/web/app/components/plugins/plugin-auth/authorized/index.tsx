@@ -52,7 +52,6 @@ type AuthorizedProps = {
   showItemSelectedIcon?: boolean
   selectedCredentialId?: string
   onUpdate?: () => void
-  notAllowCustomCredential?: boolean
 }
 const Authorized = ({
   pluginPayload,
@@ -73,7 +72,6 @@ const Authorized = ({
   showItemSelectedIcon,
   selectedCredentialId,
   onUpdate,
-  notAllowCustomCredential,
 }: AuthorizedProps) => {
   const { t } = useTranslation()
   const { notify } = useToastContext()
@@ -155,9 +153,9 @@ const Authorized = ({
   }, [setPluginDefaultCredential, onUpdate, notify, t, handleSetDoingAction])
   const { mutateAsync: updatePluginCredential } = useUpdatePluginCredentialHook(pluginPayload)
   const handleRename = useCallback(async (payload: {
-    credential_id: string
-    name: string
-  }) => {
+      credential_id: string
+      name: string
+    }) => {
     if (doingActionRef.current)
       return
     try {
@@ -173,8 +171,6 @@ const Authorized = ({
       handleSetDoingAction(false)
     }
   }, [updatePluginCredential, notify, t, handleSetDoingAction, onUpdate])
-  const unavailableCredentials = credentials.filter(credential => credential.not_allowed_to_use)
-  const unavailableCredential = credentials.find(credential => credential.not_allowed_to_use && credential.is_default)
 
   return (
     <>
@@ -198,17 +194,12 @@ const Authorized = ({
                     'w-full',
                     isOpen && 'bg-components-button-secondary-bg-hover',
                   )}>
-                  <Indicator className='mr-2' color={unavailableCredential ? 'gray' : 'green'} />
+                  <Indicator className='mr-2' />
                   {credentials.length}&nbsp;
                   {
                     credentials.length > 1
                       ? t('plugin.auth.authorizations')
                       : t('plugin.auth.authorization')
-                  }
-                  {
-                    !!unavailableCredentials.length && (
-                      ` (${unavailableCredentials.length} ${t('plugin.auth.unavailable')})`
-                    )
                   }
                   <RiArrowDownSLine className='ml-0.5 h-4 w-4' />
                 </Button>
@@ -303,24 +294,18 @@ const Authorized = ({
                 )
               }
             </div>
-            {
-              !notAllowCustomCredential && (
-                <>
-                  <div className='h-[1px] bg-divider-subtle'></div>
-                  <div className='p-2'>
-                    <Authorize
-                      pluginPayload={pluginPayload}
-                      theme='secondary'
-                      showDivider={false}
-                      canOAuth={canOAuth}
-                      canApiKey={canApiKey}
-                      disabled={disabled}
-                      onUpdate={onUpdate}
-                    />
-                  </div>
-                </>
-              )
-            }
+            <div className='h-[1px] bg-divider-subtle'></div>
+            <div className='p-2'>
+              <Authorize
+                pluginPayload={pluginPayload}
+                theme='secondary'
+                showDivider={false}
+                canOAuth={canOAuth}
+                canApiKey={canApiKey}
+                disabled={disabled}
+                onUpdate={onUpdate}
+              />
+            </div>
           </div>
         </PortalToFollowElemContent>
       </PortalToFollowElem>

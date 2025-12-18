@@ -4,15 +4,15 @@ import logging
 import click
 import sqlalchemy as sa
 
-from extensions.ext_database import db
-from models.provider_ids import GenericProviderID, ModelProviderID, ToolProviderID
+from core.plugin.entities.plugin import GenericProviderID, ModelProviderID, ToolProviderID
+from models.engine import db
 
 logger = logging.getLogger(__name__)
 
 
 class PluginDataMigration:
     @classmethod
-    def migrate(cls):
+    def migrate(cls) -> None:
         cls.migrate_db_records("providers", "provider_name", ModelProviderID)  # large table
         cls.migrate_db_records("provider_models", "provider_name", ModelProviderID)
         cls.migrate_db_records("provider_orders", "provider_name", ModelProviderID)
@@ -26,7 +26,7 @@ class PluginDataMigration:
         cls.migrate_db_records("tool_builtin_providers", "provider", ToolProviderID)
 
     @classmethod
-    def migrate_datasets(cls):
+    def migrate_datasets(cls) -> None:
         table_name = "datasets"
         provider_column_name = "embedding_model_provider"
 
@@ -46,11 +46,7 @@ limit 1000"""
                     record_id = str(i.id)
                     provider_name = str(i.provider_name)
                     retrieval_model = i.retrieval_model
-                    logger.debug(
-                        "Processing dataset %s with retrieval model of type %s",
-                        record_id,
-                        type(retrieval_model),
-                    )
+                    print(type(retrieval_model))
 
                     if record_id in failed_ids:
                         continue
@@ -130,7 +126,9 @@ limit 1000"""
         )
 
     @classmethod
-    def migrate_db_records(cls, table_name: str, provider_column_name: str, provider_cls: type[GenericProviderID]):
+    def migrate_db_records(
+        cls, table_name: str, provider_column_name: str, provider_cls: type[GenericProviderID]
+    ) -> None:
         click.echo(click.style(f"Migrating [{table_name}] data for plugin", fg="white"))
 
         processed_count = 0
@@ -177,7 +175,7 @@ limit 1000"""
                         # update jina to langgenius/jina_tool/jina etc.
                         updated_value = provider_cls(provider_name).to_string()
                         batch_updates.append((updated_value, record_id))
-                    except Exception:
+                    except Exception as e:
                         failed_ids.append(record_id)
                         click.echo(
                             click.style(

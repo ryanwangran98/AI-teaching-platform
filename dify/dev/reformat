@@ -5,9 +5,6 @@ set -x
 SCRIPT_DIR="$(dirname "$(realpath "$0")")"
 cd "$SCRIPT_DIR/.."
 
-# Import linter
-uv run --directory api --dev lint-imports
-
 # run ruff linter
 uv run --directory api --dev ruff check --fix ./
 
@@ -17,5 +14,5 @@ uv run --directory api --dev ruff format ./
 # run dotenv-linter linter
 uv run --project api --dev dotenv-linter ./api/.env.example ./web/.env.example
 
-# run basedpyright check
-dev/basedpyright-check
+# run mypy check
+dev/mypy-check

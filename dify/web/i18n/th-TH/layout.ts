@@ -1,8 +1,3 @@
-const translation = {
-  sidebar: {
-    collapseSidebar: 'ยุบแถบด้านข้าง',
-    expandSidebar: 'ขยายแถบด้านข้าง',
-  },
-}
+const translation = {}
 
 export default translation

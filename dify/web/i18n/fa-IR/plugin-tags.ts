@@ -17,7 +17,6 @@ const translation = {
     travel: 'سفر',
     videos: 'فیلم',
     agent: 'عامل',
-    rag: 'پوش',
   },
   searchTags: 'جستجو برچسب ها',
   allTags: 'همه برچسب ها',

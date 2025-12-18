@@ -1,21 +1,22 @@
 from abc import ABC, abstractmethod
-from enum import StrEnum, auto
+from enum import Enum
+from typing import Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
 from core.extension.extensible import Extensible, ExtensionModule
 
 
-class ModerationAction(StrEnum):
-    DIRECT_OUTPUT = auto()
-    OVERRIDDEN = auto()
+class ModerationAction(Enum):
+    DIRECT_OUTPUT = "direct_output"
+    OVERRIDDEN = "overridden"
 
 
 class ModerationInputsResult(BaseModel):
     flagged: bool = False
     action: ModerationAction
     preset_response: str = ""
-    inputs: dict = Field(default_factory=dict)
+    inputs: dict = {}
     query: str = ""
 
 
@@ -33,13 +34,13 @@ class Moderation(Extensible, ABC):
 
     module: ExtensionModule = ExtensionModule.MODERATION
 
-    def __init__(self, app_id: str, tenant_id: str, config: dict | None = None):
+    def __init__(self, app_id: str, tenant_id: str, config: Optional[dict] = None) -> None:
         super().__init__(tenant_id, config)
         self.app_id = app_id
 
     @classmethod
     @abstractmethod
-    def validate_config(cls, tenant_id: str, config: dict):
+    def validate_config(cls, tenant_id: str, config: dict) -> None:
         """
         Validate the incoming form config data.
 
@@ -75,7 +76,7 @@ class Moderation(Extensible, ABC):
         raise NotImplementedError
 
     @classmethod
-    def _validate_inputs_and_outputs_config(cls, config: dict, is_preset_response_required: bool):
+    def _validate_inputs_and_outputs_config(cls, config: dict, is_preset_response_required: bool) -> None:
         # inputs_config
         inputs_config = config.get("inputs_config")
         if not isinstance(inputs_config, dict):
@@ -99,14 +100,14 @@ class Moderation(Extensible, ABC):
             if not inputs_config.get("preset_response"):
                 raise ValueError("inputs_config.preset_response is required")
 
-            if len(inputs_config.get("preset_response", "0")) > 100:
+            if len(inputs_config.get("preset_response", 0)) > 100:
                 raise ValueError("inputs_config.preset_response must be less than 100 characters")
 
         if outputs_config_enabled:
             if not outputs_config.get("preset_response"):
                 raise ValueError("outputs_config.preset_response is required")
 
-            if len(outputs_config.get("preset_response", "0")) > 100:
+            if len(outputs_config.get("preset_response", 0)) > 100:
                 raise ValueError("outputs_config.preset_response must be less than 100 characters")
 
 

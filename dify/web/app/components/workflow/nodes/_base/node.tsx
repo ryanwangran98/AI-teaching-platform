@@ -16,18 +16,23 @@ import {
   RiLoader2Line,
 } from '@remixicon/react'
 import { useTranslation } from 'react-i18next'
-import type { NodeProps } from '@/app/components/workflow/types'
+import type { NodeProps } from '../../types'
 import {
   BlockEnum,
   NodeRunningStatus,
-  isTriggerNode,
-} from '@/app/components/workflow/types'
-import { useNodesReadOnly, useToolIcon } from '@/app/components/workflow/hooks'
-import { hasErrorHandleNode, hasRetryNode } from '@/app/components/workflow/utils'
-import { useNodeIterationInteractions } from '@/app/components/workflow/nodes/iteration/use-interactions'
-import { useNodeLoopInteractions } from '@/app/components/workflow/nodes/loop/use-interactions'
-import type { IterationNodeType } from '@/app/components/workflow/nodes/iteration/types'
-import CopyID from '@/app/components/workflow/nodes/tool/components/copy-id'
+} from '../../types'
+import {
+  useNodesReadOnly,
+  useToolIcon,
+} from '../../hooks'
+import {
+  hasErrorHandleNode,
+  hasRetryNode,
+} from '../../utils'
+import { useNodeIterationInteractions } from '../iteration/use-interactions'
+import { useNodeLoopInteractions } from '../loop/use-interactions'
+import type { IterationNodeType } from '../iteration/types'
+import CopyID from '../tool/components/copy-id'
 import {
   NodeSourceHandle,
   NodeTargetHandle,
@@ -37,20 +42,14 @@ import NodeControl from './components/node-control'
 import ErrorHandleOnNode from './components/error-handle/error-handle-on-node'
 import RetryOnNode from './components/retry/retry-on-node'
 import AddVariablePopupWithPosition from './components/add-variable-popup-with-position'
-import EntryNodeContainer, { StartNodeTypeEnum } from './components/entry-node-container'
 import cn from '@/utils/classnames'
 import BlockIcon from '@/app/components/workflow/block-icon'
 import Tooltip from '@/app/components/base/tooltip'
-import useInspectVarsCrud from '@/app/components/workflow/hooks/use-inspect-vars-crud'
-import { ToolTypeEnum } from '@/app/components/workflow/block-selector/types'
-
-type NodeChildProps = {
-  id: string
-  data: NodeProps['data']
-}
+import useInspectVarsCrud from '../../hooks/use-inspect-vars-crud'
+import { ToolTypeEnum } from '../../block-selector/types'
 
 type BaseNodeProps = {
-  children: ReactElement<Partial<NodeChildProps>>
+  children: ReactElement
   id: NodeProps['id']
   data: NodeProps['data']
 }
@@ -63,7 +62,6 @@ const BaseNode: FC<BaseNodeProps> = ({
   const { t } = useTranslation()
   const nodeRef = useRef<HTMLDivElement>(null)
   const { nodesReadOnly } = useNodesReadOnly()
-
   const { handleNodeIterationChildSizeChange } = useNodeIterationInteractions()
   const { handleNodeLoopChildSizeChange } = useNodeLoopInteractions()
   const toolIcon = useToolIcon(data)
@@ -138,13 +136,14 @@ const BaseNode: FC<BaseNodeProps> = ({
     return null
   }, [data._loopIndex, data._runningStatus, t])
 
-  const nodeContent = (
+  return (
     <div
       className={cn(
-        'relative flex rounded-2xl border',
+        'flex rounded-2xl border-[2px]',
         showSelectedBorder ? 'border-components-option-card-option-selected-border' : 'border-transparent',
+        !showSelectedBorder && data._inParallelHovering && 'border-workflow-block-border-highlight',
         data._waitingRun && 'opacity-70',
-        data._pluginInstallLocked && 'cursor-not-allowed',
+        data._dimmed && 'opacity-30',
       )}
       ref={nodeRef}
       style={{
@@ -152,26 +151,6 @@ const BaseNode: FC<BaseNodeProps> = ({
         height: (data.type === BlockEnum.Iteration || data.type === BlockEnum.Loop) ? data.height : 'auto',
       }}
     >
-      {(data._dimmed || data._pluginInstallLocked) && (
-        <div
-          className={cn(
-            'absolute inset-0 rounded-2xl transition-opacity',
-            data._pluginInstallLocked
-              ? 'pointer-events-auto z-30 bg-workflow-block-parma-bg opacity-80 backdrop-blur-[2px]'
-              : 'pointer-events-none z-20 bg-workflow-block-parma-bg opacity-50',
-          )}
-          data-testid='workflow-node-install-overlay'
-        />
-      )}
-      {
-        data.type === BlockEnum.DataSource && (
-          <div className='absolute inset-[-2px] top-[-22px] z-[-1] rounded-[18px] bg-node-data-source-bg p-0.5 backdrop-blur-[6px]'>
-            <div className='system-2xs-semibold-uppercase flex h-5 items-center px-2.5 text-text-tertiary'>
-              {t('workflow.blocks.datasource')}
-            </div>
-          </div>
-        )
-      }
       <div
         className={cn(
           'group relative pb-1 shadow-xs',
@@ -186,6 +165,13 @@ const BaseNode: FC<BaseNodeProps> = ({
           data._isBundled && '!shadow-lg',
         )}
       >
+        {
+          data._inParallelHovering && (
+            <div className='top system-2xs-medium-uppercase absolute -top-2.5 left-2 z-10 text-text-tertiary'>
+              {t('workflow.common.parallelRun')}
+            </div>
+          )
+        }
         {
           data._showAddVariablePopup && (
             <AddVariablePopupWithPosition
@@ -283,26 +269,35 @@ const BaseNode: FC<BaseNodeProps> = ({
             data.type === BlockEnum.Loop && data._loopIndex && LoopIndex
           }
           {
-            isLoading
-              ? <RiLoader2Line className='h-3.5 w-3.5 animate-spin text-text-accent' />
-              : data._runningStatus === NodeRunningStatus.Failed
-                ? <RiErrorWarningFill className='h-3.5 w-3.5 text-text-destructive' />
-                : data._runningStatus === NodeRunningStatus.Exception
-                  ? <RiAlertFill className='h-3.5 w-3.5 text-text-warning-secondary' />
-                  : (data._runningStatus === NodeRunningStatus.Succeeded || hasVarValue)
-                    ? <RiCheckboxCircleFill className='h-3.5 w-3.5 text-text-success' />
-                    : null
+            isLoading && (
+              <RiLoader2Line className='h-3.5 w-3.5 animate-spin text-text-accent' />
+            )
+          }
+          {
+            (!isLoading && (data._runningStatus === NodeRunningStatus.Succeeded || hasVarValue)) && (
+              <RiCheckboxCircleFill className='h-3.5 w-3.5 text-text-success' />
+            )
+          }
+          {
+            data._runningStatus === NodeRunningStatus.Failed && (
+              <RiErrorWarningFill className='h-3.5 w-3.5 text-text-destructive' />
+            )
+          }
+          {
+            data._runningStatus === NodeRunningStatus.Exception && (
+              <RiAlertFill className='h-3.5 w-3.5 text-text-warning-secondary' />
+            )
           }
         </div>
         {
           data.type !== BlockEnum.Iteration && data.type !== BlockEnum.Loop && (
-            cloneElement(children, { id, data } as any)
+            cloneElement(children, { id, data })
           )
         }
         {
           (data.type === BlockEnum.Iteration || data.type === BlockEnum.Loop) && (
             <div className='grow pb-1 pl-1 pr-1'>
-              {cloneElement(children, { id, data } as any)}
+              {cloneElement(children, { id, data })}
             </div>
           )
         }
@@ -337,17 +332,6 @@ const BaseNode: FC<BaseNodeProps> = ({
       </div>
     </div>
   )
-
-  const isStartNode = data.type === BlockEnum.Start
-  const isEntryNode = isTriggerNode(data.type as any) || isStartNode
-
-  return isEntryNode ? (
-    <EntryNodeContainer
-      nodeType={isStartNode ? StartNodeTypeEnum.Start : StartNodeTypeEnum.Trigger}
-    >
-      {nodeContent}
-    </EntryNodeContainer>
-  ) : nodeContent
 }
 
 export default memo(BaseNode)

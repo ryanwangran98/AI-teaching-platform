@@ -1,6 +1,6 @@
 from typing import Protocol
 
-from core.workflow.entities import WorkflowExecution
+from core.workflow.entities.workflow_execution import WorkflowExecution
 
 
 class WorkflowExecutionRepository(Protocol):
@@ -16,7 +16,7 @@ class WorkflowExecutionRepository(Protocol):
     application domains or deployment scenarios.
     """
 
-    def save(self, execution: WorkflowExecution):
+    def save(self, execution: WorkflowExecution) -> None:
         """
         Save or update a WorkflowExecution instance.
 

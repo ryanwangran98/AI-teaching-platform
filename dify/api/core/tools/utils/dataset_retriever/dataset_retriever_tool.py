@@ -1,7 +1,6 @@
-from typing import Any, cast
+from typing import Any, Optional, cast
 
 from pydantic import BaseModel, Field
-from sqlalchemy import select
 
 from core.app.app_config.entities import DatasetRetrieveConfigEntity, ModelConfig
 from core.rag.datasource.retrieval_service import RetrievalService
@@ -17,7 +16,7 @@ from models.dataset import Document as DatasetDocument
 from services.external_knowledge_service import ExternalDatasetService
 
 default_retrieval_model: dict[str, Any] = {
-    "search_method": RetrievalMethod.SEMANTIC_SEARCH,
+    "search_method": RetrievalMethod.SEMANTIC_SEARCH.value,
     "reranking_enable": False,
     "reranking_model": {"reranking_provider_name": "", "reranking_model_name": ""},
     "reranking_mode": "reranking_model",
@@ -37,7 +36,7 @@ class DatasetRetrieverTool(DatasetRetrieverBaseTool):
     args_schema: type[BaseModel] = DatasetRetrieverToolInput
     description: str = "use this to retrieve a dataset. "
     dataset_id: str
-    user_id: str | None = None
+    user_id: Optional[str] = None
     retrieve_config: DatasetRetrieveConfigEntity
     inputs: dict
 
@@ -57,8 +56,9 @@ class DatasetRetrieverTool(DatasetRetrieverBaseTool):
         )
 
     def _run(self, query: str) -> str:
-        dataset_stmt = select(Dataset).where(Dataset.tenant_id == self.tenant_id, Dataset.id == self.dataset_id)
-        dataset = db.session.scalar(dataset_stmt)
+        dataset = (
+            db.session.query(Dataset).where(Dataset.tenant_id == self.tenant_id, Dataset.id == self.dataset_id).first()
+        )
 
         if not dataset:
             return ""
@@ -130,7 +130,7 @@ class DatasetRetrieverTool(DatasetRetrieverBaseTool):
             if dataset.indexing_technique == "economy":
                 # use keyword table query
                 documents = RetrievalService.retrieve(
-                    retrieval_method=RetrievalMethod.KEYWORD_SEARCH,
+                    retrieval_method="keyword_search",
                     dataset_id=dataset.id,
                     query=query,
                     top_k=self.top_k,
@@ -188,23 +188,26 @@ class DatasetRetrieverTool(DatasetRetrieverBaseTool):
                         for record in records:
                             segment = record.segment
                             dataset = db.session.query(Dataset).filter_by(id=segment.dataset_id).first()
-                            dataset_document_stmt = select(DatasetDocument).where(
-                                DatasetDocument.id == segment.document_id,
-                                DatasetDocument.enabled == True,
-                                DatasetDocument.archived == False,
+                            document = (
+                                db.session.query(DatasetDocument)  # type: ignore
+                                .where(
+                                    DatasetDocument.id == segment.document_id,
+                                    DatasetDocument.enabled == True,
+                                    DatasetDocument.archived == False,
+                                )
+                                .first()
                             )
-                            document = db.session.scalar(dataset_document_stmt)
                             if dataset and document:
                                 source = RetrievalSourceMetadata(
                                     dataset_id=dataset.id,
                                     dataset_name=dataset.name,
-                                    document_id=document.id,
-                                    document_name=document.name,
-                                    data_source_type=document.data_source_type,
+                                    document_id=document.id,  # type: ignore
+                                    document_name=document.name,  # type: ignore
+                                    data_source_type=document.data_source_type,  # type: ignore
                                     segment_id=segment.id,
                                     retriever_from=self.retriever_from,
                                     score=record.score or 0.0,
-                                    doc_metadata=document.doc_metadata,
+                                    doc_metadata=document.doc_metadata,  # type: ignore
                                 )
 
                                 if self.retriever_from == "dev":

@@ -30,7 +30,7 @@ enum GeneratorView {
   result = 'result',
 }
 
-const JsonSchemaGenerator: FC<JsonSchemaGeneratorProps> = ({
+export const JsonSchemaGenerator: FC<JsonSchemaGeneratorProps> = ({
   onApply,
   crossAxisOffset,
 }) => {

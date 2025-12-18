@@ -12,11 +12,11 @@ import { ToastContext } from '@/app/components/base/toast'
 import Button from '@/app/components/base/button'
 import type { FileItem } from '@/models/datasets'
 import { upload } from '@/service/base'
-import { getFileUploadErrorMessage } from '@/app/components/base/file-uploader/utils'
+import useSWR from 'swr'
+import { fetchFileUploadConfig } from '@/service/common'
 import SimplePieChart from '@/app/components/base/simple-pie-chart'
 import { Theme } from '@/types/app'
 import useTheme from '@/hooks/use-theme'
-import { useFileUploadConfig } from '@/service/use-common'
 
 export type Props = {
   file: FileItem | undefined
@@ -33,12 +33,10 @@ const CSVUploader: FC<Props> = ({
   const dropRef = useRef<HTMLDivElement>(null)
   const dragRef = useRef<HTMLDivElement>(null)
   const fileUploader = useRef<HTMLInputElement>(null)
-  const { data: fileUploadConfigResponse } = useFileUploadConfig()
+  const { data: fileUploadConfigResponse } = useSWR({ url: '/files/upload' }, fetchFileUploadConfig)
   const fileUploadConfig = useMemo(() => fileUploadConfigResponse ?? {
     file_size_limit: 15,
   }, [fileUploadConfigResponse])
-
-  type UploadResult = Awaited<ReturnType<typeof upload>>
 
   const fileUpload = useCallback(async (fileItem: FileItem): Promise<FileItem> => {
     fileItem.progress = 0
@@ -60,22 +58,17 @@ const CSVUploader: FC<Props> = ({
       data: formData,
       onprogress: onProgress,
     }, false, undefined, '?source=datasets')
-      .then((res: UploadResult) => {
-        const updatedFile = Object.assign({}, fileItem.file, {
-          id: res.id,
-          ...(res as Partial<File>),
-        }) as File
-        const completeFile: FileItem = {
+      .then((res: File) => {
+        const completeFile = {
           fileID: fileItem.fileID,
-          file: updatedFile,
+          file: res,
           progress: 100,
         }
         updateFile(completeFile)
         return Promise.resolve({ ...completeFile })
       })
       .catch((e) => {
-        const errorMessage = getFileUploadErrorMessage(e, t('datasetCreation.stepOne.uploader.failed'), t)
-        notify({ type: 'error', message: errorMessage })
+        notify({ type: 'error', message: e?.response?.code === 'forbidden' ? e?.response?.message : t('datasetCreation.stepOne.uploader.failed') })
         const errorFile = {
           ...fileItem,
           progress: -2,
@@ -106,8 +99,7 @@ const CSVUploader: FC<Props> = ({
   const handleDragEnter = (e: DragEvent) => {
     e.preventDefault()
     e.stopPropagation()
-    if (e.target !== dragRef.current)
-      setDragging(true)
+    e.target !== dragRef.current && setDragging(true)
   }
   const handleDragOver = (e: DragEvent) => {
     e.preventDefault()
@@ -116,8 +108,7 @@ const CSVUploader: FC<Props> = ({
   const handleDragLeave = (e: DragEvent) => {
     e.preventDefault()
     e.stopPropagation()
-    if (e.target === dragRef.current)
-      setDragging(false)
+    e.target === dragRef.current && setDragging(false)
   }
   const handleDrop = (e: DragEvent) => {
     e.preventDefault()
@@ -170,7 +161,7 @@ const CSVUploader: FC<Props> = ({
   const fileChangeHandle = (e: React.ChangeEvent<HTMLInputElement>) => {
     const currentFile = e.target.files?.[0]
     if (!isValid(currentFile))
-      return
+       return
 
     initialUpload(currentFile)
   }

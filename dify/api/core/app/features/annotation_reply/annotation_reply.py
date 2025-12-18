@@ -1,6 +1,5 @@
 import logging
-
-from sqlalchemy import select
+from typing import Optional
 
 from core.app.entities.app_invoke_entities import InvokeFrom
 from core.rag.datasource.vdb.vector_factory import Vector
@@ -16,7 +15,7 @@ logger = logging.getLogger(__name__)
 class AnnotationReplyFeature:
     def query(
         self, app_record: App, message: Message, query: str, user_id: str, invoke_from: InvokeFrom
-    ) -> MessageAnnotation | None:
+    ) -> Optional[MessageAnnotation]:
         """
         Query app annotations to reply
         :param app_record: app record
@@ -26,16 +25,14 @@ class AnnotationReplyFeature:
         :param invoke_from: invoke from
         :return:
         """
-        stmt = select(AppAnnotationSetting).where(AppAnnotationSetting.app_id == app_record.id)
-        annotation_setting = db.session.scalar(stmt)
+        annotation_setting = (
+            db.session.query(AppAnnotationSetting).where(AppAnnotationSetting.app_id == app_record.id).first()
+        )
 
         if not annotation_setting:
             return None
 
         collection_binding_detail = annotation_setting.collection_binding_detail
-
-        if not collection_binding_detail:
-            return None
 
         try:
             score_threshold = annotation_setting.score_threshold or 1

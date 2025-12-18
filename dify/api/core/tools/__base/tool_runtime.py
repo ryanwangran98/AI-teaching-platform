@@ -1,10 +1,10 @@
-from typing import Any
+from typing import Any, Optional
 
-from pydantic import BaseModel, Field
+from openai import BaseModel
+from pydantic import Field
 
 from core.app.entities.app_invoke_entities import InvokeFrom
-from core.plugin.entities.plugin_daemon import CredentialType
-from core.tools.entities.tool_entities import ToolInvokeFrom
+from core.tools.entities.tool_entities import CredentialType, ToolInvokeFrom
 
 
 class ToolRuntime(BaseModel):
@@ -13,9 +13,9 @@ class ToolRuntime(BaseModel):
     """
 
     tenant_id: str
-    tool_id: str | None = None
-    invoke_from: InvokeFrom | None = None
-    tool_invoke_from: ToolInvokeFrom | None = None
+    tool_id: Optional[str] = None
+    invoke_from: Optional[InvokeFrom] = None
+    tool_invoke_from: Optional[ToolInvokeFrom] = None
     credentials: dict[str, Any] = Field(default_factory=dict)
     credential_type: CredentialType = Field(default=CredentialType.API_KEY)
     runtime_parameters: dict[str, Any] = Field(default_factory=dict)

@@ -10,11 +10,10 @@ import { Theme } from '@/types/app'
 import cn from '@/utils/classnames'
 
 type AudioPlayerProps = {
-  src?: string // Keep backward compatibility
-  srcs?: string[] // Support multiple sources
+  src: string
 }
 
-const AudioPlayer: React.FC<AudioPlayerProps> = ({ src, srcs }) => {
+const AudioPlayer: React.FC<AudioPlayerProps> = ({ src }) => {
   const [isPlaying, setIsPlaying] = useState(false)
   const [currentTime, setCurrentTime] = useState(0)
   const [duration, setDuration] = useState(0)
@@ -62,22 +61,19 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({ src, srcs }) => {
     // Preload audio metadata
     audio.load()
 
-    // Use the first source or src to generate waveform
-    const primarySrc = srcs?.[0] || src
-    if (primarySrc) {
-      // Delayed generation of waveform data
-      // eslint-disable-next-line ts/no-use-before-define
-      const timer = setTimeout(() => generateWaveformData(primarySrc), 1000)
-      return () => {
-        audio.removeEventListener('loadedmetadata', setAudioData)
-        audio.removeEventListener('timeupdate', setAudioTime)
-        audio.removeEventListener('progress', handleProgress)
-        audio.removeEventListener('ended', handleEnded)
-        audio.removeEventListener('error', handleError)
-        clearTimeout(timer)
-      }
+    // Delayed generation of waveform data
+    // eslint-disable-next-line ts/no-use-before-define
+    const timer = setTimeout(() => generateWaveformData(src), 1000)
+
+    return () => {
+      audio.removeEventListener('loadedmetadata', setAudioData)
+      audio.removeEventListener('timeupdate', setAudioTime)
+      audio.removeEventListener('progress', handleProgress)
+      audio.removeEventListener('ended', handleEnded)
+      audio.removeEventListener('error', handleError)
+      clearTimeout(timer)
     }
-  }, [src, srcs])
+  }, [src])
 
   const generateWaveformData = async (audioSrc: string) => {
     if (!window.AudioContext && !(window as any).webkitAudioContext) {
@@ -89,9 +85,8 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({ src, srcs }) => {
       return null
     }
 
-    const primarySrc = srcs?.[0] || src
-    const url = primarySrc ? new URL(primarySrc) : null
-    const isHttp = url ? (url.protocol === 'http:' || url.protocol === 'https:') : false
+    const url = new URL(src)
+    const isHttp = url.protocol === 'http:' || url.protocol === 'https:'
     if (!isHttp) {
       setIsAudioAvailable(false)
       return null
@@ -291,14 +286,9 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({ src, srcs }) => {
   }, [duration])
 
   return (
-    <div className='flex h-9 min-w-[240px] max-w-[420px] items-center gap-2 rounded-[10px] border border-components-panel-border-subtle bg-components-chat-input-audio-bg-alt p-2 shadow-xs backdrop-blur-sm'>
-      <audio ref={audioRef} src={src} preload="auto">
-        {/* If srcs array is provided, render multiple source elements */}
-        {srcs && srcs.map((srcUrl, index) => (
-          <source key={index} src={srcUrl} />
-        ))}
-      </audio>
-      <button type="button" className='inline-flex shrink-0 cursor-pointer items-center justify-center border-none text-text-accent transition-all hover:text-text-accent-secondary disabled:text-components-button-primary-bg-disabled' onClick={togglePlay} disabled={!isAudioAvailable}>
+    <div className='flex h-9 min-w-[240px] max-w-[420px] items-end gap-2 rounded-[10px] border border-components-panel-border-subtle bg-components-chat-input-audio-bg-alt p-2 shadow-xs backdrop-blur-sm'>
+      <audio ref={audioRef} src={src} preload="auto"/>
+      <button className='inline-flex shrink-0 cursor-pointer items-center justify-center border-none text-text-accent transition-all hover:text-text-accent-secondary disabled:text-components-button-primary-bg-disabled' onClick={togglePlay} disabled={!isAudioAvailable}>
         {isPlaying
           ? (
             <RiPauseCircleFill className='h-5 w-5' />

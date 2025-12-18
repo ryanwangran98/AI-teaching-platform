@@ -41,5 +41,5 @@ class FileTypeNotSupportError(LLMNodeError):
 
 
 class UnsupportedPromptContentTypeError(LLMNodeError):
-    def __init__(self, *, type_name: str):
+    def __init__(self, *, type_name: str) -> None:
         super().__init__(f"Prompt content type {type_name} is not supported.")

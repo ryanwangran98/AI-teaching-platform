@@ -1,7 +1,7 @@
 const translation = {
   title: 'लॉग्स',
   description: 'लॉग्स एप्लिकेशन के रनिंग स्टेटस को रिकॉर्ड करते हैं, जिसमें यूजर इनपुट और एआई रिप्लाईज़ शामिल हैं।',
-  dateTimeFormat: 'MM/DD/YYYY hh:mm:ss A',
+  dateTimeFormat: 'MM/DD/YYYY hh:mm A',
   table: {
     header: {
       updatedTime: 'अपडेट का समय',
@@ -19,7 +19,6 @@ const translation = {
       tokens: 'टोकन',
       user: 'अंतिम उपयोगकर्ता या खाता',
       version: 'संस्करण',
-      triggered_from: 'के द्वारा ट्रिगर',
     },
     pagination: {
       previous: 'पिछला',
@@ -68,8 +67,6 @@ const translation = {
       quarterToDate: 'तिमाही तक तिथि',
       yearToDate: 'वर्ष तक तिथि',
       allTime: 'सभी समय',
-      last30days: 'पिछले 30 दिन',
-      custom: 'कस्टम',
     },
     annotation: {
       all: 'सभी',
@@ -87,7 +84,6 @@ const translation = {
     workflowTitle: 'लॉग विवरण',
     fileListDetail: 'विस्तार',
     fileListLabel: 'फ़ाइल विवरण',
-    testWithParams: 'पैरामीटर्स के साथ परीक्षण',
   },
   promptLog: 'प्रॉम्प्ट लॉग',
   agentLog: 'एजेंट लॉग',
@@ -98,16 +94,6 @@ const translation = {
     toolUsed: 'प्रयुक्त उपकरण',
     finalProcessing: 'अंतिम प्रसंस्करण',
     iteration: 'चलना',
-  },
-  dateFormat: 'MM/DD/YYYY',
-  triggerBy: {
-    debugging: 'डिबगिंग',
-    appRun: 'वेबएप',
-    webhook: 'वेबहूक',
-    schedule: 'अनुसूची',
-    plugin: 'प्लगइन',
-    ragPipelineRun: 'RAG पाइपलाइन',
-    ragPipelineDebugging: 'RAG डीबगिंग',
   },
 }
 

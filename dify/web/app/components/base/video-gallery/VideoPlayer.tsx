@@ -2,8 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react'
 import styles from './VideoPlayer.module.css'
 
 type VideoPlayerProps = {
-  src?: string // Keep backward compatibility
-  srcs?: string[] // Support multiple sources
+  src: string
 }
 
 const PlayIcon = () => (
@@ -36,7 +35,7 @@ const FullscreenIcon = () => (
   </svg>
 )
 
-const VideoPlayer: React.FC<VideoPlayerProps> = ({ src, srcs }) => {
+const VideoPlayer: React.FC<VideoPlayerProps> = ({ src }) => {
   const [isPlaying, setIsPlaying] = useState(false)
   const [currentTime, setCurrentTime] = useState(0)
   const [duration, setDuration] = useState(0)
@@ -79,7 +78,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ src, srcs }) => {
       video.removeEventListener('timeupdate', setVideoTime)
       video.removeEventListener('ended', handleEnded)
     }
-  }, [src, srcs])
+  }, [src])
 
   useEffect(() => {
     return () => {
@@ -132,7 +131,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ src, srcs }) => {
     return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`
   }
 
-  const updateVideoProgress = useCallback((clientX: number, updateTime = false) => {
+  const updateVideoProgress = useCallback((clientX: number) => {
     const progressBar = progressRef.current
     const video = videoRef.current
     if (progressBar && video) {
@@ -141,7 +140,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ src, srcs }) => {
       const newTime = pos * video.duration
       if (newTime >= 0 && newTime <= video.duration) {
         setHoverTime(newTime)
-        if (isDragging || updateTime)
+        if (isDragging)
           video.currentTime = newTime
       }
     }
@@ -156,15 +155,10 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ src, srcs }) => {
       setHoverTime(null)
   }, [isDragging])
 
-  const handleProgressClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
-    e.preventDefault()
-    updateVideoProgress(e.clientX, true)
-  }, [updateVideoProgress])
-
   const handleMouseDown = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     e.preventDefault()
     setIsDragging(true)
-    updateVideoProgress(e.clientX, true)
+    updateVideoProgress(e.clientX)
   }, [updateVideoProgress])
 
   useEffect(() => {
@@ -215,19 +209,14 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ src, srcs }) => {
 
   return (
     <div ref={containerRef} className={styles.videoPlayer} onMouseMove={showControls} onMouseEnter={showControls}>
-      <video ref={videoRef} src={src} className={styles.video}>
-        {/* If srcs array is provided, render multiple source elements */}
-        {srcs && srcs.map((srcUrl, index) => (
-          <source key={index} src={srcUrl} />
-        ))}
-      </video>
+      <video ref={videoRef} src={src} className={styles.video} />
       <div className={`${styles.controls} ${isControlsVisible ? styles.visible : styles.hidden} ${isSmallSize ? styles.smallSize : ''}`}>
         <div className={styles.overlay}>
           <div className={styles.progressBarContainer}>
             <div
               ref={progressRef}
               className={styles.progressBar}
-              onClick={handleProgressClick}
+              onClick={handleMouseDown}
               onMouseMove={handleMouseMove}
               onMouseLeave={handleMouseLeave}
               onMouseDown={handleMouseDown}
@@ -245,13 +234,13 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ src, srcs }) => {
           </div>
           <div className={styles.controlsContent}>
             <div className={styles.leftControls}>
-              <button type="button" className={styles.playPauseButton} onClick={togglePlayPause}>
+              <button className={styles.playPauseButton} onClick={togglePlayPause}>
                 {isPlaying ? <PauseIcon /> : <PlayIcon />}
               </button>
               {!isSmallSize && (<span className={styles.time}>{formatTime(currentTime)} / {formatTime(duration)}</span>)}
             </div>
             <div className={styles.rightControls}>
-              <button type="button" className={styles.muteButton} onClick={toggleMute}>
+              <button className={styles.muteButton} onClick={toggleMute}>
                 {isMuted ? <UnmuteIcon /> : <MuteIcon />}
               </button>
               {!isSmallSize && (
@@ -275,7 +264,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ src, srcs }) => {
                   </div>
                 </div>
               )}
-              <button type="button" className={styles.fullscreenButton} onClick={toggleFullscreen}>
+              <button className={styles.fullscreenButton} onClick={toggleFullscreen}>
                 <FullscreenIcon />
               </button>
             </div>

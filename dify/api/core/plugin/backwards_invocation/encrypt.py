@@ -6,7 +6,7 @@ from models.account import Tenant
 
 class PluginEncrypter:
     @classmethod
-    def invoke_encrypt(cls, tenant: Tenant, payload: RequestInvokeEncrypt):
+    def invoke_encrypt(cls, tenant: Tenant, payload: RequestInvokeEncrypt) -> dict:
         encrypter, cache = create_provider_encrypter(
             tenant_id=tenant.id,
             config=payload.config,

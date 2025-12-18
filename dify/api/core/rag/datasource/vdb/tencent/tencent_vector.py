@@ -1,7 +1,7 @@
 import json
 import logging
 import math
-from typing import Any
+from typing import Any, Optional
 
 from pydantic import BaseModel
 from tcvdb_text.encoder import BM25Encoder  # type: ignore
@@ -24,10 +24,10 @@ logger = logging.getLogger(__name__)
 
 class TencentConfig(BaseModel):
     url: str
-    api_key: str | None = None
+    api_key: Optional[str]
     timeout: float = 30
-    username: str | None = None
-    database: str | None = None
+    username: Optional[str]
+    database: Optional[str]
     index_type: str = "HNSW"
     metric_type: str = "IP"
     shard: int = 1
@@ -37,9 +37,6 @@ class TencentConfig(BaseModel):
 
     def to_tencent_params(self):
         return {"url": self.url, "username": self.username, "key": self.api_key, "timeout": self.timeout}
-
-
-bm25 = BM25Encoder.default("zh")
 
 
 class TencentVector(BaseVector):
@@ -56,6 +53,7 @@ class TencentVector(BaseVector):
         self._dimension = 1024
         self._init_database()
         self._load_collection()
+        self._bm25 = BM25Encoder.default("zh")
 
     def _load_collection(self):
         """
@@ -82,7 +80,7 @@ class TencentVector(BaseVector):
     def get_type(self) -> str:
         return VectorType.TENCENT
 
-    def to_index_struct(self):
+    def to_index_struct(self) -> dict:
         return {"type": self.get_type(), "vector_store": {"class_prefix": self._collection_name}}
 
     def _has_collection(self) -> bool:
@@ -92,7 +90,7 @@ class TencentVector(BaseVector):
             )
         )
 
-    def _create_collection(self, dimension: int):
+    def _create_collection(self, dimension: int) -> None:
         self._dimension = dimension
         lock_name = f"vector_indexing_lock_{self._collection_name}"
         with redis_client.lock(lock_name, timeout=20):
@@ -188,7 +186,7 @@ class TencentVector(BaseVector):
                     metadata=metadata,
                 )
                 if self._enable_hybrid_search:
-                    doc.__dict__["sparse_vector"] = bm25.encode_texts(texts[i])
+                    doc.__dict__["sparse_vector"] = self._bm25.encode_texts(texts[i])
                 docs.append(doc)
             self._client.upsert(
                 database_name=self._client_config.database,
@@ -205,7 +203,7 @@ class TencentVector(BaseVector):
             return True
         return False
 
-    def delete_by_ids(self, ids: list[str]):
+    def delete_by_ids(self, ids: list[str]) -> None:
         if not ids:
             return
 
@@ -222,7 +220,7 @@ class TencentVector(BaseVector):
                 database_name=self._client_config.database, collection_name=self.collection_name, document_ids=batch_ids
             )
 
-    def delete_by_metadata_field(self, key: str, value: str):
+    def delete_by_metadata_field(self, key: str, value: str) -> None:
         self._client.delete(
             database_name=self._client_config.database,
             collection_name=self.collection_name,
@@ -266,7 +264,7 @@ class TencentVector(BaseVector):
             match=[
                 KeywordSearch(
                     field_name="sparse_vector",
-                    data=bm25.encode_queries(query),
+                    data=self._bm25.encode_queries(query),
                 ),
             ],
             rerank=WeightedRerank(
@@ -293,13 +291,13 @@ class TencentVector(BaseVector):
                 score = 1 - result.get("score", 0.0)
             else:
                 score = result.get("score", 0.0)
-            if score >= score_threshold:
+            if score > score_threshold:
                 meta["score"] = score
                 doc = Document(page_content=result.get(self.field_text), metadata=meta)
                 docs.append(doc)
         return docs
 
-    def delete(self):
+    def delete(self) -> None:
         if self._has_collection():
             self._client.drop_collection(
                 database_name=self._client_config.database, collection_name=self.collection_name

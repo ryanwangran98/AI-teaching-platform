@@ -1,20 +1,23 @@
 import json
 from collections.abc import Mapping, MutableMapping, Sequence
-from typing import Any, cast
+from typing import Any, Optional, cast
 
 from core.app.entities.app_invoke_entities import InvokeFrom
 from core.variables import SegmentType, Variable
-from core.variables.consts import SELECTORS_LENGTH
+from core.variables.consts import MIN_SELECTORS_LENGTH
 from core.workflow.constants import CONVERSATION_VARIABLE_NODE_ID
 from core.workflow.conversation_variable_updater import ConversationVariableUpdater
-from core.workflow.enums import NodeType, WorkflowNodeExecutionStatus
-from core.workflow.node_events import NodeRunResult
-from core.workflow.nodes.base.node import Node
+from core.workflow.entities.node_entities import NodeRunResult
+from core.workflow.entities.workflow_node_execution import WorkflowNodeExecutionStatus
+from core.workflow.nodes.base import BaseNode
+from core.workflow.nodes.base.entities import BaseNodeData, RetryConfig
+from core.workflow.nodes.enums import ErrorStrategy, NodeType
 from core.workflow.nodes.variable_assigner.common import helpers as common_helpers
 from core.workflow.nodes.variable_assigner.common.exc import VariableOperatorNodeError
 from core.workflow.nodes.variable_assigner.common.impl import conversation_variable_updater_factory
 
 from . import helpers
+from .constants import EMPTY_VALUE_MAPPING
 from .entities import VariableAssignerNodeData, VariableOperationItem
 from .enums import InputType, Operation
 from .exc import (
@@ -43,32 +46,38 @@ def _source_mapping_from_item(mapping: MutableMapping[str, Sequence[str]], node_
     selector = item.value
     if not isinstance(selector, list):
         raise InvalidDataError(f"selector is not a list, {node_id=}, {item=}")
-    if len(selector) < SELECTORS_LENGTH:
+    if len(selector) < MIN_SELECTORS_LENGTH:
         raise InvalidDataError(f"selector too short, {node_id=}, {item=}")
     selector_str = ".".join(selector)
     key = f"{node_id}.#{selector_str}#"
     mapping[key] = selector
 
 
-class VariableAssignerNode(Node[VariableAssignerNodeData]):
-    node_type = NodeType.VARIABLE_ASSIGNER
+class VariableAssignerNode(BaseNode):
+    _node_type = NodeType.VARIABLE_ASSIGNER
 
-    def blocks_variable_output(self, variable_selectors: set[tuple[str, ...]]) -> bool:
-        """
-        Check if this Variable Assigner node blocks the output of specific variables.
+    _node_data: VariableAssignerNodeData
 
-        Returns True if this node updates any of the requested conversation variables.
-        """
-        # Check each item in this Variable Assigner node
-        for item in self.node_data.items:
-            # Convert the item's variable_selector to tuple for comparison
-            item_selector_tuple = tuple(item.variable_selector)
+    def init_node_data(self, data: Mapping[str, Any]) -> None:
+        self._node_data = VariableAssignerNodeData.model_validate(data)
 
-            # Check if this item updates any of the requested variables
-            if item_selector_tuple in variable_selectors:
-                return True
+    def _get_error_strategy(self) -> Optional[ErrorStrategy]:
+        return self._node_data.error_strategy
 
-        return False
+    def _get_retry_config(self) -> RetryConfig:
+        return self._node_data.retry_config
+
+    def _get_title(self) -> str:
+        return self._node_data.title
+
+    def _get_description(self) -> Optional[str]:
+        return self._node_data.desc
+
+    def _get_default_value_dict(self) -> dict[str, Any]:
+        return self._node_data.default_value_dict
+
+    def get_base_node_data(self) -> BaseNodeData:
+        return self._node_data
 
     def _conv_var_updater_factory(self) -> ConversationVariableUpdater:
         return conversation_variable_updater_factory()
@@ -95,13 +104,13 @@ class VariableAssignerNode(Node[VariableAssignerNodeData]):
         return var_mapping
 
     def _run(self) -> NodeRunResult:
-        inputs = self.node_data.model_dump()
+        inputs = self._node_data.model_dump()
         process_data: dict[str, Any] = {}
         # NOTE: This node has no outputs
         updated_variable_selectors: list[Sequence[str]] = []
 
         try:
-            for item in self.node_data.items:
+            for item in self._node_data.items:
                 variable = self.graph_runtime_state.variable_pool.get(item.variable_selector)
 
                 # ==================== Validation Part
@@ -224,7 +233,7 @@ class VariableAssignerNode(Node[VariableAssignerNodeData]):
             case Operation.OVER_WRITE:
                 return value
             case Operation.CLEAR:
-                return SegmentType.get_zero_value(variable.value_type).to_object()
+                return EMPTY_VALUE_MAPPING[variable.value_type]
             case Operation.APPEND:
                 return variable.value + [value]
             case Operation.EXTEND:
@@ -249,3 +258,5 @@ class VariableAssignerNode(Node[VariableAssignerNodeData]):
                 if not variable.value:
                     return variable.value
                 return variable.value[:-1]
+            case _:
+                raise OperationNotSupportedError(operation=operation, variable_type=variable.value_type)

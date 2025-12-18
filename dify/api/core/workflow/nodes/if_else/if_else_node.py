@@ -1,20 +1,44 @@
 from collections.abc import Mapping, Sequence
-from typing import Any, Literal
+from typing import Any, Literal, Optional
 
 from typing_extensions import deprecated
 
-from core.workflow.enums import NodeExecutionType, NodeType, WorkflowNodeExecutionStatus
-from core.workflow.node_events import NodeRunResult
-from core.workflow.nodes.base.node import Node
+from core.workflow.entities.node_entities import NodeRunResult
+from core.workflow.entities.variable_pool import VariablePool
+from core.workflow.entities.workflow_node_execution import WorkflowNodeExecutionStatus
+from core.workflow.nodes.base import BaseNode
+from core.workflow.nodes.base.entities import BaseNodeData, RetryConfig
+from core.workflow.nodes.enums import ErrorStrategy, NodeType
 from core.workflow.nodes.if_else.entities import IfElseNodeData
-from core.workflow.runtime import VariablePool
 from core.workflow.utils.condition.entities import Condition
 from core.workflow.utils.condition.processor import ConditionProcessor
 
 
-class IfElseNode(Node[IfElseNodeData]):
-    node_type = NodeType.IF_ELSE
-    execution_type = NodeExecutionType.BRANCH
+class IfElseNode(BaseNode):
+    _node_type = NodeType.IF_ELSE
+
+    _node_data: IfElseNodeData
+
+    def init_node_data(self, data: Mapping[str, Any]) -> None:
+        self._node_data = IfElseNodeData.model_validate(data)
+
+    def _get_error_strategy(self) -> Optional[ErrorStrategy]:
+        return self._node_data.error_strategy
+
+    def _get_retry_config(self) -> RetryConfig:
+        return self._node_data.retry_config
+
+    def _get_title(self) -> str:
+        return self._node_data.title
+
+    def _get_description(self) -> Optional[str]:
+        return self._node_data.desc
+
+    def _get_default_value_dict(self) -> dict[str, Any]:
+        return self._node_data.default_value_dict
+
+    def get_base_node_data(self) -> BaseNodeData:
+        return self._node_data
 
     @classmethod
     def version(cls) -> str:
@@ -25,18 +49,18 @@ class IfElseNode(Node[IfElseNodeData]):
         Run node
         :return:
         """
-        node_inputs: dict[str, Sequence[Mapping[str, Any]]] = {"conditions": []}
+        node_inputs: dict[str, list] = {"conditions": []}
 
         process_data: dict[str, list] = {"condition_results": []}
 
-        input_conditions: Sequence[Mapping[str, Any]] = []
+        input_conditions = []
         final_result = False
-        selected_case_id = "false"
+        selected_case_id = None
         condition_processor = ConditionProcessor()
         try:
             # Check if the new cases structure is used
-            if self.node_data.cases:
-                for case in self.node_data.cases:
+            if self._node_data.cases:
+                for case in self._node_data.cases:
                     input_conditions, group_result, final_result = condition_processor.process_conditions(
                         variable_pool=self.graph_runtime_state.variable_pool,
                         conditions=case.conditions,
@@ -59,11 +83,11 @@ class IfElseNode(Node[IfElseNodeData]):
             else:
                 # TODO: Update database then remove this
                 # Fallback to old structure if cases are not defined
-                input_conditions, group_result, final_result = _should_not_use_old_function(  # pyright: ignore [reportDeprecated]
+                input_conditions, group_result, final_result = _should_not_use_old_function(
                     condition_processor=condition_processor,
                     variable_pool=self.graph_runtime_state.variable_pool,
-                    conditions=self.node_data.conditions or [],
-                    operator=self.node_data.logical_operator or "and",
+                    conditions=self._node_data.conditions or [],
+                    operator=self._node_data.logical_operator or "and",
                 )
 
                 selected_case_id = "true" if final_result else "false"

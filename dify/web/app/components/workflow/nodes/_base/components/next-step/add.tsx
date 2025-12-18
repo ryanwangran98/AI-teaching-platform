@@ -12,6 +12,7 @@ import {
   useAvailableBlocks,
   useNodesInteractions,
   useNodesReadOnly,
+  useWorkflow,
 } from '@/app/components/workflow/hooks'
 import BlockSelector from '@/app/components/workflow/block-selector'
 import type {
@@ -37,24 +38,28 @@ const Add = ({
   const [open, setOpen] = useState(false)
   const { handleNodeAdd } = useNodesInteractions()
   const { nodesReadOnly } = useNodesReadOnly()
-  const { availableNextBlocks } = useAvailableBlocks(nodeData.type, nodeData.isInIteration || nodeData.isInLoop)
+  const { availableNextBlocks } = useAvailableBlocks(nodeData.type, nodeData.isInIteration, nodeData.isInLoop)
+  const { checkParallelLimit } = useWorkflow()
 
-  const handleSelect = useCallback<OnSelectBlock>((type, pluginDefaultValue) => {
+  const handleSelect = useCallback<OnSelectBlock>((type, toolDefaultValue) => {
     handleNodeAdd(
       {
         nodeType: type,
-        pluginDefaultValue,
+        toolDefaultValue,
       },
       {
         prevNodeId: nodeId,
         prevNodeSourceHandle: sourceHandle,
       },
     )
-  }, [handleNodeAdd])
+  }, [nodeId, sourceHandle, handleNodeAdd])
 
   const handleOpenChange = useCallback((newOpen: boolean) => {
+    if (newOpen && !checkParallelLimit(nodeId, sourceHandle))
+      return
+
     setOpen(newOpen)
-  }, [])
+  }, [checkParallelLimit, nodeId, sourceHandle])
 
   const tip = useMemo(() => {
     if (isFailBranch)
@@ -75,7 +80,7 @@ const Add = ({
           ${nodesReadOnly && '!cursor-not-allowed'}
         `}
       >
-        <div className='mr-1.5 flex h-5 w-5 items-center justify-center rounded-[5px] bg-background-default-dimmed'>
+        <div className='bg-background-default-dimm mr-1.5 flex h-5 w-5 items-center justify-center rounded-[5px]'>
           <RiAddLine className='h-3 w-3' />
         </div>
         <div className='flex items-center uppercase'>

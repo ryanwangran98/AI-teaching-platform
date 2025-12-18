@@ -1,10 +1,7 @@
 import json
 import logging
 from collections.abc import Generator
-from typing import Union, cast
-
-from sqlalchemy import select
-from sqlalchemy.orm import Session
+from typing import Optional, Union, cast
 
 from core.app.app_config.entities import EasyUIBasedAppConfig, EasyUIBasedAppModelConfigFrom
 from core.app.apps.base_app_generator import BaseAppGenerator
@@ -84,12 +81,13 @@ class MessageBasedAppGenerator(BaseAppGenerator):
                 logger.exception("Failed to handle response, conversation_id: %s", conversation.id)
                 raise e
 
-    def _get_app_model_config(self, app_model: App, conversation: Conversation | None = None) -> AppModelConfig:
+    def _get_app_model_config(self, app_model: App, conversation: Optional[Conversation] = None) -> AppModelConfig:
         if conversation:
-            stmt = select(AppModelConfig).where(
-                AppModelConfig.id == conversation.app_model_config_id, AppModelConfig.app_id == app_model.id
+            app_model_config = (
+                db.session.query(AppModelConfig)
+                .where(AppModelConfig.id == conversation.app_model_config_id, AppModelConfig.app_id == app_model.id)
+                .first()
             )
-            app_model_config = db.session.scalar(stmt)
 
             if not app_model_config:
                 raise AppModelConfigBrokenError()
@@ -112,7 +110,7 @@ class MessageBasedAppGenerator(BaseAppGenerator):
             AgentChatAppGenerateEntity,
             AdvancedChatAppGenerateEntity,
         ],
-        conversation: Conversation | None = None,
+        conversation: Optional[Conversation] = None,
     ) -> tuple[Conversation, Message]:
         """
         Initialize generate records
@@ -156,86 +154,78 @@ class MessageBasedAppGenerator(BaseAppGenerator):
         query = application_generate_entity.query or "New conversation"
         conversation_name = (query[:20] + "…") if len(query) > 20 else query
 
-        try:
-            if not conversation:
-                conversation = Conversation(
-                    app_id=app_config.app_id,
-                    app_model_config_id=app_model_config_id,
-                    model_provider=model_provider,
-                    model_id=model_id,
-                    override_model_configs=json.dumps(override_model_configs) if override_model_configs else None,
-                    mode=app_config.app_mode.value,
-                    name=conversation_name,
-                    inputs=application_generate_entity.inputs,
-                    introduction=introduction,
-                    system_instruction="",
-                    system_instruction_tokens=0,
-                    status="normal",
-                    invoke_from=application_generate_entity.invoke_from.value,
-                    from_source=from_source,
-                    from_end_user_id=end_user_id,
-                    from_account_id=account_id,
-                )
-
-                db.session.add(conversation)
-                db.session.flush()
-                db.session.refresh(conversation)
-            else:
-                conversation.updated_at = naive_utc_now()
-
-            message = Message(
+        if not conversation:
+            conversation = Conversation(
                 app_id=app_config.app_id,
+                app_model_config_id=app_model_config_id,
                 model_provider=model_provider,
                 model_id=model_id,
                 override_model_configs=json.dumps(override_model_configs) if override_model_configs else None,
-                conversation_id=conversation.id,
+                mode=app_config.app_mode.value,
+                name=conversation_name,
                 inputs=application_generate_entity.inputs,
-                query=application_generate_entity.query,
-                message="",
-                message_tokens=0,
-                message_unit_price=0,
-                message_price_unit=0,
-                answer="",
-                answer_tokens=0,
-                answer_unit_price=0,
-                answer_price_unit=0,
-                parent_message_id=getattr(application_generate_entity, "parent_message_id", None),
-                provider_response_latency=0,
-                total_price=0,
-                currency="USD",
+                introduction=introduction,
+                system_instruction="",
+                system_instruction_tokens=0,
+                status="normal",
                 invoke_from=application_generate_entity.invoke_from.value,
                 from_source=from_source,
                 from_end_user_id=end_user_id,
                 from_account_id=account_id,
-                app_mode=app_config.app_mode,
             )
 
-            db.session.add(message)
-            db.session.flush()
-            db.session.refresh(message)
-
-            message_files = []
-            for file in application_generate_entity.files:
-                message_file = MessageFile(
-                    message_id=message.id,
-                    type=file.type,
-                    transfer_method=file.transfer_method,
-                    belongs_to="user",
-                    url=file.remote_url,
-                    upload_file_id=file.related_id,
-                    created_by_role=(CreatorUserRole.ACCOUNT if account_id else CreatorUserRole.END_USER),
-                    created_by=account_id or end_user_id or "",
-                )
-                message_files.append(message_file)
-
-            if message_files:
-                db.session.add_all(message_files)
-
+            db.session.add(conversation)
             db.session.commit()
-            return conversation, message
-        except Exception:
-            db.session.rollback()
-            raise
+            db.session.refresh(conversation)
+        else:
+            conversation.updated_at = naive_utc_now()
+            db.session.commit()
+
+        message = Message(
+            app_id=app_config.app_id,
+            model_provider=model_provider,
+            model_id=model_id,
+            override_model_configs=json.dumps(override_model_configs) if override_model_configs else None,
+            conversation_id=conversation.id,
+            inputs=application_generate_entity.inputs,
+            query=application_generate_entity.query or "",
+            message="",
+            message_tokens=0,
+            message_unit_price=0,
+            message_price_unit=0,
+            answer="",
+            answer_tokens=0,
+            answer_unit_price=0,
+            answer_price_unit=0,
+            parent_message_id=getattr(application_generate_entity, "parent_message_id", None),
+            provider_response_latency=0,
+            total_price=0,
+            currency="USD",
+            invoke_from=application_generate_entity.invoke_from.value,
+            from_source=from_source,
+            from_end_user_id=end_user_id,
+            from_account_id=account_id,
+        )
+
+        db.session.add(message)
+        db.session.commit()
+        db.session.refresh(message)
+
+        for file in application_generate_entity.files:
+            message_file = MessageFile(
+                message_id=message.id,
+                type=file.type,
+                transfer_method=file.transfer_method,
+                belongs_to="user",
+                url=file.remote_url,
+                upload_file_id=file.related_id,
+                created_by_role=(CreatorUserRole.ACCOUNT if account_id else CreatorUserRole.END_USER),
+                created_by=account_id or end_user_id or "",
+            )
+            db.session.add(message_file)
+            db.session.commit()
+
+        return conversation, message
 
     def _get_conversation_introduction(self, application_generate_entity: AppGenerateEntity) -> str:
         """
@@ -263,8 +253,7 @@ class MessageBasedAppGenerator(BaseAppGenerator):
         :param conversation_id: conversation id
         :return: conversation
         """
-        with Session(db.engine, expire_on_commit=False) as session:
-            conversation = session.scalar(select(Conversation).where(Conversation.id == conversation_id))
+        conversation = db.session.query(Conversation).where(Conversation.id == conversation_id).first()
 
         if not conversation:
             raise ConversationNotExistsError("Conversation not exists")
@@ -277,8 +266,7 @@ class MessageBasedAppGenerator(BaseAppGenerator):
         :param message_id: message id
         :return: message
         """
-        with Session(db.engine, expire_on_commit=False) as session:
-            message = session.scalar(select(Message).where(Message.id == message_id))
+        message = db.session.query(Message).where(Message.id == message_id).first()
 
         if message is None:
             raise MessageNotExistsError("Message not exists")

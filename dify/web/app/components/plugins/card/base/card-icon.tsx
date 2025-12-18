@@ -1,8 +1,6 @@
 import { RiCheckLine, RiCloseLine } from '@remixicon/react'
-import { Mcp } from '@/app/components/base/icons/src/vender/other'
 import AppIcon from '@/app/components/base/app-icon'
 import cn from '@/utils/classnames'
-import { shouldUseMcpIcon } from '@/utils/mcp'
 
 const iconSizeMap = {
   xs: 'w-4 h-4 text-base',
@@ -37,7 +35,6 @@ const Icon = ({
           icon={src.content}
           background={src.background}
           className='rounded-md'
-          innerIcon={shouldUseMcpIcon(src) ? <Mcp className='h-8 w-8 text-text-primary-on-surface' /> : undefined}
         />
       </div>
     )

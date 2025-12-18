@@ -1,13 +1,10 @@
 import logging
-from typing import Literal
-from uuid import UUID
 
-from flask import request
-from flask_restx import marshal_with
-from pydantic import BaseModel, Field
+from flask_login import current_user
+from flask_restful import marshal_with, reqparse
+from flask_restful.inputs import int_range
 from werkzeug.exceptions import InternalServerError, NotFound
 
-from controllers.common.schema import register_schema_models
 from controllers.console.app.error import (
     AppMoreLikeThisDisabledError,
     CompletionRequestError,
@@ -26,7 +23,7 @@ from core.errors.error import ModelCurrentlyNotSupportError, ProviderTokenNotIni
 from core.model_runtime.errors.invoke import InvokeError
 from fields.message_fields import message_infinite_scroll_pagination_fields
 from libs import helper
-from libs.login import current_account_with_tenant
+from libs.helper import uuid_value
 from models.model import AppMode
 from services.app_generate_service import AppGenerateService
 from services.errors.app import MoreLikeThisDisabledError
@@ -38,52 +35,25 @@ from services.errors.message import (
 )
 from services.message_service import MessageService
 
-from .. import console_ns
 
-logger = logging.getLogger(__name__)
-
-
-class MessageListQuery(BaseModel):
-    conversation_id: UUID
-    first_id: UUID | None = None
-    limit: int = Field(default=20, ge=1, le=100)
-
-
-class MessageFeedbackPayload(BaseModel):
-    rating: Literal["like", "dislike"] | None = None
-    content: str | None = None
-
-
-class MoreLikeThisQuery(BaseModel):
-    response_mode: Literal["blocking", "streaming"]
-
-
-register_schema_models(console_ns, MessageListQuery, MessageFeedbackPayload, MoreLikeThisQuery)
-
-
-@console_ns.route(
-    "/installed-apps/<uuid:installed_app_id>/messages",
-    endpoint="installed_app_messages",
-)
 class MessageListApi(InstalledAppResource):
     @marshal_with(message_infinite_scroll_pagination_fields)
-    @console_ns.expect(console_ns.models[MessageListQuery.__name__])
     def get(self, installed_app):
-        current_user, _ = current_account_with_tenant()
         app_model = installed_app.app
 
         app_mode = AppMode.value_of(app_model.mode)
         if app_mode not in {AppMode.CHAT, AppMode.AGENT_CHAT, AppMode.ADVANCED_CHAT}:
             raise NotChatAppError()
-        args = MessageListQuery.model_validate(request.args.to_dict())
+
+        parser = reqparse.RequestParser()
+        parser.add_argument("conversation_id", required=True, type=uuid_value, location="args")
+        parser.add_argument("first_id", type=uuid_value, location="args")
+        parser.add_argument("limit", type=int_range(1, 100), required=False, default=20, location="args")
+        args = parser.parse_args()
 
         try:
             return MessageService.pagination_by_first_id(
-                app_model,
-                current_user,
-                str(args.conversation_id),
-                str(args.first_id) if args.first_id else None,
-                args.limit,
+                app_model, current_user, args["conversation_id"], args["first_id"], args["limit"]
             )
         except ConversationNotExistsError:
             raise NotFound("Conversation Not Exists.")
@@ -91,27 +61,24 @@ class MessageListApi(InstalledAppResource):
             raise NotFound("First Message Not Exists.")
 
 
-@console_ns.route(
-    "/installed-apps/<uuid:installed_app_id>/messages/<uuid:message_id>/feedbacks",
-    endpoint="installed_app_message_feedback",
-)
 class MessageFeedbackApi(InstalledAppResource):
-    @console_ns.expect(console_ns.models[MessageFeedbackPayload.__name__])
     def post(self, installed_app, message_id):
-        current_user, _ = current_account_with_tenant()
         app_model = installed_app.app
 
         message_id = str(message_id)
 
-        payload = MessageFeedbackPayload.model_validate(console_ns.payload or {})
+        parser = reqparse.RequestParser()
+        parser.add_argument("rating", type=str, choices=["like", "dislike", None], location="json")
+        parser.add_argument("content", type=str, location="json")
+        args = parser.parse_args()
 
         try:
             MessageService.create_feedback(
                 app_model=app_model,
                 message_id=message_id,
                 user=current_user,
-                rating=payload.rating,
-                content=payload.content,
+                rating=args.get("rating"),
+                content=args.get("content"),
             )
         except MessageNotExistsError:
             raise NotFound("Message Not Exists.")
@@ -119,23 +86,21 @@ class MessageFeedbackApi(InstalledAppResource):
         return {"result": "success"}
 
 
-@console_ns.route(
-    "/installed-apps/<uuid:installed_app_id>/messages/<uuid:message_id>/more-like-this",
-    endpoint="installed_app_more_like_this",
-)
 class MessageMoreLikeThisApi(InstalledAppResource):
-    @console_ns.expect(console_ns.models[MoreLikeThisQuery.__name__])
     def get(self, installed_app, message_id):
-        current_user, _ = current_account_with_tenant()
         app_model = installed_app.app
         if app_model.mode != "completion":
             raise NotCompletionAppError()
 
         message_id = str(message_id)
 
-        args = MoreLikeThisQuery.model_validate(request.args.to_dict())
+        parser = reqparse.RequestParser()
+        parser.add_argument(
+            "response_mode", type=str, required=True, choices=["blocking", "streaming"], location="args"
+        )
+        args = parser.parse_args()
 
-        streaming = args.response_mode == "streaming"
+        streaming = args["response_mode"] == "streaming"
 
         try:
             response = AppGenerateService.generate_more_like_this(
@@ -161,17 +126,12 @@ class MessageMoreLikeThisApi(InstalledAppResource):
         except ValueError as e:
             raise e
         except Exception:
-            logger.exception("internal server error.")
+            logging.exception("internal server error.")
             raise InternalServerError()
 
 
-@console_ns.route(
-    "/installed-apps/<uuid:installed_app_id>/messages/<uuid:message_id>/suggested-questions",
-    endpoint="installed_app_suggested_question",
-)
 class MessageSuggestedQuestionApi(InstalledAppResource):
     def get(self, installed_app, message_id):
-        current_user, _ = current_account_with_tenant()
         app_model = installed_app.app
         app_mode = AppMode.value_of(app_model.mode)
         if app_mode not in {AppMode.CHAT, AppMode.AGENT_CHAT, AppMode.ADVANCED_CHAT}:
@@ -198,7 +158,7 @@ class MessageSuggestedQuestionApi(InstalledAppResource):
         except InvokeError as e:
             raise CompletionRequestError(e.description)
         except Exception:
-            logger.exception("internal server error.")
+            logging.exception("internal server error.")
             raise InternalServerError()
 
         return {"data": questions}

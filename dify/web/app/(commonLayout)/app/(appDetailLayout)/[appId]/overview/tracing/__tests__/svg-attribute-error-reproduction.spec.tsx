@@ -3,6 +3,13 @@ import { render } from '@testing-library/react'
 import '@testing-library/jest-dom'
 import { OpikIconBig } from '@/app/components/base/icons/src/public/tracing'
 
+// Mock dependencies to isolate the SVG rendering issue
+jest.mock('react-i18next', () => ({
+  useTranslation: () => ({
+    t: (key: string) => key,
+  }),
+}))
+
 describe('SVG Attribute Error Reproduction', () => {
   // Capture console errors
   const originalError = console.error
@@ -40,7 +47,7 @@ describe('SVG Attribute Error Reproduction', () => {
           console.log(`  ${index + 1}. ${error.substring(0, 100)}...`)
         })
       }
-      else {
+ else {
         console.log('No inkscape errors found in this render')
       }
 
@@ -143,7 +150,7 @@ describe('SVG Attribute Error Reproduction', () => {
 
     if (problematicKeys.length > 0)
       console.log(`🚨 PROBLEM: Still found problematic attributes: ${problematicKeys.join(', ')}`)
-    else
+     else
       console.log('✅ No problematic attributes found after normalization')
   })
 })

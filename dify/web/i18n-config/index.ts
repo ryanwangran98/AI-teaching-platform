@@ -14,8 +14,7 @@ export type Locale = typeof i18n['locales'][number]
 export const setLocaleOnClient = async (locale: Locale, reloadPage = true) => {
   Cookies.set(LOCALE_COOKIE_NAME, locale, { expires: 365 })
   await changeLanguage(locale)
-  if (reloadPage)
-    location.reload()
+  reloadPage && location.reload()
 }
 
 export const getLocaleOnClient = (): Locale => {

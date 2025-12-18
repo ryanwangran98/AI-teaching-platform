@@ -36,29 +36,20 @@ const DatePicker = ({
   renderTrigger,
   triggerWrapClassName,
   popupZIndexClassname = 'z-[11]',
-  noConfirm,
-  getIsDateDisabled,
 }: DatePickerProps) => {
   const { t } = useTranslation()
   const [isOpen, setIsOpen] = useState(false)
   const [view, setView] = useState(ViewType.date)
   const containerRef = useRef<HTMLDivElement>(null)
   const isInitial = useRef(true)
-
-  // Normalize the value to ensure that all subsequent uses are Day.js objects.
-  const normalizedValue = useMemo(() => {
-    if (!value) return undefined
-    return dayjs.isDayjs(value) ? value.tz(timezone) : dayjs(value).tz(timezone)
-  }, [value, timezone])
-
-  const inputValue = useRef(normalizedValue).current
+  const inputValue = useRef(value ? value.tz(timezone) : undefined).current
   const defaultValue = useRef(getDateWithTimezone({ timezone })).current
 
   const [currentDate, setCurrentDate] = useState(inputValue || defaultValue)
   const [selectedDate, setSelectedDate] = useState(inputValue)
 
-  const [selectedMonth, setSelectedMonth] = useState(() => (inputValue || defaultValue).month())
-  const [selectedYear, setSelectedYear] = useState(() => (inputValue || defaultValue).year())
+  const [selectedMonth, setSelectedMonth] = useState((inputValue || defaultValue).month())
+  const [selectedYear, setSelectedYear] = useState((inputValue || defaultValue).year())
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -77,8 +68,8 @@ const DatePicker = ({
       return
     }
     clearMonthMapCache()
-    if (normalizedValue) {
-      const newValue = getDateWithTimezone({ date: normalizedValue, timezone })
+    if (value) {
+      const newValue = getDateWithTimezone({ date: value, timezone })
       setCurrentDate(newValue)
       setSelectedDate(newValue)
       onChange(newValue)
@@ -97,9 +88,9 @@ const DatePicker = ({
     }
     setView(ViewType.date)
     setIsOpen(true)
-    if (normalizedValue) {
-      setCurrentDate(normalizedValue)
-      setSelectedDate(normalizedValue)
+    if (value) {
+      setCurrentDate(value)
+      setSelectedDate(value)
     }
   }
 
@@ -122,26 +113,23 @@ const DatePicker = ({
     setCurrentDate(currentDate.clone().subtract(1, 'month'))
   }, [currentDate])
 
-  const handleConfirmDate = useCallback((passedInSelectedDate?: Dayjs) => {
-    // passedInSelectedDate may be a click event when noConfirm is false
-    const nextDate = (dayjs.isDayjs(passedInSelectedDate) ? passedInSelectedDate : selectedDate)
-    onChange(nextDate ? nextDate.tz(timezone) : undefined)
-    setIsOpen(false)
-  }, [selectedDate, onChange, timezone])
-
   const handleDateSelect = useCallback((day: Dayjs) => {
     const newDate = cloneTime(day, selectedDate || getDateWithTimezone({ timezone }))
     setCurrentDate(newDate)
     setSelectedDate(newDate)
-    if (noConfirm)
-      handleConfirmDate(newDate)
-  }, [selectedDate, timezone, noConfirm, handleConfirmDate])
+  }, [selectedDate, timezone])
 
   const handleSelectCurrentDate = () => {
     const newDate = getDateWithTimezone({ timezone })
     setCurrentDate(newDate)
     setSelectedDate(newDate)
     onChange(newDate)
+    setIsOpen(false)
+  }
+
+  const handleConfirmDate = () => {
+    // debugger
+    onChange(selectedDate ? selectedDate.tz(timezone) : undefined)
     setIsOpen(false)
   }
 
@@ -204,7 +192,7 @@ const DatePicker = ({
   }
 
   const timeFormat = needTimePicker ? t('time.dateFormats.displayWithTime') : t('time.dateFormats.display')
-  const displayValue = normalizedValue?.format(timeFormat) || ''
+  const displayValue = value?.format(timeFormat) || ''
   const displayTime = selectedDate?.format('hh:mm A') || '--:-- --'
   const placeholderDate = isOpen && selectedDate ? selectedDate.format(timeFormat) : (placeholder || t('time.defaultPlaceholder'))
 
@@ -216,7 +204,7 @@ const DatePicker = ({
     >
       <PortalToFollowElemTrigger className={triggerWrapClassName}>
         {renderTrigger ? (renderTrigger({
-          value: normalizedValue,
+          value,
           selectedDate,
           isOpen,
           handleClear,
@@ -275,7 +263,6 @@ const DatePicker = ({
                 days={days}
                 selectedDate={selectedDate}
                 onDateClick={handleDateSelect}
-                getIsDateDisabled={getIsDateDisabled}
               />
             ) : view === ViewType.yearMonth ? (
               <YearAndMonthPickerOptions
@@ -296,7 +283,7 @@ const DatePicker = ({
 
           {/* Footer */}
           {
-            [ViewType.date, ViewType.time].includes(view) && !noConfirm && (
+            [ViewType.date, ViewType.time].includes(view) ? (
               <DatePickerFooter
                 needTimePicker={needTimePicker}
                 displayTime={displayTime}
@@ -305,10 +292,7 @@ const DatePicker = ({
                 handleSelectCurrentDate={handleSelectCurrentDate}
                 handleConfirmDate={handleConfirmDate}
               />
-            )
-          }
-          {
-            ![ViewType.date, ViewType.time].includes(view) && (
+            ) : (
               <YearAndMonthPickerFooter
                 handleYearMonthCancel={handleYearMonthCancel}
                 handleYearMonthConfirm={handleYearMonthConfirm}

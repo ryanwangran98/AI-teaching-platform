@@ -31,6 +31,7 @@ const translation = {
       sync: 'Синхронизировать',
       resume: 'Возобновить',
       pause: 'Пауза',
+      download: 'Скачать файл',
     },
     index: {
       enable: 'Включить',
@@ -81,10 +82,6 @@ const translation = {
       ok: 'ОК',
     },
     learnMore: 'Подробнее',
-    sort: {
-      uploadTime: 'Время загрузки',
-      hitCount: 'Количество извлечений',
-    },
   },
   metadata: {
     title: 'Метаданные',
@@ -103,9 +100,6 @@ const translation = {
       upload_file: 'Загрузить файл',
       notion: 'Синхронизировать из Notion',
       github: 'Синхронизировать из Github',
-      local_file: 'Локальный файл',
-      online_document: 'Онлайн-документ',
-      website_crawl: 'Сканирование сайта',
     },
     type: {
       book: 'Книга',
@@ -343,13 +337,13 @@ const translation = {
     childMaxTokens: 'Ребёнок',
     hierarchical: 'Родитель-дочерний',
     pause: 'Пауза',
-    waiting: 'Ожидание встраивания...',
   },
   segment: {
     paragraphs: 'Абзацы',
     keywords: 'Ключевые слова',
     addKeyWord: 'Добавить ключевое слово',
     keywordError: 'Максимальная длина ключевого слова - 20',
+    characters: 'символов',
     hitCount: 'Количество обращений',
     vectorHash: 'Векторный хэш: ',
     questionPlaceholder: 'добавьте вопрос здесь',
@@ -401,7 +395,6 @@ const translation = {
     newChildChunk: 'Новый дочерний чанк',
     keywordEmpty: 'Ключевое слово не может быть пустым',
     keywordDuplicate: 'Ключевое слово уже существует',
-    allFilesUploaded: 'Все файлы должны быть загружены перед сохранением',
   },
 }
 

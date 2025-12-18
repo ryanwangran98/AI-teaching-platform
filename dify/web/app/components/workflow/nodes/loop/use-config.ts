@@ -2,7 +2,7 @@ import {
   useCallback,
   useRef,
 } from 'react'
-import { produce } from 'immer'
+import produce from 'immer'
 import { v4 as uuid4 } from 'uuid'
 import {
   useIsChatMode,
@@ -15,24 +15,9 @@ import useNodeCrud from '../_base/hooks/use-node-crud'
 import { toNodeOutputVars } from '../_base/components/variable/utils'
 import { getOperators } from './utils'
 import { LogicalOperator } from './types'
-import type {
-  HandleAddCondition,
-  HandleAddSubVariableCondition,
-  HandleRemoveCondition,
-  HandleToggleConditionLogicalOperator,
-  HandleToggleSubVariableConditionLogicalOperator,
-  HandleUpdateCondition,
-  HandleUpdateSubVariableCondition,
-  LoopNodeType,
-} from './types'
+import type { HandleAddCondition, HandleAddSubVariableCondition, HandleRemoveCondition, HandleToggleConditionLogicalOperator, HandleToggleSubVariableConditionLogicalOperator, HandleUpdateCondition, HandleUpdateSubVariableCondition, LoopNodeType } from './types'
 import useIsVarFileAttribute from './use-is-var-file-attribute'
 import { useStore } from '@/app/components/workflow/store'
-import {
-  useAllBuiltInTools,
-  useAllCustomTools,
-  useAllMCPTools,
-  useAllWorkflowTools,
-} from '@/service/use-tools'
 
 const useConfig = (id: string, payload: LoopNodeType) => {
   const { nodesReadOnly: readOnly } = useNodesReadOnly()
@@ -53,19 +38,7 @@ const useConfig = (id: string, payload: LoopNodeType) => {
   // output
   const { getLoopNodeChildren } = useWorkflow()
   const loopChildrenNodes = [{ id, data: payload } as any, ...getLoopNodeChildren(id)]
-  const { data: buildInTools } = useAllBuiltInTools()
-  const { data: customTools } = useAllCustomTools()
-  const { data: workflowTools } = useAllWorkflowTools()
-  const { data: mcpTools } = useAllMCPTools()
-  const dataSourceList = useStore(s => s.dataSourceList)
-  const allPluginInfoList = {
-    buildInTools: buildInTools || [],
-    customTools: customTools || [],
-    workflowTools: workflowTools || [],
-    mcpTools: mcpTools || [],
-    dataSourceList: dataSourceList || [],
-  }
-  const childrenNodeVars = toNodeOutputVars(loopChildrenNodes, isChatMode, undefined, [], conversationVariables, [], allPluginInfoList)
+  const childrenNodeVars = toNodeOutputVars(loopChildrenNodes, isChatMode, undefined, [], conversationVariables)
 
   const {
     getIsVarFileAttribute,
@@ -74,14 +47,14 @@ const useConfig = (id: string, payload: LoopNodeType) => {
   })
 
   const changeErrorResponseMode = useCallback((item: { value: unknown }) => {
-    const newInputs = produce(inputsRef.current, (draft) => {
+    const newInputs = produce(inputs, (draft) => {
       draft.error_handle_mode = item.value as ErrorHandleMode
     })
-    handleInputsChange(newInputs)
-  }, [inputs, handleInputsChange])
+    setInputs(newInputs)
+  }, [inputs, setInputs])
 
   const handleAddCondition = useCallback<HandleAddCondition>((valueSelector, varItem) => {
-    const newInputs = produce(inputsRef.current, (draft) => {
+    const newInputs = produce(inputs, (draft) => {
       if (!draft.break_conditions)
         draft.break_conditions = []
 
@@ -90,37 +63,37 @@ const useConfig = (id: string, payload: LoopNodeType) => {
         varType: varItem.type,
         variable_selector: valueSelector,
         comparison_operator: getOperators(varItem.type, getIsVarFileAttribute(valueSelector) ? { key: valueSelector.slice(-1)[0] } : undefined)[0],
-        value: varItem.type === VarType.boolean ? 'false' : '',
+        value: '',
       })
     })
-    handleInputsChange(newInputs)
-  }, [getIsVarFileAttribute, handleInputsChange])
+    setInputs(newInputs)
+  }, [getIsVarFileAttribute, inputs, setInputs])
 
   const handleRemoveCondition = useCallback<HandleRemoveCondition>((conditionId) => {
-    const newInputs = produce(inputsRef.current, (draft) => {
+    const newInputs = produce(inputs, (draft) => {
       draft.break_conditions = draft.break_conditions?.filter(item => item.id !== conditionId)
     })
-    handleInputsChange(newInputs)
-  }, [handleInputsChange])
+    setInputs(newInputs)
+  }, [inputs, setInputs])
 
   const handleUpdateCondition = useCallback<HandleUpdateCondition>((conditionId, newCondition) => {
-    const newInputs = produce(inputsRef.current, (draft) => {
+    const newInputs = produce(inputs, (draft) => {
       const targetCondition = draft.break_conditions?.find(item => item.id === conditionId)
       if (targetCondition)
         Object.assign(targetCondition, newCondition)
     })
-    handleInputsChange(newInputs)
-  }, [handleInputsChange])
+    setInputs(newInputs)
+  }, [inputs, setInputs])
 
   const handleToggleConditionLogicalOperator = useCallback<HandleToggleConditionLogicalOperator>(() => {
-    const newInputs = produce(inputsRef.current, (draft) => {
+    const newInputs = produce(inputs, (draft) => {
       draft.logical_operator = draft.logical_operator === LogicalOperator.and ? LogicalOperator.or : LogicalOperator.and
     })
-    handleInputsChange(newInputs)
-  }, [handleInputsChange])
+    setInputs(newInputs)
+  }, [inputs, setInputs])
 
   const handleAddSubVariableCondition = useCallback<HandleAddSubVariableCondition>((conditionId: string, key?: string) => {
-    const newInputs = produce(inputsRef.current, (draft) => {
+    const newInputs = produce(inputs, (draft) => {
       const condition = draft.break_conditions?.find(item => item.id === conditionId)
       if (!condition)
         return
@@ -146,11 +119,11 @@ const useConfig = (id: string, payload: LoopNodeType) => {
         })
       }
     })
-    handleInputsChange(newInputs)
-  }, [handleInputsChange])
+    setInputs(newInputs)
+  }, [inputs, setInputs])
 
   const handleRemoveSubVariableCondition = useCallback((conditionId: string, subConditionId: string) => {
-    const newInputs = produce(inputsRef.current, (draft) => {
+    const newInputs = produce(inputs, (draft) => {
       const condition = draft.break_conditions?.find(item => item.id === conditionId)
       if (!condition)
         return
@@ -160,11 +133,11 @@ const useConfig = (id: string, payload: LoopNodeType) => {
       if (subVarCondition)
         subVarCondition.conditions = subVarCondition.conditions.filter(item => item.id !== subConditionId)
     })
-    handleInputsChange(newInputs)
-  }, [handleInputsChange])
+    setInputs(newInputs)
+  }, [inputs, setInputs])
 
   const handleUpdateSubVariableCondition = useCallback<HandleUpdateSubVariableCondition>((conditionId, subConditionId, newSubCondition) => {
-    const newInputs = produce(inputsRef.current, (draft) => {
+    const newInputs = produce(inputs, (draft) => {
       const targetCondition = draft.break_conditions?.find(item => item.id === conditionId)
       if (targetCondition && targetCondition.sub_variable_condition) {
         const targetSubCondition = targetCondition.sub_variable_condition.conditions.find(item => item.id === subConditionId)
@@ -172,24 +145,24 @@ const useConfig = (id: string, payload: LoopNodeType) => {
           Object.assign(targetSubCondition, newSubCondition)
       }
     })
-    handleInputsChange(newInputs)
-  }, [handleInputsChange])
+    setInputs(newInputs)
+  }, [inputs, setInputs])
 
   const handleToggleSubVariableConditionLogicalOperator = useCallback<HandleToggleSubVariableConditionLogicalOperator>((conditionId) => {
-    const newInputs = produce(inputsRef.current, (draft) => {
+    const newInputs = produce(inputs, (draft) => {
       const targetCondition = draft.break_conditions?.find(item => item.id === conditionId)
       if (targetCondition && targetCondition.sub_variable_condition)
         targetCondition.sub_variable_condition.logical_operator = targetCondition.sub_variable_condition.logical_operator === LogicalOperator.and ? LogicalOperator.or : LogicalOperator.and
     })
-    handleInputsChange(newInputs)
-  }, [handleInputsChange])
+    setInputs(newInputs)
+  }, [inputs, setInputs])
 
   const handleUpdateLoopCount = useCallback((value: number) => {
-    const newInputs = produce(inputsRef.current, (draft) => {
+    const newInputs = produce(inputs, (draft) => {
       draft.loop_count = value
     })
-    handleInputsChange(newInputs)
-  }, [handleInputsChange])
+    setInputs(newInputs)
+  }, [inputs, setInputs])
 
   const handleAddLoopVariable = useCallback(() => {
     const newInputs = produce(inputsRef.current, (draft) => {

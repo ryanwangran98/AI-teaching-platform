@@ -1,4 +1,4 @@
-from typing import Union
+from typing import Optional, Union
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 from core.app.entities.app_invoke_entities import InvokeFrom
 from extensions.ext_database import db
 from libs.infinite_scroll_pagination import InfiniteScrollPagination
-from models import Account
+from models.account import Account
 from models.model import App, EndUser
 from models.web import PinnedConversation
 from services.conversation_service import ConversationService
@@ -19,11 +19,11 @@ class WebConversationService:
         *,
         session: Session,
         app_model: App,
-        user: Union[Account, EndUser] | None,
-        last_id: str | None,
+        user: Optional[Union[Account, EndUser]],
+        last_id: Optional[str],
         limit: int,
         invoke_from: InvokeFrom,
-        pinned: bool | None = None,
+        pinned: Optional[bool] = None,
         sort_by="-updated_at",
     ) -> InfiniteScrollPagination:
         if not user:
@@ -60,7 +60,7 @@ class WebConversationService:
         )
 
     @classmethod
-    def pin(cls, app_model: App, conversation_id: str, user: Union[Account, EndUser] | None):
+    def pin(cls, app_model: App, conversation_id: str, user: Optional[Union[Account, EndUser]]):
         if not user:
             return
         pinned_conversation = (
@@ -92,7 +92,7 @@ class WebConversationService:
         db.session.commit()
 
     @classmethod
-    def unpin(cls, app_model: App, conversation_id: str, user: Union[Account, EndUser] | None):
+    def unpin(cls, app_model: App, conversation_id: str, user: Optional[Union[Account, EndUser]]):
         if not user:
             return
         pinned_conversation = (

@@ -11,11 +11,12 @@ import { useRouter } from 'next/navigation'
 import { debounce } from 'lodash-es'
 import cn from '@/utils/classnames'
 import AppIcon from '@/app/components/base/app-icon'
-import { AppTypeIcon } from '@/app/components/app/type-selector'
+import { AiText, ChatBot, CuteRobot } from '@/app/components/base/icons/src/vender/solid/communication'
+import { Route } from '@/app/components/base/icons/src/vender/solid/mapsAndTravel'
 import { useAppContext } from '@/context/app-context'
 import { useStore as useAppStore } from '@/app/components/app/store'
 import { FileArrow01, FilePlus01, FilePlus02 } from '@/app/components/base/icons/src/vender/line/files'
-import type { AppIconType, AppModeEnum } from '@/types/app'
+import type { AppIconType } from '@/types/app'
 
 export type NavItem = {
   id: string
@@ -23,31 +24,31 @@ export type NavItem = {
   link: string
   icon_type: AppIconType | null
   icon: string
-  icon_background: string | null
+  icon_background: string
   icon_url: string | null
-  mode?: AppModeEnum
+  mode?: string
 }
 export type INavSelectorProps = {
-  navigationItems: NavItem[]
+  navs: NavItem[]
   curNav?: Omit<NavItem, 'link'>
   createText: string
   isApp?: boolean
   onCreate: (state: string) => void
-  onLoadMore?: () => void
+  onLoadmore?: () => void
 }
 
-const NavSelector = ({ curNav, navigationItems, createText, isApp, onCreate, onLoadMore }: INavSelectorProps) => {
+const NavSelector = ({ curNav, navs, createText, isApp, onCreate, onLoadmore }: INavSelectorProps) => {
   const { t } = useTranslation()
   const router = useRouter()
   const { isCurrentWorkspaceEditor } = useAppContext()
   const setAppDetail = useAppStore(state => state.setAppDetail)
 
   const handleScroll = useCallback(debounce((e) => {
-    if (typeof onLoadMore === 'function') {
+    if (typeof onLoadmore === 'function') {
       const { clientHeight, scrollHeight, scrollTop } = e.target
 
       if (clientHeight + scrollTop > scrollHeight - 50)
-        onLoadMore()
+        onLoadmore()
     }
   }, 50), [])
 
@@ -74,7 +75,7 @@ const NavSelector = ({ curNav, navigationItems, createText, isApp, onCreate, onL
           >
             <div className="overflow-auto px-1 py-1" style={{ maxHeight: '50vh' }} onScroll={handleScroll}>
               {
-                navigationItems.map(nav => (
+                navs.map(nav => (
                   <MenuItem key={nav.id}>
                     <div className='flex w-full cursor-pointer items-center truncate rounded-lg px-3 py-[6px] text-[14px] font-normal text-text-secondary hover:bg-state-base-hover' onClick={() => {
                       if (curNav?.id === nav.id)
@@ -83,15 +84,27 @@ const NavSelector = ({ curNav, navigationItems, createText, isApp, onCreate, onL
                       router.push(nav.link)
                     }} title={nav.name}>
                       <div className='relative mr-2 h-6 w-6 rounded-md'>
-                        <AppIcon
-                          size='tiny'
-                          iconType={nav.icon_type}
-                          icon={nav.icon}
-                          background={nav.icon_background}
-                          imageUrl={nav.icon_url}
-                        />
+                        <AppIcon size='tiny' iconType={nav.icon_type} icon={nav.icon} background={nav.icon_background} imageUrl={nav.icon_url} />
                         {!!nav.mode && (
-                          <AppTypeIcon type={nav.mode} wrapperClassName='absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 shadow-sm' className='h-2.5 w-2.5' />
+                          <span className={cn(
+                            'absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 rounded border-[0.5px] border-[rgba(0,0,0,0.02)] bg-white p-0.5 shadow-sm',
+                          )}>
+                            {nav.mode === 'advanced-chat' && (
+                              <ChatBot className='h-2.5 w-2.5 text-[#1570EF]' />
+                            )}
+                            {nav.mode === 'agent-chat' && (
+                              <CuteRobot className='h-2.5 w-2.5 text-indigo-600' />
+                            )}
+                            {nav.mode === 'chat' && (
+                              <ChatBot className='h-2.5 w-2.5 text-[#1570EF]' />
+                            )}
+                            {nav.mode === 'completion' && (
+                              <AiText className='h-2.5 w-2.5 text-[#0E9384]' />
+                            )}
+                            {nav.mode === 'workflow' && (
+                              <Route className='h-2.5 w-2.5 text-[#f79009]' />
+                            )}
+                          </span>
                         )}
                       </div>
                       <div className='truncate'>

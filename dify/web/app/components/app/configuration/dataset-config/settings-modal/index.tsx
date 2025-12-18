@@ -1,12 +1,12 @@
 import type { FC } from 'react'
-import { useMemo, useRef, useState } from 'react'
+import { useRef, useState } from 'react'
 import { useMount } from 'ahooks'
 import { useTranslation } from 'react-i18next'
 import { isEqual } from 'lodash-es'
 import { RiCloseLine } from '@remixicon/react'
 import { ApiConnectionMod } from '@/app/components/base/icons/src/vender/solid/development'
 import cn from '@/utils/classnames'
-import IndexMethod from '@/app/components/datasets/settings/index-method'
+import IndexMethodRadio from '@/app/components/datasets/settings/index-method-radio'
 import Divider from '@/app/components/base/divider'
 import Button from '@/app/components/base/button'
 import Input from '@/app/components/base/input'
@@ -16,7 +16,6 @@ import { useToastContext } from '@/app/components/base/toast'
 import { updateDatasetSetting } from '@/service/datasets'
 import { useAppContext } from '@/context/app-context'
 import { useModalContext } from '@/context/modal-context'
-import { ACCOUNT_SETTING_TAB } from '@/app/components/header/account-setting/constants'
 import type { RetrievalConfig } from '@/types/app'
 import RetrievalSettings from '@/app/components/datasets/external-knowledge-base/create/RetrievalSettings'
 import RetrievalMethodConfig from '@/app/components/datasets/common/retrieval-method-config'
@@ -25,13 +24,14 @@ import { isReRankModelSelected } from '@/app/components/datasets/common/check-re
 import { AlertTriangle } from '@/app/components/base/icons/src/vender/solid/alertsAndFeedback'
 import PermissionSelector from '@/app/components/datasets/settings/permission-selector'
 import ModelSelector from '@/app/components/header/account-setting/model-provider-page/model-selector'
-import { useModelList } from '@/app/components/header/account-setting/model-provider-page/hooks'
+import {
+  useModelList,
+  useModelListAndDefaultModelAndCurrentProviderAndModel,
+} from '@/app/components/header/account-setting/model-provider-page/hooks'
 import { ModelTypeEnum } from '@/app/components/header/account-setting/model-provider-page/declarations'
 import { fetchMembers } from '@/service/common'
 import type { Member } from '@/models/common'
-import { IndexingType } from '@/app/components/datasets/create/step-two'
 import { useDocLink } from '@/context/i18n'
-import { checkShowMultiModalTip } from '@/app/components/datasets/settings/utils'
 
 type SettingsModalProps = {
   currentDataset: DataSet
@@ -52,8 +52,10 @@ const SettingsModal: FC<SettingsModalProps> = ({
   onCancel,
   onSave,
 }) => {
-  const { data: embeddingModelList } = useModelList(ModelTypeEnum.textEmbedding)
-  const { data: rerankModelList } = useModelList(ModelTypeEnum.rerank)
+  const { data: embeddingsModelList } = useModelList(ModelTypeEnum.textEmbedding)
+  const {
+    modelList: rerankModelList,
+  } = useModelListAndDefaultModelAndCurrentProviderAndModel(ModelTypeEnum.rerank)
   const { t } = useTranslation()
   const docLink = useDocLink()
   const { notify } = useToastContext()
@@ -71,7 +73,6 @@ const SettingsModal: FC<SettingsModalProps> = ({
 
   const [indexMethod, setIndexMethod] = useState(currentDataset.indexing_technique)
   const [retrievalConfig, setRetrievalConfig] = useState(localeCurrentDataset?.retrieval_model_dict as RetrievalConfig)
-  const [keywordNumber, setKeywordNumber] = useState(currentDataset.keyword_number ?? 10)
 
   const handleValueChange = (type: string, value: string) => {
     setLocaleCurrentDataset({ ...localeCurrentDataset, [type]: value })
@@ -123,7 +124,6 @@ const SettingsModal: FC<SettingsModalProps> = ({
           description,
           permission,
           indexing_technique: indexMethod,
-          keyword_number: keywordNumber,
           retrieval_model: {
             ...retrievalConfig,
             score_threshold: retrievalConfig.score_threshold_enabled ? retrievalConfig.score_threshold : 0,
@@ -176,23 +176,6 @@ const SettingsModal: FC<SettingsModalProps> = ({
   useMount(() => {
     getMembers()
   })
-
-  const showMultiModalTip = useMemo(() => {
-    return checkShowMultiModalTip({
-      embeddingModel: {
-        provider: localeCurrentDataset.embedding_model_provider,
-        model: localeCurrentDataset.embedding_model,
-      },
-      rerankingEnable: retrievalConfig.reranking_enable,
-      rerankModel: {
-        rerankingProviderName: retrievalConfig.reranking_model.reranking_provider_name,
-        rerankingModelName: retrievalConfig.reranking_model.reranking_model_name,
-      },
-      indexMethod,
-      embeddingModelList,
-      rerankModelList,
-    })
-  }, [localeCurrentDataset.embedding_model, localeCurrentDataset.embedding_model_provider, retrievalConfig.reranking_enable, retrievalConfig.reranking_model, indexMethod, embeddingModelList, rerankModelList])
 
   return (
     <div
@@ -262,18 +245,17 @@ const SettingsModal: FC<SettingsModalProps> = ({
               <div className='system-sm-semibold text-text-secondary'>{t('datasetSettings.form.indexMethod')}</div>
             </div>
             <div className='grow'>
-              <IndexMethod
-                disabled={!localeCurrentDataset?.embedding_available}
+              <IndexMethodRadio
+                disable={!localeCurrentDataset?.embedding_available}
                 value={indexMethod}
-                onChange={setIndexMethod}
+                onChange={v => setIndexMethod(v!)}
+                docForm={currentDataset.doc_form}
                 currentValue={currentDataset.indexing_technique}
-                keywordNumber={keywordNumber}
-                onKeywordNumberChange={setKeywordNumber}
               />
             </div>
           </div>
         )}
-        {indexMethod === IndexingType.QUALIFIED && (
+        {indexMethod === 'high_quality' && (
           <div className={cn(rowClass)}>
             <div className={labelClass}>
               <div className='system-sm-semibold text-text-secondary'>{t('datasetSettings.form.embeddingModel')}</div>
@@ -286,12 +268,12 @@ const SettingsModal: FC<SettingsModalProps> = ({
                     provider: localeCurrentDataset.embedding_model_provider,
                     model: localeCurrentDataset.embedding_model,
                   }}
-                  modelList={embeddingModelList}
+                  modelList={embeddingsModelList}
                 />
               </div>
               <div className='mt-2 w-full text-xs leading-6 text-text-tertiary'>
                 {t('datasetSettings.form.embeddingModelTip')}
-                <span className='cursor-pointer text-text-accent' onClick={() => setShowAccountSettingModal({ payload: ACCOUNT_SETTING_TAB.PROVIDER })}>{t('datasetSettings.form.embeddingModelTipLink')}</span>
+                <span className='cursor-pointer text-text-accent' onClick={() => setShowAccountSettingModal({ payload: 'provider' })}>{t('datasetSettings.form.embeddingModelTipLink')}</span>
               </div>
             </div>
           </div>
@@ -352,12 +334,11 @@ const SettingsModal: FC<SettingsModalProps> = ({
               </div>
             </div>
             <div>
-              {indexMethod === IndexingType.QUALIFIED
+              {indexMethod === 'high_quality'
                 ? (
                   <RetrievalMethodConfig
                     value={retrievalConfig}
                     onChange={setRetrievalConfig}
-                    showMultiModalTip={showMultiModalTip}
                   />
                 )
                 : (

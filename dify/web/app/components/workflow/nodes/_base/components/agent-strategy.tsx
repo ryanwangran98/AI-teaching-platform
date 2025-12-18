@@ -22,7 +22,6 @@ import type { Node } from 'reactflow'
 import type { PluginMeta } from '@/app/components/plugins/types'
 import { noop } from 'lodash-es'
 import { useDocLink } from '@/context/i18n'
-import { AppModeEnum } from '@/types/app'
 
 export type Strategy = {
   agent_strategy_provider_name: string
@@ -88,10 +87,9 @@ export const AgentStrategy = memo((props: AgentStrategyProps) => {
             headerClassName='bg-transparent px-0 text-text-secondary system-sm-semibold-uppercase'
             containerBackgroundClassName='bg-transparent'
             gradientBorder={false}
-            nodeId={nodeId}
             isSupportPromptGenerator={!!def.auto_generate?.type}
             titleTooltip={schema.tooltip && renderI18nObject(schema.tooltip)}
-            editorContainerClassName='px-0 bg-components-input-bg-normal focus-within:bg-components-input-bg-active rounded-lg'
+            editorContainerClassName='px-0'
             availableNodes={availableNodes}
             nodesOutputVars={nodeOutputVars}
             isSupportJinja={def.template?.enabled}
@@ -100,7 +98,7 @@ export const AgentStrategy = memo((props: AgentStrategyProps) => {
             modelConfig={
               defaultModel.data
                 ? {
-                  mode: AppModeEnum.CHAT,
+                  mode: 'chat',
                   name: defaultModel.data.model,
                   provider: defaultModel.data.provider.provider,
                   completion_params: {},
@@ -108,7 +106,7 @@ export const AgentStrategy = memo((props: AgentStrategyProps) => {
             }
             placeholderClassName='px-2 py-1'
             titleClassName='system-sm-semibold-uppercase text-text-secondary text-[13px]'
-            inputClassName='px-2 py-1'
+            inputClassName='px-2 py-1 bg-components-input-bg-normal focus:bg-components-input-bg-active focus:border-components-input-border-active focus:border rounded-lg'
           />
         }
         case FormTypeEnum.textNumber: {
@@ -237,7 +235,7 @@ export const AgentStrategy = memo((props: AgentStrategyProps) => {
               'zh-Hans': '/guides/workflow/node/agent#选择-agent-策略',
               'ja-JP': '/guides/workflow/node/agent#エージェント戦略の選択',
             })}
-            className='text-text-accent-secondary' target='_blank'>
+              className='text-text-accent-secondary' target='_blank'>
               {t('workflow.nodes.agent.learnMore')}
             </Link>
           </div>}

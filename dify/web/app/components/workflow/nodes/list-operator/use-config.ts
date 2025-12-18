@@ -1,5 +1,5 @@
 import { useCallback, useMemo } from 'react'
-import { produce } from 'immer'
+import produce from 'immer'
 import { useStoreApi } from 'reactflow'
 import type { ValueSelector, Var } from '../../types'
 import { VarType } from '../../types'
@@ -45,7 +45,7 @@ const useConfig = (id: string, payload: ListFilterNodeType) => {
       isChatMode,
       isConstant: false,
     })
-    let itemVarType
+    let itemVarType = varType
     switch (varType) {
       case VarType.arrayNumber:
         itemVarType = VarType.number
@@ -59,11 +59,6 @@ const useConfig = (id: string, payload: ListFilterNodeType) => {
       case VarType.arrayObject:
         itemVarType = VarType.object
         break
-      case VarType.arrayBoolean:
-        itemVarType = VarType.boolean
-        break
-      default:
-        itemVarType = varType
     }
     return { varType, itemVarType }
   }, [availableNodes, getCurrentVariableType, inputs.variable, isChatMode, isInIteration, iterationNode, loopNode])
@@ -89,7 +84,7 @@ const useConfig = (id: string, payload: ListFilterNodeType) => {
       draft.filter_by.conditions = [{
         key: (isFileArray && !draft.filter_by.conditions[0]?.key) ? 'name' : '',
         comparison_operator: getOperators(itemVarType, isFileArray ? { key: 'name' } : undefined)[0],
-        value: itemVarType === VarType.boolean ? false : '',
+        value: '',
       }]
       if (isFileArray && draft.order_by.enabled && !draft.order_by.key)
         draft.order_by.key = 'name'
@@ -99,7 +94,7 @@ const useConfig = (id: string, payload: ListFilterNodeType) => {
 
   const filterVar = useCallback((varPayload: Var) => {
     // Don't know the item struct of VarType.arrayObject, so not support it
-    return [VarType.arrayNumber, VarType.arrayString, VarType.arrayBoolean, VarType.arrayFile].includes(varPayload.type)
+    return [VarType.arrayNumber, VarType.arrayString, VarType.arrayFile].includes(varPayload.type)
   }, [])
 
   const handleFilterEnabledChange = useCallback((enabled: boolean) => {

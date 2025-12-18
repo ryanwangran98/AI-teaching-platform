@@ -7,14 +7,13 @@ import OptionsWrap from '../base/options-wrap'
 import CrawledResult from '../base/crawled-result'
 import Crawling from '../base/crawling'
 import ErrorMessage from '../base/error-message'
+import Header from './header'
 import Options from './options'
 import { useModalContext } from '@/context/modal-context'
 import Toast from '@/app/components/base/toast'
 import { checkJinaReaderTaskStatus, createJinaReaderTask } from '@/service/datasets'
 import { sleep } from '@/utils'
 import type { CrawlOptions, CrawlResultItem } from '@/models/datasets'
-import Header from '../base/header'
-import { ACCOUNT_SETTING_TAB } from '@/app/components/header/account-setting/constants'
 
 const ERROR_I18N_PREFIX = 'common.errorMsg'
 const I18N_PREFIX = 'datasetCreation.stepOne.website'
@@ -52,7 +51,7 @@ const JinaReader: FC<Props> = ({
   const { setShowAccountSettingModal } = useModalContext()
   const handleSetting = useCallback(() => {
     setShowAccountSettingModal({
-      payload: ACCOUNT_SETTING_TAB.DATA_SOURCE,
+      payload: 'data-source',
     })
   }, [setShowAccountSettingModal])
 
@@ -151,15 +150,14 @@ const JinaReader: FC<Props> = ({
       }) as any
 
       if (res.data) {
-        const { title, content, description, url } = res.data
         const data = {
           current: 1,
           total: 1,
           data: [{
-            title,
-            markdown: content,
-            description,
-            source_url: url,
+            title: res.data.title,
+            markdown: res.data.content,
+            description: res.data.description,
+            source_url: res.data.url,
           }],
           time_consuming: (Date.now() - startTime) / 1000,
         }
@@ -192,13 +190,7 @@ const JinaReader: FC<Props> = ({
 
   return (
     <div>
-      <Header
-        onClickConfiguration={handleSetting}
-        title={t(`${I18N_PREFIX}.jinaReaderTitle`)}
-        buttonText={t(`${I18N_PREFIX}.configureJinaReader`)}
-        docTitle={t(`${I18N_PREFIX}.jinaReaderDoc`)}
-        docLink={'https://jina.ai/reader'}
-      />
+      <Header onSetting={handleSetting} />
       <div className='mt-2 rounded-xl border border-components-panel-border bg-background-default-subtle p-4 pb-0'>
         <UrlInput onRun={handleRun} isRunning={isRunning} />
         <OptionsWrap

@@ -11,14 +11,7 @@ class OAuthProxyService(BasePluginClient):
     __KEY_PREFIX__ = "oauth_proxy_context:"
 
     @staticmethod
-    def create_proxy_context(
-        user_id: str,
-        tenant_id: str,
-        plugin_id: str,
-        provider: str,
-        extra_data: dict = {},
-        credential_id: str | None = None,
-    ):
+    def create_proxy_context(user_id: str, tenant_id: str, plugin_id: str, provider: str):
         """
         Create a proxy context for an OAuth 2.0 authorization request.
 
@@ -33,14 +26,11 @@ class OAuthProxyService(BasePluginClient):
         """
         context_id = str(uuid.uuid4())
         data = {
-            **extra_data,
             "user_id": user_id,
             "plugin_id": plugin_id,
             "tenant_id": tenant_id,
             "provider": provider,
         }
-        if credential_id:
-            data["credential_id"] = credential_id
         redis_client.setex(
             f"{OAuthProxyService.__KEY_PREFIX__}{context_id}",
             OAuthProxyService.__MAX_AGE__,
@@ -57,9 +47,7 @@ class OAuthProxyService(BasePluginClient):
         if not context_id:
             raise ValueError("context_id is required")
         # get data from redis
-        key = f"{OAuthProxyService.__KEY_PREFIX__}{context_id}"
-        data = redis_client.get(key)
+        data = redis_client.getdel(f"{OAuthProxyService.__KEY_PREFIX__}{context_id}")
         if not data:
             raise ValueError("context_id is invalid")
-        redis_client.delete(key)
         return json.loads(data)

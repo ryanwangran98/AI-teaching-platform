@@ -9,7 +9,6 @@ import {
   EDUCATION_VERIFYING_LOCALSTORAGE_ITEM,
   EDUCATION_VERIFY_URL_SEARCHPARAMS_ACTION,
 } from '@/app/education-apply/constants'
-import { resolvePostLoginRedirect } from '../signin/utils/post-login-redirect'
 
 type SwrInitializerProps = {
   children: ReactNode
@@ -19,7 +18,10 @@ const SwrInitializer = ({
 }: SwrInitializerProps) => {
   const router = useRouter()
   const searchParams = useSearchParams()
-  // Tokens are now stored in cookies, no need to check localStorage
+  const consoleToken = decodeURIComponent(searchParams.get('access_token') || '')
+  const refreshToken = decodeURIComponent(searchParams.get('refresh_token') || '')
+  const consoleTokenFromLocalStorage = localStorage?.getItem('console_token')
+  const refreshTokenFromLocalStorage = localStorage?.getItem('refresh_token')
   const pathname = usePathname()
   const [init, setInit] = useState(false)
 
@@ -54,11 +56,14 @@ const SwrInitializer = ({
           router.replace('/install')
           return
         }
-
-        const redirectUrl = resolvePostLoginRedirect(searchParams)
-        if (redirectUrl) {
-          location.replace(redirectUrl)
+        if (!((consoleToken && refreshToken) || (consoleTokenFromLocalStorage && refreshTokenFromLocalStorage))) {
+          router.replace('/signin')
           return
+        }
+        if (searchParams.has('access_token') || searchParams.has('refresh_token')) {
+          consoleToken && localStorage.setItem('console_token', consoleToken)
+          refreshToken && localStorage.setItem('refresh_token', refreshToken)
+          router.replace(pathname)
         }
 
         setInit(true)
@@ -67,16 +72,13 @@ const SwrInitializer = ({
         router.replace('/signin')
       }
     })()
-  }, [isSetupFinished, router, pathname, searchParams])
+  }, [isSetupFinished, router, pathname, searchParams, consoleToken, refreshToken, consoleTokenFromLocalStorage, refreshTokenFromLocalStorage])
 
   return init
     ? (
       <SWRConfig value={{
         shouldRetryOnError: false,
         revalidateOnFocus: false,
-        dedupingInterval: 60000,
-        focusThrottleInterval: 5000,
-        provider: () => new Map(),
       }}>
         {children}
       </SWRConfig>

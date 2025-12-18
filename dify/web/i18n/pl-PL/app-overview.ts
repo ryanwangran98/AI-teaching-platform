@@ -125,11 +125,6 @@ const translation = {
         },
       },
       launch: 'Uruchomić',
-      enableTooltip: {
-        description: 'Aby włączyć tę funkcję, dodaj węzeł Wprowadzanie użytkownika na planszę. (Może już istnieć w szkicu, zacznie działać po opublikowaniu)',
-        learnMore: 'Dowiedz się więcej',
-      },
-      title: 'Aplikacja internetowa',
     },
     apiInfo: {
       title: 'API usługi w tle',
@@ -140,17 +135,6 @@ const translation = {
     status: {
       running: 'W usłudze',
       disable: 'Wyłącz',
-    },
-    triggerInfo: {
-      title: 'Czynniki wywołujące',
-      explanation: 'Zarządzanie wyzwalaczami przepływu pracy',
-      triggersAdded: '{{count}} Wyzwalacze dodane',
-      noTriggerAdded: 'Nie dodano wyzwalacza',
-      triggerStatusDescription: 'Status węzła wyzwalacza pojawia się tutaj. (Może już istnieć w wersji roboczej, obowiązuje po opublikowaniu)',
-      learnAboutTriggers: 'Dowiedz się o wyzwalaczach',
-    },
-    disableTooltip: {
-      triggerMode: 'Funkcja {{feature}} nie jest obsługiwana w trybie węzła wyzwalającego.',
     },
   },
   analysis: {

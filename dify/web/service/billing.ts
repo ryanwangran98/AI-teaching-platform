@@ -1,4 +1,4 @@
-import { get, put } from './base'
+import { get } from './base'
 import type { CurrentPlanInfoBackend, SubscriptionUrlsBackend } from '@/app/components/billing/type'
 
 export const fetchCurrentPlanInfo = () => {
@@ -11,14 +11,4 @@ export const fetchSubscriptionUrls = (plan: string, interval: string) => {
 
 export const fetchBillingUrl = () => {
   return get<{ url: string }>('/billing/invoices')
-}
-
-export const bindPartnerStackInfo = (partnerKey: string, clickId: string) => {
-  return put(`/billing/partners/${partnerKey}/tenants`, {
-    body: {
-      click_id: clickId,
-    },
-  }, {
-    silent: true,
-  })
 }

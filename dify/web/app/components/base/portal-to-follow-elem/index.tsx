@@ -1,5 +1,5 @@
 'use client'
-import React, { useCallback, useState } from 'react'
+import React from 'react'
 import {
   FloatingPortal,
   autoUpdate,
@@ -33,22 +33,17 @@ export type PortalToFollowElemOptions = {
 
 export function usePortalToFollowElem({
   placement = 'bottom',
-  open: controlledOpen,
+  open,
   offset: offsetValue = 0,
   onOpenChange: setControlledOpen,
   triggerPopupSameWidth,
 }: PortalToFollowElemOptions = {}) {
-  const [localOpen, setLocalOpen] = useState(false)
-  const open = controlledOpen ?? localOpen
-  const handleOpenChange = useCallback((newOpen: boolean) => {
-    setLocalOpen(newOpen)
-    setControlledOpen?.(newOpen)
-  }, [setControlledOpen, setLocalOpen])
+  const setOpen = setControlledOpen
 
   const data = useFloating({
     placement,
     open,
-    onOpenChange: handleOpenChange,
+    onOpenChange: setOpen,
     whileElementsMounted: autoUpdate,
     middleware: [
       offset(offsetValue),
@@ -71,10 +66,10 @@ export function usePortalToFollowElem({
 
   const hover = useHover(context, {
     move: false,
-    enabled: controlledOpen === undefined,
+    enabled: open == null,
   })
   const focus = useFocus(context, {
-    enabled: controlledOpen === undefined,
+    enabled: open == null,
   })
   const dismiss = useDismiss(context)
   const role = useRole(context, { role: 'tooltip' })
@@ -84,11 +79,11 @@ export function usePortalToFollowElem({
   return React.useMemo(
     () => ({
       open,
-      setOpen: handleOpenChange,
+      setOpen,
       ...interactions,
       ...data,
     }),
-    [open, handleOpenChange, interactions, data],
+    [open, setOpen, interactions, data],
   )
 }
 
@@ -125,7 +120,7 @@ export const PortalToFollowElemTrigger = (
     children,
     asChild = false,
     ...props
-  }: React.HTMLProps<HTMLElement> & { ref?: React.RefObject<HTMLElement | null>, asChild?: boolean },
+  }: React.HTMLProps<HTMLElement> & { ref?: React.RefObject<HTMLElement>, asChild?: boolean },
 ) => {
   const context = usePortalToFollowElemContext()
   const childrenRef = (children as any).props?.ref
@@ -133,15 +128,14 @@ export const PortalToFollowElemTrigger = (
 
   // `asChild` allows the user to pass any element as the anchor
   if (asChild && React.isValidElement(children)) {
-    const childProps = (children.props ?? {}) as Record<string, unknown>
     return React.cloneElement(
       children,
       context.getReferenceProps({
         ref,
         ...props,
-        ...childProps,
+        ...children.props,
         'data-state': context.open ? 'open' : 'closed',
-      } as React.HTMLProps<HTMLElement>),
+      }),
     )
   }
 
@@ -165,7 +159,7 @@ export const PortalToFollowElemContent = (
     style,
     ...props
   }: React.HTMLProps<HTMLDivElement> & {
-    ref?: React.RefObject<HTMLDivElement | null>;
+    ref?: React.RefObject<HTMLDivElement>;
   },
 ) => {
   const context = usePortalToFollowElemContext()
@@ -183,7 +177,6 @@ export const PortalToFollowElemContent = (
         style={{
           ...context.floatingStyles,
           ...style,
-          visibility: context.middlewareData.hide?.referenceHidden ? 'hidden' : 'visible',
         }}
         {...context.getFloatingProps(props)}
       />

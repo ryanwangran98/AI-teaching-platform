@@ -1,3 +1,5 @@
+from typing import Optional
+
 from core.app.app_config.base_app_config_manager import BaseAppConfigManager
 from core.app.app_config.common.sensitive_word_avoidance.manager import SensitiveWordAvoidanceConfigManager
 from core.app.app_config.easy_ui_based_app.dataset.manager import DatasetConfigManager
@@ -22,7 +24,7 @@ class CompletionAppConfig(EasyUIBasedAppConfig):
 class CompletionAppConfigManager(BaseAppConfigManager):
     @classmethod
     def get_app_config(
-        cls, app_model: App, app_model_config: AppModelConfig, override_config_dict: dict | None = None
+        cls, app_model: App, app_model_config: AppModelConfig, override_config_dict: Optional[dict] = None
     ) -> CompletionAppConfig:
         """
         Convert app model config to completion app config
@@ -64,7 +66,7 @@ class CompletionAppConfigManager(BaseAppConfigManager):
         return app_config
 
     @classmethod
-    def config_validate(cls, tenant_id: str, config: dict):
+    def config_validate(cls, tenant_id: str, config: dict) -> dict:
         """
         Validate for completion app model config
 

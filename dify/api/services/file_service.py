@@ -1,11 +1,10 @@
-import base64
+import datetime
 import hashlib
 import os
 import uuid
-from typing import Literal, Union
+from typing import Any, Literal, Union
 
-from sqlalchemy import Engine, select
-from sqlalchemy.orm import Session, sessionmaker
+from flask_login import current_user
 from werkzeug.exceptions import NotFound
 
 from configs import dify_config
@@ -17,36 +16,26 @@ from constants import (
 )
 from core.file import helpers as file_helpers
 from core.rag.extractor.extract_processor import ExtractProcessor
+from extensions.ext_database import db
 from extensions.ext_storage import storage
-from libs.datetime_utils import naive_utc_now
 from libs.helper import extract_tenant_id
-from models import Account
+from models.account import Account
 from models.enums import CreatorUserRole
 from models.model import EndUser, UploadFile
 
-from .errors.file import BlockedFileExtensionError, FileTooLargeError, UnsupportedFileTypeError
+from .errors.file import FileTooLargeError, UnsupportedFileTypeError
 
 PREVIEW_WORDS_LIMIT = 3000
 
 
 class FileService:
-    _session_maker: sessionmaker[Session]
-
-    def __init__(self, session_factory: sessionmaker | Engine | None = None):
-        if isinstance(session_factory, Engine):
-            self._session_maker = sessionmaker(bind=session_factory)
-        elif isinstance(session_factory, sessionmaker):
-            self._session_maker = session_factory
-        else:
-            raise AssertionError("must be a sessionmaker or an Engine.")
-
+    @staticmethod
     def upload_file(
-        self,
         *,
         filename: str,
         content: bytes,
         mimetype: str,
-        user: Union[Account, EndUser],
+        user: Union[Account, EndUser, Any],
         source: Literal["datasets"] | None = None,
         source_url: str = "",
     ) -> UploadFile:
@@ -59,10 +48,6 @@ class FileService:
 
         if len(filename) > 200:
             filename = filename.split(".")[0][:200] + "." + extension
-
-        # check if extension is in blacklist
-        if extension and extension in dify_config.UPLOAD_FILE_EXTENSION_BLACKLIST:
-            raise BlockedFileExtensionError(f"File extension '.{extension}' is not allowed for security reasons")
 
         if source == "datasets" and extension not in DOCUMENT_EXTENSIONS:
             raise UnsupportedFileTypeError()
@@ -95,19 +80,19 @@ class FileService:
             mime_type=mimetype,
             created_by_role=(CreatorUserRole.ACCOUNT if isinstance(user, Account) else CreatorUserRole.END_USER),
             created_by=user.id,
-            created_at=naive_utc_now(),
+            created_at=datetime.datetime.now(datetime.UTC).replace(tzinfo=None),
             used=False,
             hash=hashlib.sha3_256(content).hexdigest(),
             source_url=source_url,
         )
-        # The `UploadFile` ID is generated within its constructor, so flushing to retrieve the ID is unnecessary.
-        # We can directly generate the `source_url` here before committing.
+
+        db.session.add(upload_file)
+        db.session.commit()
+
         if not upload_file.source_url:
             upload_file.source_url = file_helpers.get_signed_file_url(upload_file_id=upload_file.id)
-
-        with self._session_maker(expire_on_commit=False) as session:
-            session.add(upload_file)
-            session.commit()
+            db.session.add(upload_file)
+            db.session.commit()
 
         return upload_file
 
@@ -124,51 +109,42 @@ class FileService:
 
         return file_size <= file_size_limit
 
-    def get_file_base64(self, file_id: str) -> str:
-        upload_file = (
-            self._session_maker(expire_on_commit=False).query(UploadFile).where(UploadFile.id == file_id).first()
-        )
-        if not upload_file:
-            raise NotFound("File not found")
-        blob = storage.load_once(upload_file.key)
-        return base64.b64encode(blob).decode()
-
-    def upload_text(self, text: str, text_name: str, user_id: str, tenant_id: str) -> UploadFile:
+    @staticmethod
+    def upload_text(text: str, text_name: str) -> UploadFile:
         if len(text_name) > 200:
             text_name = text_name[:200]
         # user uuid as file name
         file_uuid = str(uuid.uuid4())
-        file_key = "upload_files/" + tenant_id + "/" + file_uuid + ".txt"
+        file_key = "upload_files/" + current_user.current_tenant_id + "/" + file_uuid + ".txt"
 
         # save file to storage
         storage.save(file_key, text.encode("utf-8"))
 
         # save file to db
         upload_file = UploadFile(
-            tenant_id=tenant_id,
+            tenant_id=current_user.current_tenant_id,
             storage_type=dify_config.STORAGE_TYPE,
             key=file_key,
             name=text_name,
             size=len(text),
             extension="txt",
             mime_type="text/plain",
-            created_by=user_id,
+            created_by=current_user.id,
             created_by_role=CreatorUserRole.ACCOUNT,
-            created_at=naive_utc_now(),
+            created_at=datetime.datetime.now(datetime.UTC).replace(tzinfo=None),
             used=True,
-            used_by=user_id,
-            used_at=naive_utc_now(),
+            used_by=current_user.id,
+            used_at=datetime.datetime.now(datetime.UTC).replace(tzinfo=None),
         )
 
-        with self._session_maker(expire_on_commit=False) as session:
-            session.add(upload_file)
-            session.commit()
+        db.session.add(upload_file)
+        db.session.commit()
 
         return upload_file
 
-    def get_file_preview(self, file_id: str):
-        with self._session_maker(expire_on_commit=False) as session:
-            upload_file = session.query(UploadFile).where(UploadFile.id == file_id).first()
+    @staticmethod
+    def get_file_preview(file_id: str):
+        upload_file = db.session.query(UploadFile).where(UploadFile.id == file_id).first()
 
         if not upload_file:
             raise NotFound("File not found")
@@ -183,14 +159,15 @@ class FileService:
 
         return text
 
-    def get_image_preview(self, file_id: str, timestamp: str, nonce: str, sign: str):
+    @staticmethod
+    def get_image_preview(file_id: str, timestamp: str, nonce: str, sign: str):
         result = file_helpers.verify_image_signature(
             upload_file_id=file_id, timestamp=timestamp, nonce=nonce, sign=sign
         )
         if not result:
             raise NotFound("File not found or signature is invalid")
-        with self._session_maker(expire_on_commit=False) as session:
-            upload_file = session.query(UploadFile).where(UploadFile.id == file_id).first()
+
+        upload_file = db.session.query(UploadFile).where(UploadFile.id == file_id).first()
 
         if not upload_file:
             raise NotFound("File not found or signature is invalid")
@@ -204,13 +181,13 @@ class FileService:
 
         return generator, upload_file.mime_type
 
-    def get_file_generator_by_file_id(self, file_id: str, timestamp: str, nonce: str, sign: str):
+    @staticmethod
+    def get_file_generator_by_file_id(file_id: str, timestamp: str, nonce: str, sign: str):
         result = file_helpers.verify_file_signature(upload_file_id=file_id, timestamp=timestamp, nonce=nonce, sign=sign)
         if not result:
             raise NotFound("File not found or signature is invalid")
 
-        with self._session_maker(expire_on_commit=False) as session:
-            upload_file = session.query(UploadFile).where(UploadFile.id == file_id).first()
+        upload_file = db.session.query(UploadFile).where(UploadFile.id == file_id).first()
 
         if not upload_file:
             raise NotFound("File not found or signature is invalid")
@@ -219,9 +196,9 @@ class FileService:
 
         return generator, upload_file
 
-    def get_public_image_preview(self, file_id: str):
-        with self._session_maker(expire_on_commit=False) as session:
-            upload_file = session.query(UploadFile).where(UploadFile.id == file_id).first()
+    @staticmethod
+    def get_public_image_preview(file_id: str):
+        upload_file = db.session.query(UploadFile).where(UploadFile.id == file_id).first()
 
         if not upload_file:
             raise NotFound("File not found or signature is invalid")
@@ -234,22 +211,3 @@ class FileService:
         generator = storage.load(upload_file.key)
 
         return generator, upload_file.mime_type
-
-    def get_file_content(self, file_id: str) -> str:
-        with self._session_maker(expire_on_commit=False) as session:
-            upload_file: UploadFile | None = session.query(UploadFile).where(UploadFile.id == file_id).first()
-
-        if not upload_file:
-            raise NotFound("File not found")
-        content = storage.load(upload_file.key)
-
-        return content.decode("utf-8")
-
-    def delete_file(self, file_id: str):
-        with self._session_maker() as session, session.begin():
-            upload_file = session.scalar(select(UploadFile).where(UploadFile.id == file_id))
-
-            if not upload_file:
-                return
-            storage.delete(upload_file.key)
-            session.delete(upload_file)

@@ -18,7 +18,7 @@ type VisualEditorProviderProps = {
 export const VisualEditorContext = createContext<VisualEditorContextType>(null)
 
 export const VisualEditorContextProvider = ({ children }: VisualEditorProviderProps) => {
-  const storeRef = useRef<VisualEditorStore | null>(null)
+  const storeRef = useRef<VisualEditorStore>()
 
   if (!storeRef.current)
     storeRef.current = createVisualEditorStore()

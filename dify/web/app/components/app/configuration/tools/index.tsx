@@ -76,11 +76,7 @@ const Tools = () => {
   const handleOpenExternalDataToolModal = (payload: ExternalDataTool, index: number) => {
     setShowExternalDataToolModal({
       payload,
-      onSaveCallback: (externalDataTool?: ExternalDataTool) => {
-        if (!externalDataTool)
-          return
-        handleSaveExternalDataToolModal(externalDataTool, index)
-      },
+      onSaveCallback: (externalDataTool: ExternalDataTool) => handleSaveExternalDataToolModal(externalDataTool, index),
       onValidateBeforeSaveCallback: (newExternalDataTool: ExternalDataTool) => handleValidateBeforeSaveExternalDataToolModal(newExternalDataTool, index),
     })
   }

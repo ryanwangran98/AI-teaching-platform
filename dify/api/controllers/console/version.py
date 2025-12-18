@@ -1,51 +1,20 @@
 import json
 import logging
 
-import httpx
-from flask import request
-from flask_restx import Resource, fields
+import requests
+from flask_restful import Resource, reqparse
 from packaging import version
-from pydantic import BaseModel, Field
 
 from configs import dify_config
 
-from . import console_ns
-
-logger = logging.getLogger(__name__)
+from . import api
 
 
-class VersionQuery(BaseModel):
-    current_version: str = Field(..., description="Current application version")
-
-
-console_ns.schema_model(
-    VersionQuery.__name__,
-    VersionQuery.model_json_schema(ref_template="#/definitions/{model}"),
-)
-
-
-@console_ns.route("/version")
 class VersionApi(Resource):
-    @console_ns.doc("check_version_update")
-    @console_ns.doc(description="Check for application version updates")
-    @console_ns.expect(console_ns.models[VersionQuery.__name__])
-    @console_ns.response(
-        200,
-        "Success",
-        console_ns.model(
-            "VersionResponse",
-            {
-                "version": fields.String(description="Latest version number"),
-                "release_date": fields.String(description="Release date of latest version"),
-                "release_notes": fields.String(description="Release notes for latest version"),
-                "can_auto_update": fields.Boolean(description="Whether auto-update is supported"),
-                "features": fields.Raw(description="Feature flags and capabilities"),
-            },
-        ),
-    )
     def get(self):
-        """Check for application version updates"""
-        args = VersionQuery.model_validate(request.args.to_dict(flat=True))  # type: ignore
+        parser = reqparse.RequestParser()
+        parser.add_argument("current_version", type=str, required=True, location="args")
+        args = parser.parse_args()
         check_update_url = dify_config.CHECK_UPDATE_URL
 
         result = {
@@ -63,18 +32,14 @@ class VersionApi(Resource):
             return result
 
         try:
-            response = httpx.get(
-                check_update_url,
-                params={"current_version": args.current_version},
-                timeout=httpx.Timeout(timeout=10.0, connect=3.0),
-            )
+            response = requests.get(check_update_url, {"current_version": args.get("current_version")})
         except Exception as error:
-            logger.warning("Check update version error: %s.", str(error))
-            result["version"] = args.current_version
+            logging.warning("Check update version error: %s.", str(error))
+            result["version"] = args.get("current_version")
             return result
 
         content = json.loads(response.content)
-        if _has_new_version(latest_version=content["version"], current_version=f"{args.current_version}"):
+        if _has_new_version(latest_version=content["version"], current_version=f"{args.get('current_version')}"):
             result["version"] = content["version"]
             result["release_date"] = content["releaseDate"]
             result["release_notes"] = content["releaseNotes"]
@@ -90,5 +55,8 @@ def _has_new_version(*, latest_version: str, current_version: str) -> bool:
         # Compare versions
         return latest > current
     except version.InvalidVersion:
-        logger.warning("Invalid version format: latest=%s, current=%s", latest_version, current_version)
+        logging.warning("Invalid version format: latest=%s, current=%s", latest_version, current_version)
         return False
+
+
+api.add_resource(VersionApi, "/version")

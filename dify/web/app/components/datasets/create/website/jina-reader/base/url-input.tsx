@@ -2,7 +2,7 @@
 import type { FC } from 'react'
 import React, { useCallback, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import Input from '../../base/input'
+import Input from './input'
 import Button from '@/app/components/base/button'
 import { useDocLink } from '@/context/i18n'
 
@@ -41,7 +41,6 @@ const UrlInput: FC<Props> = ({
         onClick={handleOnRun}
         className='ml-2'
         loading={isRunning}
-        data-testid='url-input-run-button'
       >
         {!isRunning ? t(`${I18N_PREFIX}.run`) : ''}
       </Button>

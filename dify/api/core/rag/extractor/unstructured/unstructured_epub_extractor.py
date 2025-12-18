@@ -1,8 +1,8 @@
 import logging
+from typing import Optional
 
 import pypandoc  # type: ignore
 
-from configs import dify_config
 from core.rag.extractor.extractor_base import BaseExtractor
 from core.rag.models.document import Document
 
@@ -20,7 +20,7 @@ class UnstructuredEpubExtractor(BaseExtractor):
     def __init__(
         self,
         file_path: str,
-        api_url: str | None = None,
+        api_url: Optional[str] = None,
         api_key: str = "",
     ):
         """Initialize with file path."""
@@ -41,8 +41,7 @@ class UnstructuredEpubExtractor(BaseExtractor):
 
         from unstructured.chunking.title import chunk_by_title
 
-        max_characters = dify_config.INDEXING_MAX_SEGMENTATION_TOKENS_LENGTH
-        chunks = chunk_by_title(elements, max_characters=max_characters, combine_text_under_n_chars=max_characters)
+        chunks = chunk_by_title(elements, max_characters=2000, combine_text_under_n_chars=2000)
         documents = []
         for chunk in chunks:
             text = chunk.text.strip()

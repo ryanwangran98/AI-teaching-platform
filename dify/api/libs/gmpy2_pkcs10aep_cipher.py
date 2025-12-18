@@ -23,11 +23,11 @@ from hashlib import sha1
 
 import Crypto.Hash.SHA1
 import Crypto.Util.number
-import gmpy2
+import gmpy2  # type: ignore
 from Crypto import Random
 from Crypto.Signature.pss import MGF1
 from Crypto.Util.number import bytes_to_long, ceil_div, long_to_bytes
-from Crypto.Util.py3compat import bord
+from Crypto.Util.py3compat import _copy_bytes, bord
 from Crypto.Util.strxor import strxor
 
 
@@ -72,7 +72,7 @@ class PKCS1OAepCipher:
         else:
             self._mgf = lambda x, y: MGF1(x, y, self._hashObj)
 
-        self._label = bytes(label)
+        self._label = _copy_bytes(None, None, label)
         self._randfunc = randfunc
 
     def can_encrypt(self):
@@ -120,7 +120,7 @@ class PKCS1OAepCipher:
         # Step 2b
         ps = b"\x00" * ps_len
         # Step 2c
-        db = lHash + ps + b"\x01" + bytes(message)
+        db = lHash + ps + b"\x01" + _copy_bytes(None, None, message)
         # Step 2d
         ros = self._randfunc(hLen)
         # Step 2e
@@ -191,12 +191,12 @@ class PKCS1OAepCipher:
         # Step 3g
         one_pos = hLen + db[hLen:].find(b"\x01")
         lHash1 = db[:hLen]
-        invalid = bord(y) | int(one_pos < hLen)  # type: ignore[arg-type]
+        invalid = bord(y) | int(one_pos < hLen)  # type: ignore
         hash_compare = strxor(lHash1, lHash)
         for x in hash_compare:
-            invalid |= bord(x)  # type: ignore[arg-type]
+            invalid |= bord(x)  # type: ignore
         for x in db[hLen:one_pos]:
-            invalid |= bord(x)  # type: ignore[arg-type]
+            invalid |= bord(x)  # type: ignore
         if invalid != 0:
             raise ValueError("Incorrect decryption.")
         # Step 4

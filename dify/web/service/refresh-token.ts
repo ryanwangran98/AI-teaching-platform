@@ -39,6 +39,7 @@ async function getNewAccessToken(timeout: number): Promise<void> {
       globalThis.localStorage.setItem(LOCAL_STORAGE_KEY, '1')
       globalThis.localStorage.setItem('last_refresh_time', new Date().getTime().toString())
       globalThis.addEventListener('beforeunload', releaseRefreshLock)
+      const refresh_token = globalThis.localStorage.getItem('refresh_token')
 
       // Do not use baseFetch to refresh tokens.
       // If a 401 response occurs and baseFetch itself attempts to refresh the token,
@@ -47,11 +48,10 @@ async function getNewAccessToken(timeout: number): Promise<void> {
       // that does not call baseFetch and uses a single retry mechanism.
       const [error, ret] = await fetchWithRetry(globalThis.fetch(`${API_PREFIX}/refresh-token`, {
         method: 'POST',
-        credentials: 'include', // Important: include cookies in the request
         headers: {
           'Content-Type': 'application/json;utf-8',
         },
-        // No body needed - refresh token is in cookie
+        body: JSON.stringify({ refresh_token }),
       }))
       if (error) {
         return Promise.reject(error)
@@ -59,6 +59,10 @@ async function getNewAccessToken(timeout: number): Promise<void> {
       else {
         if (ret.status === 401)
           return Promise.reject(ret)
+
+        const { data } = await ret.json()
+        globalThis.localStorage.setItem('console_token', data.access_token)
+        globalThis.localStorage.setItem('refresh_token', data.refresh_token)
       }
     }
   }

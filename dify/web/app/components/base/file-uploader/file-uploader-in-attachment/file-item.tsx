@@ -23,7 +23,6 @@ import cn from '@/utils/classnames'
 import { ReplayLine } from '@/app/components/base/icons/src/vender/other'
 import { SupportUploadFileTypes } from '@/app/components/workflow/types'
 import ImagePreview from '@/app/components/base/image-uploader/image-preview'
-import { PreviewMode } from '@/app/components/base/features/types'
 
 type FileInAttachmentItemProps = {
   file: FileEntity
@@ -32,7 +31,6 @@ type FileInAttachmentItemProps = {
   onRemove?: (fileId: string) => void
   onReUpload?: (fileId: string) => void
   canPreview?: boolean
-  previewMode?: PreviewMode
 }
 const FileInAttachmentItem = ({
   file,
@@ -41,7 +39,6 @@ const FileInAttachmentItem = ({
   onRemove,
   onReUpload,
   canPreview,
-  previewMode = PreviewMode.CurrentPage,
 }: FileInAttachmentItemProps) => {
   const { id, name, type, progress, supportFileType, base64Url, url, isRemote } = file
   const ext = getFileExtension(name, type, isRemote)
@@ -52,13 +49,7 @@ const FileInAttachmentItem = ({
       <div className={cn(
         'flex h-12 items-center rounded-lg border-[0.5px] border-components-panel-border bg-components-panel-on-panel-item-bg pr-3 shadow-xs',
         progress === -1 && 'border-state-destructive-border bg-state-destructive-hover',
-        canPreview && previewMode === PreviewMode.NewPage && 'cursor-pointer',
-      )}
-      onClick={() => {
-        if (canPreview && previewMode === PreviewMode.NewPage)
-          window.open(url || base64Url || '', '_blank')
-      }}
-      >
+      )}>
         <div className='flex h-12 w-12 items-center justify-center'>
           {
             isImageFile && (
@@ -72,7 +63,7 @@ const FileInAttachmentItem = ({
             !isImageFile && (
               <FileTypeIcon
                 type={getFileAppearanceType(name, type)}
-                size='xl'
+                size='lg'
               />
             )
           }

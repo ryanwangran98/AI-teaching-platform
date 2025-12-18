@@ -1,96 +1,50 @@
-from typing import Any, Literal
-from uuid import UUID
+import json
 
-from flask import request
-from flask_restx import Resource
-from flask_restx._http import HTTPStatus
-from pydantic import BaseModel, Field, model_validator
+from flask_restful import Resource, marshal_with, reqparse
+from flask_restful.inputs import int_range
 from sqlalchemy.orm import Session
 from werkzeug.exceptions import BadRequest, NotFound
 
 import services
-from controllers.common.schema import register_schema_models
-from controllers.service_api import service_api_ns
+from controllers.service_api import api
 from controllers.service_api.app.error import NotChatAppError
 from controllers.service_api.wraps import FetchUserArg, WhereisUserArg, validate_app_token
 from core.app.entities.app_invoke_entities import InvokeFrom
 from extensions.ext_database import db
 from fields.conversation_fields import (
-    build_conversation_delete_model,
-    build_conversation_infinite_scroll_pagination_model,
-    build_simple_conversation_model,
+    conversation_delete_fields,
+    conversation_infinite_scroll_pagination_fields,
+    simple_conversation_fields,
 )
 from fields.conversation_variable_fields import (
-    build_conversation_variable_infinite_scroll_pagination_model,
-    build_conversation_variable_model,
+    conversation_variable_fields,
+    conversation_variable_infinite_scroll_pagination_fields,
 )
+from libs.helper import uuid_value
 from models.model import App, AppMode, EndUser
 from services.conversation_service import ConversationService
 
 
-class ConversationListQuery(BaseModel):
-    last_id: UUID | None = Field(default=None, description="Last conversation ID for pagination")
-    limit: int = Field(default=20, ge=1, le=100, description="Number of conversations to return")
-    sort_by: Literal["created_at", "-created_at", "updated_at", "-updated_at"] = Field(
-        default="-updated_at", description="Sort order for conversations"
-    )
-
-
-class ConversationRenamePayload(BaseModel):
-    name: str | None = Field(default=None, description="New conversation name (required if auto_generate is false)")
-    auto_generate: bool = Field(default=False, description="Auto-generate conversation name")
-
-    @model_validator(mode="after")
-    def validate_name_requirement(self):
-        if not self.auto_generate:
-            if self.name is None or not self.name.strip():
-                raise ValueError("name is required when auto_generate is false")
-        return self
-
-
-class ConversationVariablesQuery(BaseModel):
-    last_id: UUID | None = Field(default=None, description="Last variable ID for pagination")
-    limit: int = Field(default=20, ge=1, le=100, description="Number of variables to return")
-
-
-class ConversationVariableUpdatePayload(BaseModel):
-    value: Any
-
-
-register_schema_models(
-    service_api_ns,
-    ConversationListQuery,
-    ConversationRenamePayload,
-    ConversationVariablesQuery,
-    ConversationVariableUpdatePayload,
-)
-
-
-@service_api_ns.route("/conversations")
 class ConversationApi(Resource):
-    @service_api_ns.expect(service_api_ns.models[ConversationListQuery.__name__])
-    @service_api_ns.doc("list_conversations")
-    @service_api_ns.doc(description="List all conversations for the current user")
-    @service_api_ns.doc(
-        responses={
-            200: "Conversations retrieved successfully",
-            401: "Unauthorized - invalid API token",
-            404: "Last conversation not found",
-        }
-    )
     @validate_app_token(fetch_user_arg=FetchUserArg(fetch_from=WhereisUserArg.QUERY))
-    @service_api_ns.marshal_with(build_conversation_infinite_scroll_pagination_model(service_api_ns))
+    @marshal_with(conversation_infinite_scroll_pagination_fields)
     def get(self, app_model: App, end_user: EndUser):
-        """List all conversations for the current user.
-
-        Supports pagination using last_id and limit parameters.
-        """
         app_mode = AppMode.value_of(app_model.mode)
         if app_mode not in {AppMode.CHAT, AppMode.AGENT_CHAT, AppMode.ADVANCED_CHAT}:
             raise NotChatAppError()
 
-        query_args = ConversationListQuery.model_validate(request.args.to_dict())
-        last_id = str(query_args.last_id) if query_args.last_id else None
+        parser = reqparse.RequestParser()
+        parser.add_argument("last_id", type=uuid_value, location="args")
+        parser.add_argument("limit", type=int_range(1, 100), required=False, default=20, location="args")
+        parser.add_argument(
+            "sort_by",
+            type=str,
+            choices=["created_at", "-created_at", "updated_at", "-updated_at"],
+            required=False,
+            default="-updated_at",
+            location="args",
+        )
+        args = parser.parse_args()
 
         try:
             with Session(db.engine) as session:
@@ -98,31 +52,19 @@ class ConversationApi(Resource):
                     session=session,
                     app_model=app_model,
                     user=end_user,
-                    last_id=last_id,
-                    limit=query_args.limit,
+                    last_id=args["last_id"],
+                    limit=args["limit"],
                     invoke_from=InvokeFrom.SERVICE_API,
-                    sort_by=query_args.sort_by,
+                    sort_by=args["sort_by"],
                 )
         except services.errors.conversation.LastConversationNotExistsError:
             raise NotFound("Last Conversation Not Exists.")
 
 
-@service_api_ns.route("/conversations/<uuid:c_id>")
 class ConversationDetailApi(Resource):
-    @service_api_ns.doc("delete_conversation")
-    @service_api_ns.doc(description="Delete a specific conversation")
-    @service_api_ns.doc(params={"c_id": "Conversation ID"})
-    @service_api_ns.doc(
-        responses={
-            204: "Conversation deleted successfully",
-            401: "Unauthorized - invalid API token",
-            404: "Conversation not found",
-        }
-    )
     @validate_app_token(fetch_user_arg=FetchUserArg(fetch_from=WhereisUserArg.JSON))
-    @service_api_ns.marshal_with(build_conversation_delete_model(service_api_ns), code=HTTPStatus.NO_CONTENT)
+    @marshal_with(conversation_delete_fields)
     def delete(self, app_model: App, end_user: EndUser, c_id):
-        """Delete a specific conversation."""
         app_mode = AppMode.value_of(app_model.mode)
         if app_mode not in {AppMode.CHAT, AppMode.AGENT_CHAT, AppMode.ADVANCED_CHAT}:
             raise NotChatAppError()
@@ -136,57 +78,31 @@ class ConversationDetailApi(Resource):
         return {"result": "success"}, 204
 
 
-@service_api_ns.route("/conversations/<uuid:c_id>/name")
 class ConversationRenameApi(Resource):
-    @service_api_ns.expect(service_api_ns.models[ConversationRenamePayload.__name__])
-    @service_api_ns.doc("rename_conversation")
-    @service_api_ns.doc(description="Rename a conversation or auto-generate a name")
-    @service_api_ns.doc(params={"c_id": "Conversation ID"})
-    @service_api_ns.doc(
-        responses={
-            200: "Conversation renamed successfully",
-            401: "Unauthorized - invalid API token",
-            404: "Conversation not found",
-        }
-    )
     @validate_app_token(fetch_user_arg=FetchUserArg(fetch_from=WhereisUserArg.JSON))
-    @service_api_ns.marshal_with(build_simple_conversation_model(service_api_ns))
+    @marshal_with(simple_conversation_fields)
     def post(self, app_model: App, end_user: EndUser, c_id):
-        """Rename a conversation or auto-generate a name."""
         app_mode = AppMode.value_of(app_model.mode)
         if app_mode not in {AppMode.CHAT, AppMode.AGENT_CHAT, AppMode.ADVANCED_CHAT}:
             raise NotChatAppError()
 
         conversation_id = str(c_id)
 
-        payload = ConversationRenamePayload.model_validate(service_api_ns.payload or {})
+        parser = reqparse.RequestParser()
+        parser.add_argument("name", type=str, required=False, location="json")
+        parser.add_argument("auto_generate", type=bool, required=False, default=False, location="json")
+        args = parser.parse_args()
 
         try:
-            return ConversationService.rename(app_model, conversation_id, end_user, payload.name, payload.auto_generate)
+            return ConversationService.rename(app_model, conversation_id, end_user, args["name"], args["auto_generate"])
         except services.errors.conversation.ConversationNotExistsError:
             raise NotFound("Conversation Not Exists.")
 
 
-@service_api_ns.route("/conversations/<uuid:c_id>/variables")
 class ConversationVariablesApi(Resource):
-    @service_api_ns.expect(service_api_ns.models[ConversationVariablesQuery.__name__])
-    @service_api_ns.doc("list_conversation_variables")
-    @service_api_ns.doc(description="List all variables for a conversation")
-    @service_api_ns.doc(params={"c_id": "Conversation ID"})
-    @service_api_ns.doc(
-        responses={
-            200: "Variables retrieved successfully",
-            401: "Unauthorized - invalid API token",
-            404: "Conversation not found",
-        }
-    )
     @validate_app_token(fetch_user_arg=FetchUserArg(fetch_from=WhereisUserArg.QUERY))
-    @service_api_ns.marshal_with(build_conversation_variable_infinite_scroll_pagination_model(service_api_ns))
+    @marshal_with(conversation_variable_infinite_scroll_pagination_fields)
     def get(self, app_model: App, end_user: EndUser, c_id):
-        """List all variables for a conversation.
-
-        Conversational variables are only available for chat applications.
-        """
         # conversational variable only for chat app
         app_mode = AppMode.value_of(app_model.mode)
         if app_mode not in {AppMode.CHAT, AppMode.AGENT_CHAT, AppMode.ADVANCED_CHAT}:
@@ -194,39 +110,24 @@ class ConversationVariablesApi(Resource):
 
         conversation_id = str(c_id)
 
-        query_args = ConversationVariablesQuery.model_validate(request.args.to_dict())
-        last_id = str(query_args.last_id) if query_args.last_id else None
+        parser = reqparse.RequestParser()
+        parser.add_argument("last_id", type=uuid_value, location="args")
+        parser.add_argument("limit", type=int_range(1, 100), required=False, default=20, location="args")
+        args = parser.parse_args()
 
         try:
             return ConversationService.get_conversational_variable(
-                app_model, conversation_id, end_user, query_args.limit, last_id
+                app_model, conversation_id, end_user, args["limit"], args["last_id"]
             )
         except services.errors.conversation.ConversationNotExistsError:
             raise NotFound("Conversation Not Exists.")
 
 
-@service_api_ns.route("/conversations/<uuid:c_id>/variables/<uuid:variable_id>")
 class ConversationVariableDetailApi(Resource):
-    @service_api_ns.expect(service_api_ns.models[ConversationVariableUpdatePayload.__name__])
-    @service_api_ns.doc("update_conversation_variable")
-    @service_api_ns.doc(description="Update a conversation variable's value")
-    @service_api_ns.doc(params={"c_id": "Conversation ID", "variable_id": "Variable ID"})
-    @service_api_ns.doc(
-        responses={
-            200: "Variable updated successfully",
-            400: "Bad request - type mismatch",
-            401: "Unauthorized - invalid API token",
-            404: "Conversation or variable not found",
-        }
-    )
     @validate_app_token(fetch_user_arg=FetchUserArg(fetch_from=WhereisUserArg.JSON))
-    @service_api_ns.marshal_with(build_conversation_variable_model(service_api_ns))
+    @marshal_with(conversation_variable_fields)
     def put(self, app_model: App, end_user: EndUser, c_id, variable_id):
-        """Update a conversation variable's value.
-
-        Allows updating the value of a specific conversation variable.
-        The value must match the variable's expected type.
-        """
+        """Update a conversation variable's value"""
         app_mode = AppMode.value_of(app_model.mode)
         if app_mode not in {AppMode.CHAT, AppMode.AGENT_CHAT, AppMode.ADVANCED_CHAT}:
             raise NotChatAppError()
@@ -234,11 +135,13 @@ class ConversationVariableDetailApi(Resource):
         conversation_id = str(c_id)
         variable_id = str(variable_id)
 
-        payload = ConversationVariableUpdatePayload.model_validate(service_api_ns.payload or {})
+        parser = reqparse.RequestParser()
+        parser.add_argument("value", required=True, location="json")
+        args = parser.parse_args()
 
         try:
             return ConversationService.update_conversation_variable(
-                app_model, conversation_id, variable_id, end_user, payload.value
+                app_model, conversation_id, variable_id, end_user, json.loads(args["value"])
             )
         except services.errors.conversation.ConversationNotExistsError:
             raise NotFound("Conversation Not Exists.")
@@ -246,3 +149,15 @@ class ConversationVariableDetailApi(Resource):
             raise NotFound("Conversation Variable Not Exists.")
         except services.errors.conversation.ConversationVariableTypeMismatchError as e:
             raise BadRequest(str(e))
+
+
+api.add_resource(ConversationRenameApi, "/conversations/<uuid:c_id>/name", endpoint="conversation_name")
+api.add_resource(ConversationApi, "/conversations")
+api.add_resource(ConversationDetailApi, "/conversations/<uuid:c_id>", endpoint="conversation_detail")
+api.add_resource(ConversationVariablesApi, "/conversations/<uuid:c_id>/variables", endpoint="conversation_variables")
+api.add_resource(
+    ConversationVariableDetailApi,
+    "/conversations/<uuid:c_id>/variables/<uuid:variable_id>",
+    endpoint="conversation_variable_detail",
+    methods=["PUT"],
+)

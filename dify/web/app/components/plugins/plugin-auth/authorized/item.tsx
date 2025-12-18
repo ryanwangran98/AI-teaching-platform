@@ -61,19 +61,14 @@ const Item = ({
     return !(disableRename && disableEdit && disableDelete && disableSetDefault)
   }, [disableRename, disableEdit, disableDelete, disableSetDefault])
 
-  const CredentialItem = (
+  return (
     <div
       key={credential.id}
       className={cn(
         'group flex h-8 items-center rounded-lg p-1 hover:bg-state-base-hover',
         renaming && 'bg-state-base-hover',
-        (disabled || credential.not_allowed_to_use) && 'cursor-not-allowed opacity-50',
       )}
-      onClick={() => {
-        if (credential.not_allowed_to_use || disabled)
-          return
-        onItemClick?.(credential.id === '__workspace_default__' ? '' : credential.id)
-      }}
+      onClick={() => onItemClick?.(credential.id === '__workspace_default__' ? '' : credential.id)}
     >
       {
         renaming && (
@@ -126,10 +121,7 @@ const Item = ({
                 </div>
               )
             }
-            <Indicator
-              className='ml-2 mr-1.5 shrink-0'
-              color={credential.not_allowed_to_use ? 'gray' : 'green'}
-            />
+            <Indicator className='ml-2 mr-1.5 shrink-0' />
             <div
               className='system-md-regular truncate text-text-secondary'
               title={credential.name}
@@ -147,17 +139,10 @@ const Item = ({
         )
       }
       {
-        credential.from_enterprise && (
-          <Badge className='shrink-0'>
-            Enterprise
-          </Badge>
-        )
-      }
-      {
         showAction && !renaming && (
           <div className='ml-2 hidden shrink-0 items-center group-hover:flex'>
             {
-              !credential.is_default && !disableSetDefault && !credential.not_allowed_to_use && (
+              !credential.is_default && !disableSetDefault && (
                 <Button
                   size='small'
                   disabled={disabled}
@@ -171,7 +156,7 @@ const Item = ({
               )
             }
             {
-              !disableRename && !credential.from_enterprise && !credential.not_allowed_to_use && (
+              !disableRename && (
                 <Tooltip popupContent={t('common.operation.rename')}>
                   <ActionButton
                     disabled={disabled}
@@ -187,7 +172,7 @@ const Item = ({
               )
             }
             {
-              !isOAuth && !disableEdit && !credential.from_enterprise && !credential.not_allowed_to_use && (
+              !isOAuth && !disableEdit && (
                 <Tooltip popupContent={t('common.operation.edit')}>
                   <ActionButton
                     disabled={disabled}
@@ -209,7 +194,7 @@ const Item = ({
               )
             }
             {
-              !disableDelete && !credential.from_enterprise && (
+              !disableDelete && (
                 <Tooltip popupContent={t('common.operation.delete')}>
                   <ActionButton
                     className='hover:bg-transparent'
@@ -228,18 +213,6 @@ const Item = ({
         )
       }
     </div>
-  )
-
-  if (credential.not_allowed_to_use) {
-    return (
-      <Tooltip popupContent={t('plugin.auth.customCredentialUnavailable')}>
-        {CredentialItem}
-      </Tooltip>
-    )
-  }
-
-  return (
-    CredentialItem
   )
 }
 

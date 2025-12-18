@@ -1,11 +1,10 @@
 import { useCallback } from 'react'
 import {
+  useNodes,
   useStoreApi,
 } from 'reactflow'
-import { useNodes } from 'reactflow'
-
 import { uniqBy } from 'lodash-es'
-import { produce } from 'immer'
+import produce from 'immer'
 import {
   useIsChatMode,
   useNodeDataUpdate,
@@ -133,6 +132,7 @@ export const useGetAvailableVars = () => {
 
     if (!currentNode)
       return []
+
     const beforeNodes = getBeforeNodesInSameBranchIncludeParent(nodeId)
     availableNodes.push(...beforeNodes)
     const parentNode = nodes.find(node => node.id === currentNode.parentId)
@@ -143,7 +143,7 @@ export const useGetAvailableVars = () => {
         beforeNodes: uniqBy(availableNodes, 'id').filter(node => node.id !== nodeId),
         isChatMode,
         hideEnv,
-        hideChatVar: false,
+        hideChatVar: hideEnv,
         filterVar,
       })
         .map(node => ({

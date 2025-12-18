@@ -26,6 +26,7 @@ const ModelParameterTrigger: FC<ModelParameterTriggerProps> = ({
 }) => {
   const { t } = useTranslation()
   const {
+    mode,
     isAdvancedMode,
   } = useDebugConfigurationContext()
   const {
@@ -56,6 +57,7 @@ const ModelParameterTrigger: FC<ModelParameterTriggerProps> = ({
 
   return (
     <ModelParameterModal
+      mode={mode}
       isAdvancedMode={isAdvancedMode}
       provider={modelAndParameter.provider}
       modelId={modelAndParameter.model}

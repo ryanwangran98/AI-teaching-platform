@@ -71,6 +71,7 @@ export type ChatProps = {
   onFeatureBarClick?: (state: boolean) => void
   noSpacing?: boolean
   inputDisabled?: boolean
+  isMobile?: boolean
   sidebarCollapseState?: boolean
 }
 
@@ -109,6 +110,7 @@ const Chat: FC<ChatProps> = ({
   onFeatureBarClick,
   noSpacing,
   inputDisabled,
+  isMobile,
   sidebarCollapseState,
 }) => {
   const { t } = useTranslation()
@@ -126,17 +128,10 @@ const Chat: FC<ChatProps> = ({
   const chatFooterRef = useRef<HTMLDivElement>(null)
   const chatFooterInnerRef = useRef<HTMLDivElement>(null)
   const userScrolledRef = useRef(false)
-  const isAutoScrollingRef = useRef(false)
 
   const handleScrollToBottom = useCallback(() => {
-    if (chatList.length > 1 && chatContainerRef.current && !userScrolledRef.current) {
-      isAutoScrollingRef.current = true
+    if (chatList.length > 1 && chatContainerRef.current && !userScrolledRef.current)
       chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight
-
-      requestAnimationFrame(() => {
-        isAutoScrollingRef.current = false
-      })
-    }
   }, [chatList.length])
 
   const handleWindowResize = useCallback(() => {
@@ -165,13 +160,8 @@ const Chat: FC<ChatProps> = ({
   })
 
   useEffect(() => {
-    const debouncedHandler = debounce(handleWindowResize, 200)
-    window.addEventListener('resize', debouncedHandler)
-
-    return () => {
-      window.removeEventListener('resize', debouncedHandler)
-      debouncedHandler.cancel()
-    }
+    window.addEventListener('resize', debounce(handleWindowResize))
+    return () => window.removeEventListener('resize', handleWindowResize)
   }, [handleWindowResize])
 
   useEffect(() => {
@@ -203,30 +193,17 @@ const Chat: FC<ChatProps> = ({
   }, [handleScrollToBottom])
 
   useEffect(() => {
-    const setUserScrolled = () => {
-      const container = chatContainerRef.current
-      if (!container) return
-
-      if (isAutoScrollingRef.current) return
-
-      const distanceToBottom = container.scrollHeight - container.clientHeight - container.scrollTop
-      const SCROLL_UP_THRESHOLD = 100
-
-      userScrolledRef.current = distanceToBottom > SCROLL_UP_THRESHOLD
+    const chatContainer = chatContainerRef.current
+    if (chatContainer) {
+      const setUserScrolled = () => {
+        // eslint-disable-next-line sonarjs/no-gratuitous-expressions
+        if (chatContainer) // its in event callback, chatContainer may be null
+          userScrolledRef.current = chatContainer.scrollHeight - chatContainer.scrollTop > chatContainer.clientHeight
+      }
+      chatContainer.addEventListener('scroll', setUserScrolled)
+      return () => chatContainer.removeEventListener('scroll', setUserScrolled)
     }
-
-    const container = chatContainerRef.current
-    if (!container) return
-
-    container.addEventListener('scroll', setUserScrolled)
-    return () => container.removeEventListener('scroll', setUserScrolled)
   }, [])
-
-  // Reset user scroll state when a new chat starts (length <= 1)
-  useEffect(() => {
-    if (chatList.length <= 1)
-      userScrolledRef.current = false
-  }, [chatList.length])
 
   useEffect(() => {
     if (!sidebarCollapseState)
@@ -319,6 +296,7 @@ const Chat: FC<ChatProps> = ({
                 <TryToAsk
                   suggestedQuestions={suggestedQuestions}
                   onSend={onSend}
+                  isMobile={isMobile}
                 />
               )
             }

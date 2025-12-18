@@ -12,8 +12,6 @@ import type {
 } from '@/types/workflow'
 import type { CommonResponse } from '@/models/common'
 import { useInvalid, useReset } from './use-base'
-import type { FlowType } from '@/types/common'
-import { getFlowPrefix } from './utils'
 
 const NAME_SPACE = 'workflow'
 
@@ -35,13 +33,11 @@ export const useInvalidateAppWorkflow = () => {
   }
 }
 
-export const useWorkflowConfig = <T = WorkflowConfigResponse>(url: string, onSuccess: (v: T) => void) => {
+export const useWorkflowConfig = (appId: string, onSuccess: (v: WorkflowConfigResponse) => void) => {
   return useQuery({
-    enabled: !!url,
-    queryKey: [NAME_SPACE, 'config', url],
-    staleTime: 0,
+    queryKey: [NAME_SPACE, 'config', appId],
     queryFn: async () => {
-      const data = await get<T>(url)
+      const data = await get<WorkflowConfigResponse>(`/apps/${appId}/workflows/draft/config`)
       onSuccess(data)
       return data
     },
@@ -51,11 +47,10 @@ export const useWorkflowConfig = <T = WorkflowConfigResponse>(url: string, onSuc
 const WorkflowVersionHistoryKey = [NAME_SPACE, 'versionHistory']
 
 export const useWorkflowVersionHistory = (params: FetchWorkflowDraftPageParams) => {
-  const { url, initialPage, limit, userId, namedOnly } = params
+  const { appId, initialPage, limit, userId, namedOnly } = params
   return useInfiniteQuery({
-    enabled: !!url,
-    queryKey: [...WorkflowVersionHistoryKey, url, initialPage, limit, userId, namedOnly],
-    queryFn: ({ pageParam = 1 }) => get<FetchWorkflowDraftPageResponse>(url, {
+    queryKey: [...WorkflowVersionHistoryKey, appId, initialPage, limit, userId, namedOnly],
+    queryFn: ({ pageParam = 1 }) => get<FetchWorkflowDraftPageResponse>(`/apps/${appId}/workflows`, {
       params: {
         page: pageParam,
         limit,
@@ -68,14 +63,14 @@ export const useWorkflowVersionHistory = (params: FetchWorkflowDraftPageParams) 
   })
 }
 
-export const useResetWorkflowVersionHistory = () => {
-  return useReset([...WorkflowVersionHistoryKey])
+export const useResetWorkflowVersionHistory = (appId: string) => {
+  return useReset([...WorkflowVersionHistoryKey, appId])
 }
 
-export const useUpdateWorkflow = () => {
+export const useUpdateWorkflow = (appId: string) => {
   return useMutation({
     mutationKey: [NAME_SPACE, 'update'],
-    mutationFn: (params: UpdateWorkflowParams) => patch(params.url, {
+    mutationFn: (params: UpdateWorkflowParams) => patch(`/apps/${appId}/workflows/${params.workflowId}`, {
       body: {
         marked_name: params.title,
         marked_comment: params.releaseNotes,
@@ -84,17 +79,17 @@ export const useUpdateWorkflow = () => {
   })
 }
 
-export const useDeleteWorkflow = () => {
+export const useDeleteWorkflow = (appId: string) => {
   return useMutation({
     mutationKey: [NAME_SPACE, 'delete'],
-    mutationFn: (url: string) => del(url),
+    mutationFn: (workflowId: string) => del(`/apps/${appId}/workflows/${workflowId}`),
   })
 }
 
-export const usePublishWorkflow = () => {
+export const usePublishWorkflow = (appId: string) => {
   return useMutation({
     mutationKey: [NAME_SPACE, 'publish'],
-    mutationFn: (params: PublishWorkflowParams) => post<CommonResponse & { created_at: number }>(params.url, {
+    mutationFn: (params: PublishWorkflowParams) => post<CommonResponse & { created_at: number }>(`/apps/${appId}/workflows/publish`, {
       body: {
         marked_name: params.title,
         marked_comment: params.releaseNotes,
@@ -104,12 +99,12 @@ export const usePublishWorkflow = () => {
 }
 
 const useLastRunKey = [NAME_SPACE, 'last-run']
-export const useLastRun = (flowType: FlowType, flowId: string, nodeId: string, enabled: boolean) => {
+export const useLastRun = (appID: string, nodeId: string, enabled: boolean) => {
   return useQuery<NodeTracing>({
     enabled,
-    queryKey: [...useLastRunKey, flowType, flowId, nodeId],
+    queryKey: [...useLastRunKey, appID, nodeId],
     queryFn: async () => {
-      return get(`${getFlowPrefix(flowType)}/${flowId}/workflows/draft/nodes/${nodeId}/last-run`, {}, {
+      return get(`apps/${appID}/workflows/draft/nodes/${nodeId}/last-run`, {}, {
         silent: true,
       })
     },
@@ -117,101 +112,103 @@ export const useLastRun = (flowType: FlowType, flowId: string, nodeId: string, e
   })
 }
 
-export const useInvalidLastRun = (flowType: FlowType, flowId: string, nodeId: string) => {
-  return useInvalid([...useLastRunKey, flowType, flowId, nodeId])
+export const useInvalidLastRun = (appId: string, nodeId: string) => {
+  return useInvalid([NAME_SPACE, 'last-run', appId, nodeId])
 }
 
 // Rerun workflow or change the version of workflow
-export const useInvalidAllLastRun = (flowType?: FlowType, flowId?: string) => {
-  return useInvalid([...useLastRunKey, flowType, flowId])
+export const useInvalidAllLastRun = (appId: string) => {
+  return useInvalid([NAME_SPACE, 'last-run', appId])
 }
 
-export const useConversationVarValues = (flowType?: FlowType, flowId?: string) => {
+const useConversationVarValuesKey = [NAME_SPACE, 'conversation-variable']
+
+export const useConversationVarValues = (url?: string) => {
   return useQuery({
-    enabled: !!flowId,
-    queryKey: [NAME_SPACE, flowType, 'conversation var values', flowId],
+    enabled: !!url,
+    queryKey: [...useConversationVarValuesKey, url],
     queryFn: async () => {
-      const { items } = (await get(`${getFlowPrefix(flowType)}/${flowId}/workflows/draft/conversation-variables`)) as { items: VarInInspect[] }
+      const { items } = (await get(url || '')) as { items: VarInInspect[] }
       return items
     },
   })
 }
 
-export const useInvalidateConversationVarValues = (flowType: FlowType, flowId: string) => {
-  return useInvalid([NAME_SPACE, flowType, 'conversation var values', flowId])
+export const useInvalidateConversationVarValues = (url: string) => {
+  return useInvalid([...useConversationVarValuesKey, url])
 }
 
-export const useResetConversationVar = (flowType: FlowType, flowId: string) => {
+export const useResetConversationVar = (appId: string) => {
   return useMutation({
-    mutationKey: [NAME_SPACE, flowType, 'reset conversation var', flowId],
+    mutationKey: [NAME_SPACE, 'reset conversation var', appId],
     mutationFn: async (varId: string) => {
-      return put(`${getFlowPrefix(flowType)}/${flowId}/workflows/draft/variables/${varId}/reset`)
+      return put(`apps/${appId}/workflows/draft/variables/${varId}/reset`)
     },
   })
 }
 
-export const useResetToLastRunValue = (flowType: FlowType, flowId: string) => {
+export const useResetToLastRunValue = (appId: string) => {
   return useMutation({
-    mutationKey: [NAME_SPACE, flowType, 'reset to last run value', flowId],
+    mutationKey: [NAME_SPACE, 'reset to last run value', appId],
     mutationFn: async (varId: string): Promise<{ value: any }> => {
-      return put(`${getFlowPrefix(flowType)}/${flowId}/workflows/draft/variables/${varId}/reset`)
+      return put(`apps/${appId}/workflows/draft/variables/${varId}/reset`)
     },
   })
 }
 
 export const useSysVarValuesKey = [NAME_SPACE, 'sys-variable']
-export const useSysVarValues = (flowType?: FlowType, flowId?: string) => {
+export const useSysVarValues = (url?: string) => {
   return useQuery({
-    enabled: !!flowId,
-    queryKey: [NAME_SPACE, flowType, 'sys var values', flowId],
+    enabled: !!url,
+    queryKey: [...useSysVarValuesKey, url],
     queryFn: async () => {
-      const { items } = (await get(`${getFlowPrefix(flowType)}/${flowId}/workflows/draft/system-variables`)) as { items: VarInInspect[] }
+      const { items } = (await get(url || '')) as { items: VarInInspect[] }
       return items
     },
   })
 }
 
-export const useInvalidateSysVarValues = (flowType: FlowType, flowId: string) => {
-  return useInvalid([NAME_SPACE, flowType, 'sys var values', flowId])
+export const useInvalidateSysVarValues = (url: string) => {
+  return useInvalid([...useSysVarValuesKey, url])
 }
 
-export const useDeleteAllInspectorVars = (flowType: FlowType, flowId: string) => {
+export const useDeleteAllInspectorVars = (appId: string) => {
   return useMutation({
-    mutationKey: [NAME_SPACE, flowType, 'delete all inspector vars', flowId],
+    mutationKey: [NAME_SPACE, 'delete all inspector vars', appId],
     mutationFn: async () => {
-      return del(`${getFlowPrefix(flowType)}/${flowId}/workflows/draft/variables`)
+      return del(`apps/${appId}/workflows/draft/variables`)
     },
   })
 }
 
-export const useDeleteNodeInspectorVars = (flowType: FlowType, flowId: string) => {
+export const useDeleteNodeInspectorVars = (appId: string) => {
   return useMutation({
-    mutationKey: [NAME_SPACE, flowType, 'delete node inspector vars', flowId],
+    mutationKey: [NAME_SPACE, 'delete node inspector vars', appId],
     mutationFn: async (nodeId: string) => {
-      return del(`${getFlowPrefix(flowType)}/${flowId}/workflows/draft/nodes/${nodeId}/variables`)
+      return del(`apps/${appId}/workflows/draft/nodes/${nodeId}/variables`)
     },
   })
 }
 
-export const useDeleteInspectVar = (flowType: FlowType, flowId: string) => {
+export const useDeleteInspectVar = (appId: string) => {
   return useMutation({
-    mutationKey: [NAME_SPACE, flowType, 'delete inspector var', flowId],
+    mutationKey: [NAME_SPACE, 'delete inspector var', appId],
     mutationFn: async (varId: string) => {
-      return del(`${getFlowPrefix(flowType)}/${flowId}/workflows/draft/variables/${varId}`)
+      return del(`apps/${appId}/workflows/draft/variables/${varId}`)
     },
   })
 }
 
 // edit the name or value of the inspector var
-export const useEditInspectorVar = (flowType: FlowType, flowId: string) => {
+export const useEditInspectorVar = (appId: string) => {
   return useMutation({
-    mutationKey: [NAME_SPACE, flowType, 'edit inspector var', flowId],
+    mutationKey: [NAME_SPACE, 'edit inspector var', appId],
     mutationFn: async ({ varId, ...rest }: {
       varId: string
       name?: string
       value?: any
     }) => {
-      return patch(`${getFlowPrefix(flowType)}/${flowId}/workflows/draft/variables/${varId}`, {
+      return patch(`apps/${appId}/workflows/draft/variables/${varId}`, {
         body: rest,
       })
     },

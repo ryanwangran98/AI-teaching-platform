@@ -1,47 +1,11 @@
-import ssl
 from datetime import timedelta
-from typing import Any
 
 import pytz
-from celery import Celery, Task
-from celery.schedules import crontab
+from celery import Celery, Task  # type: ignore
+from celery.schedules import crontab  # type: ignore
 
 from configs import dify_config
 from dify_app import DifyApp
-
-
-def _get_celery_ssl_options() -> dict[str, Any] | None:
-    """Get SSL configuration for Celery broker/backend connections."""
-    # Use REDIS_USE_SSL for consistency with the main Redis client
-    # Only apply SSL if we're using Redis as broker/backend
-    if not dify_config.REDIS_USE_SSL:
-        return None
-
-    # Check if Celery is actually using Redis
-    broker_is_redis = dify_config.CELERY_BROKER_URL and (
-        dify_config.CELERY_BROKER_URL.startswith("redis://") or dify_config.CELERY_BROKER_URL.startswith("rediss://")
-    )
-
-    if not broker_is_redis:
-        return None
-
-    # Map certificate requirement strings to SSL constants
-    cert_reqs_map = {
-        "CERT_NONE": ssl.CERT_NONE,
-        "CERT_OPTIONAL": ssl.CERT_OPTIONAL,
-        "CERT_REQUIRED": ssl.CERT_REQUIRED,
-    }
-
-    ssl_cert_reqs = cert_reqs_map.get(dify_config.REDIS_SSL_CERT_REQS, ssl.CERT_NONE)
-
-    ssl_options = {
-        "ssl_cert_reqs": ssl_cert_reqs,
-        "ssl_ca_certs": dify_config.REDIS_SSL_CA_CERTS,
-        "ssl_certfile": dify_config.REDIS_SSL_CERTFILE,
-        "ssl_keyfile": dify_config.REDIS_SSL_KEYFILE,
-    }
-
-    return ssl_options
 
 
 def init_app(app: DifyApp) -> Celery:
@@ -66,7 +30,16 @@ def init_app(app: DifyApp) -> Celery:
         task_cls=FlaskTask,
         broker=dify_config.CELERY_BROKER_URL,
         backend=dify_config.CELERY_BACKEND,
+        task_ignore_result=True,
     )
+
+    # Add SSL options to the Celery configuration
+    ssl_options = {
+        "ssl_cert_reqs": None,
+        "ssl_ca_certs": None,
+        "ssl_certfile": None,
+        "ssl_keyfile": None,
+    }
 
     celery_app.conf.update(
         result_backend=dify_config.CELERY_RESULT_BACKEND,
@@ -76,16 +49,11 @@ def init_app(app: DifyApp) -> Celery:
         worker_task_log_format=dify_config.LOG_FORMAT,
         worker_hijack_root_logger=False,
         timezone=pytz.timezone(dify_config.LOG_TZ or "UTC"),
-        task_ignore_result=True,
     )
 
-    # Apply SSL configuration if enabled
-    ssl_options = _get_celery_ssl_options()
-    if ssl_options:
+    if dify_config.BROKER_USE_SSL:
         celery_app.conf.update(
-            broker_use_ssl=ssl_options,
-            # Also apply SSL to the backend if it's Redis
-            redis_backend_use_ssl=ssl_options if dify_config.CELERY_BACKEND == "redis" else None,
+            broker_use_ssl=ssl_options,  # Add the SSL options to the broker configuration
         )
 
     if dify_config.LOG_FILE:
@@ -96,10 +64,7 @@ def init_app(app: DifyApp) -> Celery:
     celery_app.set_default()
     app.extensions["celery"] = celery_app
 
-    imports = [
-        "tasks.async_workflow_tasks",  # trigger workers
-        "tasks.trigger_processing_tasks",  # async trigger processing
-    ]
+    imports = []
     day = dify_config.CELERY_BEAT_SCHEDULER_TIME
 
     # if you add a new task, please add the switch to CeleryScheduleTasksConfig
@@ -144,34 +109,17 @@ def init_app(app: DifyApp) -> Celery:
         imports.append("schedule.queue_monitor_task")
         beat_schedule["datasets-queue-monitor"] = {
             "task": "schedule.queue_monitor_task.queue_monitor_task",
-            "schedule": timedelta(minutes=dify_config.QUEUE_MONITOR_INTERVAL or 30),
+            "schedule": timedelta(
+                minutes=dify_config.QUEUE_MONITOR_INTERVAL if dify_config.QUEUE_MONITOR_INTERVAL else 30
+            ),
         }
-    if dify_config.ENABLE_CHECK_UPGRADABLE_PLUGIN_TASK and dify_config.MARKETPLACE_ENABLED:
+    if dify_config.ENABLE_CHECK_UPGRADABLE_PLUGIN_TASK:
         imports.append("schedule.check_upgradable_plugin_task")
-        imports.append("tasks.process_tenant_plugin_autoupgrade_check_task")
         beat_schedule["check_upgradable_plugin_task"] = {
             "task": "schedule.check_upgradable_plugin_task.check_upgradable_plugin_task",
             "schedule": crontab(minute="*/15"),
         }
-    if dify_config.WORKFLOW_LOG_CLEANUP_ENABLED:
-        # 2:00 AM every day
-        imports.append("schedule.clean_workflow_runlogs_precise")
-        beat_schedule["clean_workflow_runlogs_precise"] = {
-            "task": "schedule.clean_workflow_runlogs_precise.clean_workflow_runlogs_precise",
-            "schedule": crontab(minute="0", hour="2"),
-        }
-    if dify_config.ENABLE_WORKFLOW_SCHEDULE_POLLER_TASK:
-        imports.append("schedule.workflow_schedule_task")
-        beat_schedule["workflow_schedule_task"] = {
-            "task": "schedule.workflow_schedule_task.poll_workflow_schedules",
-            "schedule": timedelta(minutes=dify_config.WORKFLOW_SCHEDULE_POLLER_INTERVAL),
-        }
-    if dify_config.ENABLE_TRIGGER_PROVIDER_REFRESH_TASK:
-        imports.append("schedule.trigger_provider_refresh_task")
-        beat_schedule["trigger_provider_refresh"] = {
-            "task": "schedule.trigger_provider_refresh_task.trigger_provider_refresh",
-            "schedule": timedelta(minutes=dify_config.TRIGGER_PROVIDER_REFRESH_INTERVAL),
-        }
+
     celery_app.conf.update(beat_schedule=beat_schedule, imports=imports)
 
     return celery_app

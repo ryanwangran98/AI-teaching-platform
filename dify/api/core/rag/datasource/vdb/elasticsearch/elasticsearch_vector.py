@@ -1,10 +1,10 @@
 import json
 import logging
 import math
-from typing import Any, cast
+from typing import Any, Optional, cast
 from urllib.parse import urlparse
 
-from elasticsearch import ConnectionError as ElasticsearchConnectionError
+import requests
 from elasticsearch import Elasticsearch
 from flask import current_app
 from packaging.version import parse as parse_version
@@ -24,18 +24,18 @@ logger = logging.getLogger(__name__)
 
 class ElasticSearchConfig(BaseModel):
     # Regular Elasticsearch config
-    host: str | None = None
-    port: int | None = None
-    username: str | None = None
-    password: str | None = None
+    host: Optional[str] = None
+    port: Optional[int] = None
+    username: Optional[str] = None
+    password: Optional[str] = None
 
     # Elastic Cloud specific config
-    cloud_url: str | None = None  # Cloud URL for Elasticsearch Cloud
-    api_key: str | None = None
+    cloud_url: Optional[str] = None  # Cloud URL for Elasticsearch Cloud
+    api_key: Optional[str] = None
 
     # Common config
     use_cloud: bool = False
-    ca_certs: str | None = None
+    ca_certs: Optional[str] = None
     verify_certs: bool = False
     request_timeout: int = 100000
     retry_on_timeout: bool = True
@@ -43,7 +43,7 @@ class ElasticSearchConfig(BaseModel):
 
     @model_validator(mode="before")
     @classmethod
-    def validate_config(cls, values: dict):
+    def validate_config(cls, values: dict) -> dict:
         use_cloud = values.get("use_cloud", False)
         cloud_url = values.get("cloud_url")
 
@@ -138,7 +138,7 @@ class ElasticSearchVector(BaseVector):
             if not client.ping():
                 raise ConnectionError("Failed to connect to Elasticsearch")
 
-        except ElasticsearchConnectionError as e:
+        except requests.exceptions.ConnectionError as e:
             raise ConnectionError(f"Vector database connection error: {str(e)}")
         except Exception as e:
             raise ConnectionError(f"Elasticsearch client initialization failed: {str(e)}")
@@ -147,8 +147,7 @@ class ElasticSearchVector(BaseVector):
 
     def _get_version(self) -> str:
         info = self._client.info()
-        # remove any suffix like "-SNAPSHOT" from the version string
-        return cast(str, info["version"]["number"]).split("-")[0]
+        return cast(str, info["version"]["number"])
 
     def _check_version(self):
         if parse_version(self._version) < parse_version("8.0.0"):
@@ -164,9 +163,9 @@ class ElasticSearchVector(BaseVector):
                 index=self._collection_name,
                 id=uuids[i],
                 document={
-                    Field.CONTENT_KEY: documents[i].page_content,
-                    Field.VECTOR: embeddings[i] or None,
-                    Field.METADATA_KEY: documents[i].metadata or {},
+                    Field.CONTENT_KEY.value: documents[i].page_content,
+                    Field.VECTOR.value: embeddings[i] or None,
+                    Field.METADATA_KEY.value: documents[i].metadata or {},
                 },
             )
         self._client.indices.refresh(index=self._collection_name)
@@ -175,26 +174,26 @@ class ElasticSearchVector(BaseVector):
     def text_exists(self, id: str) -> bool:
         return bool(self._client.exists(index=self._collection_name, id=id))
 
-    def delete_by_ids(self, ids: list[str]):
+    def delete_by_ids(self, ids: list[str]) -> None:
         if not ids:
             return
         for id in ids:
             self._client.delete(index=self._collection_name, id=id)
 
-    def delete_by_metadata_field(self, key: str, value: str):
+    def delete_by_metadata_field(self, key: str, value: str) -> None:
         query_str = {"query": {"match": {f"metadata.{key}": f"{value}"}}}
         results = self._client.search(index=self._collection_name, body=query_str)
         ids = [hit["_id"] for hit in results["hits"]["hits"]]
         if ids:
             self.delete_by_ids(ids)
 
-    def delete(self):
+    def delete(self) -> None:
         self._client.indices.delete(index=self._collection_name)
 
     def search_by_vector(self, query_vector: list[float], **kwargs: Any) -> list[Document]:
         top_k = kwargs.get("top_k", 4)
         num_candidates = math.ceil(top_k * 1.5)
-        knn = {"field": Field.VECTOR, "query_vector": query_vector, "k": top_k, "num_candidates": num_candidates}
+        knn = {"field": Field.VECTOR.value, "query_vector": query_vector, "k": top_k, "num_candidates": num_candidates}
         document_ids_filter = kwargs.get("document_ids_filter")
         if document_ids_filter:
             knn["filter"] = {"terms": {"metadata.document_id": document_ids_filter}}
@@ -206,9 +205,9 @@ class ElasticSearchVector(BaseVector):
             docs_and_scores.append(
                 (
                     Document(
-                        page_content=hit["_source"][Field.CONTENT_KEY],
-                        vector=hit["_source"][Field.VECTOR],
-                        metadata=hit["_source"][Field.METADATA_KEY],
+                        page_content=hit["_source"][Field.CONTENT_KEY.value],
+                        vector=hit["_source"][Field.VECTOR.value],
+                        metadata=hit["_source"][Field.METADATA_KEY.value],
                     ),
                     hit["_score"],
                 )
@@ -217,7 +216,7 @@ class ElasticSearchVector(BaseVector):
         docs = []
         for doc, score in docs_and_scores:
             score_threshold = float(kwargs.get("score_threshold") or 0.0)
-            if score >= score_threshold:
+            if score > score_threshold:
                 if doc.metadata is not None:
                     doc.metadata["score"] = score
                     docs.append(doc)
@@ -225,13 +224,13 @@ class ElasticSearchVector(BaseVector):
         return docs
 
     def search_by_full_text(self, query: str, **kwargs: Any) -> list[Document]:
-        query_str: dict[str, Any] = {"match": {Field.CONTENT_KEY: query}}
+        query_str: dict[str, Any] = {"match": {Field.CONTENT_KEY.value: query}}
         document_ids_filter = kwargs.get("document_ids_filter")
 
         if document_ids_filter:
             query_str = {
                 "bool": {
-                    "must": {"match": {Field.CONTENT_KEY: query}},
+                    "must": {"match": {Field.CONTENT_KEY.value: query}},
                     "filter": {"terms": {"metadata.document_id": document_ids_filter}},
                 }
             }
@@ -241,9 +240,9 @@ class ElasticSearchVector(BaseVector):
         for hit in results["hits"]["hits"]:
             docs.append(
                 Document(
-                    page_content=hit["_source"][Field.CONTENT_KEY],
-                    vector=hit["_source"][Field.VECTOR],
-                    metadata=hit["_source"][Field.METADATA_KEY],
+                    page_content=hit["_source"][Field.CONTENT_KEY.value],
+                    vector=hit["_source"][Field.VECTOR.value],
+                    metadata=hit["_source"][Field.METADATA_KEY.value],
                 )
             )
 
@@ -257,8 +256,8 @@ class ElasticSearchVector(BaseVector):
     def create_collection(
         self,
         embeddings: list[list[float]],
-        metadatas: list[dict[Any, Any]] | None = None,
-        index_params: dict | None = None,
+        metadatas: Optional[list[dict[Any, Any]]] = None,
+        index_params: Optional[dict] = None,
     ):
         lock_name = f"vector_indexing_lock_{self._collection_name}"
         with redis_client.lock(lock_name, timeout=20):
@@ -271,14 +270,14 @@ class ElasticSearchVector(BaseVector):
                 dim = len(embeddings[0])
                 mappings = {
                     "properties": {
-                        Field.CONTENT_KEY: {"type": "text"},
-                        Field.VECTOR: {  # Make sure the dimension is correct here
+                        Field.CONTENT_KEY.value: {"type": "text"},
+                        Field.VECTOR.value: {  # Make sure the dimension is correct here
                             "type": "dense_vector",
                             "dims": dim,
                             "index": True,
                             "similarity": "cosine",
                         },
-                        Field.METADATA_KEY: {
+                        Field.METADATA_KEY.value: {
                             "type": "object",
                             "properties": {
                                 "doc_id": {"type": "keyword"},  # Map doc_id to keyword type

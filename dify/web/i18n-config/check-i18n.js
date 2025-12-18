@@ -7,99 +7,6 @@ const targetLanguage = 'en-US'
 const data = require('./languages.json')
 const languages = data.languages.filter(language => language.supported).map(language => language.value)
 
-function parseArgs(argv) {
-  const args = {
-    files: [],
-    languages: [],
-    autoRemove: false,
-    help: false,
-    errors: [],
-  }
-
-  const collectValues = (startIndex) => {
-    const values = []
-    let cursor = startIndex + 1
-    while (cursor < argv.length && !argv[cursor].startsWith('--')) {
-      const value = argv[cursor].trim()
-      if (value) values.push(value)
-      cursor++
-    }
-    return { values, nextIndex: cursor - 1 }
-  }
-
-  const validateList = (values, flag) => {
-    if (!values.length) {
-      args.errors.push(`${flag} requires at least one value. Example: ${flag} app billing`)
-      return false
-    }
-
-    const invalid = values.find(value => value.includes(','))
-    if (invalid) {
-      args.errors.push(`${flag} expects space-separated values. Example: ${flag} app billing`)
-      return false
-    }
-
-    return true
-  }
-
-  for (let index = 2; index < argv.length; index++) {
-    const arg = argv[index]
-
-    if (arg === '--auto-remove') {
-      args.autoRemove = true
-      continue
-    }
-
-    if (arg === '--help' || arg === '-h') {
-      args.help = true
-      break
-    }
-
-    if (arg.startsWith('--file=')) {
-      args.errors.push('--file expects space-separated values. Example: --file app billing')
-      continue
-    }
-
-    if (arg === '--file') {
-      const { values, nextIndex } = collectValues(index)
-      if (validateList(values, '--file'))
-        args.files.push(...values)
-      index = nextIndex
-      continue
-    }
-
-    if (arg.startsWith('--lang=')) {
-      args.errors.push('--lang expects space-separated values. Example: --lang zh-Hans ja-JP')
-      continue
-    }
-
-    if (arg === '--lang') {
-      const { values, nextIndex } = collectValues(index)
-      if (validateList(values, '--lang'))
-        args.languages.push(...values)
-      index = nextIndex
-      continue
-    }
-  }
-
-  return args
-}
-
-function printHelp() {
-  console.log(`Usage: pnpm run check-i18n [options]
-
-Options:
-  --file <name...>  Check only specific files; provide space-separated names and repeat --file if needed
-  --lang <locale>   Check only specific locales; provide space-separated locales and repeat --lang if needed
-  --auto-remove     Remove extra keys automatically
-  -h, --help        Show help
-
-Examples:
-  pnpm run check-i18n -- --file app billing --lang zh-Hans ja-JP
-  pnpm run check-i18n -- --auto-remove
-`)
-}
-
 async function getKeysFromLanguage(language) {
   return new Promise((resolve, reject) => {
     const folderPath = path.resolve(__dirname, '../i18n', language)
@@ -366,30 +273,27 @@ async function removeExtraKeysFromFile(language, fileName, extraKeys) {
 }
 
 // Add command line argument support
-const args = parseArgs(process.argv)
-const targetFiles = Array.from(new Set(args.files))
-const targetLangs = Array.from(new Set(args.languages))
-const autoRemove = args.autoRemove
+const targetFile = process.argv.find(arg => arg.startsWith('--file='))?.split('=')[1]
+const targetLang = process.argv.find(arg => arg.startsWith('--lang='))?.split('=')[1]
+const autoRemove = process.argv.includes('--auto-remove')
 
 async function main() {
   const compareKeysCount = async () => {
-    let hasDiff = false
     const allTargetKeys = await getKeysFromLanguage(targetLanguage)
 
     // Filter target keys by file if specified
-    const camelTargetFiles = targetFiles.map(file => file.replace(/[-_](.)/g, (_, c) => c.toUpperCase()))
-    const targetKeys = targetFiles.length
-      ? allTargetKeys.filter(key => camelTargetFiles.some(file => key.startsWith(`${file}.`)))
+    const targetKeys = targetFile
+      ? allTargetKeys.filter(key => key.startsWith(`${targetFile.replace(/[-_](.)/g, (_, c) => c.toUpperCase())}.`))
       : allTargetKeys
 
     // Filter languages by target language if specified
-    const languagesToProcess = targetLangs.length ? targetLangs : languages
+    const languagesToProcess = targetLang ? [targetLang] : languages
 
     const allLanguagesKeys = await Promise.all(languagesToProcess.map(language => getKeysFromLanguage(language)))
 
     // Filter language keys by file if specified
-    const languagesKeys = targetFiles.length
-      ? allLanguagesKeys.map(keys => keys.filter(key => camelTargetFiles.some(file => key.startsWith(`${file}.`))))
+    const languagesKeys = targetFile
+      ? allLanguagesKeys.map(keys => keys.filter(key => key.startsWith(`${targetFile.replace(/[-_](.)/g, (_, c) => c.toUpperCase())}.`)))
       : allLanguagesKeys
 
     const keysCount = languagesKeys.map(keys => keys.length)
@@ -412,8 +316,6 @@ async function main() {
       const extraKeys = languageKeys.filter(key => !targetKeys.includes(key))
 
       console.log(`Missing keys in ${language}:`, missingKeys)
-      if (missingKeys.length > 0)
-        hasDiff = true
 
       // Show extra keys only when there are extra keys (negative difference)
       if (extraKeys.length > 0) {
@@ -428,7 +330,7 @@ async function main() {
           const files = fs.readdirSync(i18nFolder)
             .filter(file => /\.ts$/.test(file))
             .map(file => file.replace(/\.ts$/, ''))
-            .filter(f => targetFiles.length === 0 || targetFiles.includes(f))
+            .filter(f => !targetFile || f === targetFile) // Filter by target file if specified
 
           let totalRemoved = 0
           for (const fileName of files) {
@@ -438,59 +340,21 @@ async function main() {
 
           console.log(`✅ Auto-removal completed for ${language}. Modified ${totalRemoved} files.`)
         }
-        else {
-          hasDiff = true
-        }
       }
     }
-
-    return hasDiff
   }
 
   console.log('🚀 Starting check-i18n script...')
-  if (targetFiles.length)
-    console.log(`📁 Checking files: ${targetFiles.join(', ')}`)
+  if (targetFile)
+    console.log(`📁 Checking file: ${targetFile}`)
 
-  if (targetLangs.length)
-    console.log(`🌍 Checking languages: ${targetLangs.join(', ')}`)
+  if (targetLang)
+    console.log(`🌍 Checking language: ${targetLang}`)
 
   if (autoRemove)
     console.log('🤖 Auto-remove mode: ENABLED')
 
-  const hasDiff = await compareKeysCount()
-  if (hasDiff) {
-    console.error('\n❌ i18n keys are not aligned. Fix issues above.')
-    process.exitCode = 1
-  }
-  else {
-    console.log('\n✅ All i18n files are in sync')
-  }
+  compareKeysCount()
 }
 
-async function bootstrap() {
-  if (args.help) {
-    printHelp()
-    return
-  }
-
-  if (args.errors.length) {
-    args.errors.forEach(message => console.error(`❌ ${message}`))
-    printHelp()
-    process.exit(1)
-    return
-  }
-
-  const unknownLangs = targetLangs.filter(lang => !languages.includes(lang))
-  if (unknownLangs.length) {
-    console.error(`❌ Unsupported languages: ${unknownLangs.join(', ')}`)
-    process.exit(1)
-    return
-  }
-
-  await main()
-}
-
-bootstrap().catch((error) => {
-  console.error('❌ Unexpected error:', error.message)
-  process.exit(1)
-})
+main()

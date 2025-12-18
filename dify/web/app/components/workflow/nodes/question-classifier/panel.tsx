@@ -56,6 +56,7 @@ const Panel: FC<NodePanelProps<QuestionClassifierNodeType>> = ({
             popupClassName='!w-[387px]'
             isInWorkflow
             isAdvancedMode={true}
+            mode={model?.mode}
             provider={model?.provider}
             completionParams={model.completion_params}
             modelId={model.name}
@@ -89,14 +90,19 @@ const Panel: FC<NodePanelProps<QuestionClassifierNodeType>> = ({
           config={inputs.vision?.configs}
           onConfigChange={handleVisionResolutionChange}
         />
-        <ClassList
-          nodeId={id}
-          list={inputs.classes}
-          onChange={handleTopicsChange}
-          readonly={readOnly}
-          filterVar={filterVar}
-          handleSortTopic={handleSortTopic}
-        />
+        <Field
+          title={t(`${i18nPrefix}.class`)}
+          required
+        >
+          <ClassList
+            nodeId={id}
+            list={inputs.classes}
+            onChange={handleTopicsChange}
+            readonly={readOnly}
+            filterVar={filterVar}
+            handleSortTopic={handleSortTopic}
+          />
+        </Field>
         <Split />
       </div>
       <FieldCollapse

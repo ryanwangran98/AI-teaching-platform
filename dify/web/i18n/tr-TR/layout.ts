@@ -1,8 +1,3 @@
-const translation = {
-  sidebar: {
-    expandSidebar: 'Kenar Çubuğunu Genişlet',
-    collapseSidebar: 'Kenar Çubuğunu Daralt',
-  },
-}
+const translation = {}
 
 export default translation

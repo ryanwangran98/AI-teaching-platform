@@ -1,11 +1,12 @@
 import json
-from enum import StrEnum
+from enum import Enum
 from json import JSONDecodeError
+from typing import Optional
 
 from extensions.ext_redis import redis_client
 
 
-class ProviderCredentialsCacheType(StrEnum):
+class ProviderCredentialsCacheType(Enum):
     PROVIDER = "provider"
     MODEL = "provider_model"
     LOAD_BALANCING_MODEL = "load_balancing_provider_model"
@@ -13,9 +14,9 @@ class ProviderCredentialsCacheType(StrEnum):
 
 class ProviderCredentialsCache:
     def __init__(self, tenant_id: str, identity_id: str, cache_type: ProviderCredentialsCacheType):
-        self.cache_key = f"{cache_type}_credentials:tenant_id:{tenant_id}:id:{identity_id}"
+        self.cache_key = f"{cache_type.value}_credentials:tenant_id:{tenant_id}:id:{identity_id}"
 
-    def get(self) -> dict | None:
+    def get(self) -> Optional[dict]:
         """
         Get cached model provider credentials.
 
@@ -33,7 +34,7 @@ class ProviderCredentialsCache:
         else:
             return None
 
-    def set(self, credentials: dict):
+    def set(self, credentials: dict) -> None:
         """
         Cache model provider credentials.
 
@@ -42,7 +43,7 @@ class ProviderCredentialsCache:
         """
         redis_client.setex(self.cache_key, 86400, json.dumps(credentials))
 
-    def delete(self):
+    def delete(self) -> None:
         """
         Delete cached model provider credentials.
 

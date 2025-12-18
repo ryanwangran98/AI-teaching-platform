@@ -12,10 +12,6 @@ from services.workflow_draft_variable_service import (
 )
 
 
-def _get_random_variable_name(fake: Faker):
-    return "".join(fake.random_letters(length=10))
-
-
 class TestWorkflowDraftVariableService:
     """
     Comprehensive integration tests for WorkflowDraftVariableService using testcontainers.
@@ -108,7 +104,6 @@ class TestWorkflowDraftVariableService:
             created_by=app.created_by,
             environment_variables=[],
             conversation_variables=[],
-            rag_pipeline_variables=[],
         )
         from extensions.ext_database import db
 
@@ -117,14 +112,7 @@ class TestWorkflowDraftVariableService:
         return workflow
 
     def _create_test_variable(
-        self,
-        db_session_with_containers,
-        app_id,
-        node_id,
-        name,
-        value,
-        variable_type: DraftVariableType = DraftVariableType.CONVERSATION,
-        fake=None,
+        self, db_session_with_containers, app_id, node_id, name, value, variable_type="conversation", fake=None
     ):
         """
         Helper method to create a test workflow draft variable with proper configuration.
@@ -239,13 +227,7 @@ class TestWorkflowDraftVariableService:
             db_session_with_containers, app.id, CONVERSATION_VARIABLE_NODE_ID, "var2", var2_value, fake=fake
         )
         var3 = self._create_test_variable(
-            db_session_with_containers,
-            app.id,
-            "test_node_1",
-            "var3",
-            var3_value,
-            variable_type=DraftVariableType.NODE,
-            fake=fake,
+            db_session_with_containers, app.id, "test_node_1", "var3", var3_value, "node", fake=fake
         )
         selectors = [
             [CONVERSATION_VARIABLE_NODE_ID, "var1"],
@@ -281,14 +263,9 @@ class TestWorkflowDraftVariableService:
         fake = Faker()
         app = self._create_test_app(db_session_with_containers, mock_external_service_dependencies, fake=fake)
         for i in range(5):
-            test_value = StringSegment(value=fake.numerify("value######"))
+            test_value = StringSegment(value=fake.numerify("value##"))
             self._create_test_variable(
-                db_session_with_containers,
-                app.id,
-                CONVERSATION_VARIABLE_NODE_ID,
-                _get_random_variable_name(fake),
-                test_value,
-                fake=fake,
+                db_session_with_containers, app.id, CONVERSATION_VARIABLE_NODE_ID, fake.word(), test_value, fake=fake
             )
         service = WorkflowDraftVariableService(db_session_with_containers)
         result = service.list_variables_without_values(app.id, page=1, limit=3)
@@ -314,32 +291,10 @@ class TestWorkflowDraftVariableService:
         var1_value = StringSegment(value=fake.word())
         var2_value = StringSegment(value=fake.word())
         var3_value = StringSegment(value=fake.word())
+        self._create_test_variable(db_session_with_containers, app.id, node_id, "var1", var1_value, "node", fake=fake)
+        self._create_test_variable(db_session_with_containers, app.id, node_id, "var2", var3_value, "node", fake=fake)
         self._create_test_variable(
-            db_session_with_containers,
-            app.id,
-            node_id,
-            "var1",
-            var1_value,
-            variable_type=DraftVariableType.NODE,
-            fake=fake,
-        )
-        self._create_test_variable(
-            db_session_with_containers,
-            app.id,
-            node_id,
-            "var2",
-            var3_value,
-            variable_type=DraftVariableType.NODE,
-            fake=fake,
-        )
-        self._create_test_variable(
-            db_session_with_containers,
-            app.id,
-            "other_node",
-            "var3",
-            var2_value,
-            variable_type=DraftVariableType.NODE,
-            fake=fake,
+            db_session_with_containers, app.id, "other_node", "var3", var2_value, "node", fake=fake
         )
         service = WorkflowDraftVariableService(db_session_with_containers)
         result = service.list_node_variables(app.id, node_id)
@@ -373,13 +328,7 @@ class TestWorkflowDraftVariableService:
         )
         sys_var_value = StringSegment(value=fake.word())
         self._create_test_variable(
-            db_session_with_containers,
-            app.id,
-            SYSTEM_VARIABLE_NODE_ID,
-            "sys_var",
-            sys_var_value,
-            variable_type=DraftVariableType.SYS,
-            fake=fake,
+            db_session_with_containers, app.id, SYSTEM_VARIABLE_NODE_ID, "sys_var", sys_var_value, "system", fake=fake
         )
         service = WorkflowDraftVariableService(db_session_with_containers)
         result = service.list_conversation_variables(app.id)
@@ -531,24 +480,14 @@ class TestWorkflowDraftVariableService:
         fake = Faker()
         app = self._create_test_app(db_session_with_containers, mock_external_service_dependencies, fake=fake)
         for i in range(3):
-            test_value = StringSegment(value=fake.numerify("value######"))
+            test_value = StringSegment(value=fake.numerify("value##"))
             self._create_test_variable(
-                db_session_with_containers,
-                app.id,
-                CONVERSATION_VARIABLE_NODE_ID,
-                _get_random_variable_name(fake),
-                test_value,
-                fake=fake,
+                db_session_with_containers, app.id, CONVERSATION_VARIABLE_NODE_ID, fake.word(), test_value, fake=fake
             )
         other_app = self._create_test_app(db_session_with_containers, mock_external_service_dependencies, fake=fake)
         other_value = StringSegment(value=fake.word())
         self._create_test_variable(
-            db_session_with_containers,
-            other_app.id,
-            CONVERSATION_VARIABLE_NODE_ID,
-            _get_random_variable_name(fake),
-            other_value,
-            fake=fake,
+            db_session_with_containers, other_app.id, CONVERSATION_VARIABLE_NODE_ID, fake.word(), other_value, fake=fake
         )
         from extensions.ext_database import db
 
@@ -576,34 +515,17 @@ class TestWorkflowDraftVariableService:
         app = self._create_test_app(db_session_with_containers, mock_external_service_dependencies, fake=fake)
         node_id = fake.word()
         for i in range(2):
-            test_value = StringSegment(value=fake.numerify("node_value######"))
+            test_value = StringSegment(value=fake.numerify("node_value##"))
             self._create_test_variable(
-                db_session_with_containers,
-                app.id,
-                node_id,
-                _get_random_variable_name(fake),
-                test_value,
-                variable_type=DraftVariableType.NODE,
-                fake=fake,
+                db_session_with_containers, app.id, node_id, fake.word(), test_value, "node", fake=fake
             )
         other_node_value = StringSegment(value=fake.word())
         self._create_test_variable(
-            db_session_with_containers,
-            app.id,
-            "other_node",
-            _get_random_variable_name(fake),
-            other_node_value,
-            variable_type=DraftVariableType.NODE,
-            fake=fake,
+            db_session_with_containers, app.id, "other_node", fake.word(), other_node_value, "node", fake=fake
         )
         conv_value = StringSegment(value=fake.word())
         self._create_test_variable(
-            db_session_with_containers,
-            app.id,
-            CONVERSATION_VARIABLE_NODE_ID,
-            _get_random_variable_name(fake),
-            conv_value,
-            fake=fake,
+            db_session_with_containers, app.id, CONVERSATION_VARIABLE_NODE_ID, fake.word(), conv_value, fake=fake
         )
         from extensions.ext_database import db
 
@@ -705,7 +627,7 @@ class TestWorkflowDraftVariableService:
             SYSTEM_VARIABLE_NODE_ID,
             "conversation_id",
             conv_id_value,
-            variable_type=DraftVariableType.SYS,
+            "system",
             fake=fake,
         )
         service = WorkflowDraftVariableService(db_session_with_containers)
@@ -742,22 +664,10 @@ class TestWorkflowDraftVariableService:
         sys_var1_value = StringSegment(value=fake.word())
         sys_var2_value = StringSegment(value=fake.word())
         sys_var1 = self._create_test_variable(
-            db_session_with_containers,
-            app.id,
-            SYSTEM_VARIABLE_NODE_ID,
-            "sys_var1",
-            sys_var1_value,
-            variable_type=DraftVariableType.SYS,
-            fake=fake,
+            db_session_with_containers, app.id, SYSTEM_VARIABLE_NODE_ID, "sys_var1", sys_var1_value, "system", fake=fake
         )
         sys_var2 = self._create_test_variable(
-            db_session_with_containers,
-            app.id,
-            SYSTEM_VARIABLE_NODE_ID,
-            "sys_var2",
-            sys_var2_value,
-            variable_type=DraftVariableType.SYS,
-            fake=fake,
+            db_session_with_containers, app.id, SYSTEM_VARIABLE_NODE_ID, "sys_var2", sys_var2_value, "system", fake=fake
         )
         conv_var_value = StringSegment(value=fake.word())
         self._create_test_variable(
@@ -791,22 +701,10 @@ class TestWorkflowDraftVariableService:
             db_session_with_containers, app.id, CONVERSATION_VARIABLE_NODE_ID, "test_conv_var", test_value, fake=fake
         )
         sys_var = self._create_test_variable(
-            db_session_with_containers,
-            app.id,
-            SYSTEM_VARIABLE_NODE_ID,
-            "test_sys_var",
-            test_value,
-            variable_type=DraftVariableType.SYS,
-            fake=fake,
+            db_session_with_containers, app.id, SYSTEM_VARIABLE_NODE_ID, "test_sys_var", test_value, "system", fake=fake
         )
         node_var = self._create_test_variable(
-            db_session_with_containers,
-            app.id,
-            "test_node",
-            "test_node_var",
-            test_value,
-            variable_type=DraftVariableType.NODE,
-            fake=fake,
+            db_session_with_containers, app.id, "test_node", "test_node_var", test_value, "node", fake=fake
         )
         service = WorkflowDraftVariableService(db_session_with_containers)
         retrieved_conv_var = service.get_conversation_variable(app.id, "test_conv_var")

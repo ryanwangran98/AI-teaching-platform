@@ -1,20 +1,25 @@
 import React from 'react'
 import { useFieldContext } from '../..'
 import Input, { type InputProps } from '../../../input'
-import type { LabelProps } from '../label'
 import Label from '../label'
 import cn from '@/utils/classnames'
 
 type TextFieldProps = {
   label: string
-  labelOptions?: Omit<LabelProps, 'htmlFor' | 'label'>
+  isRequired?: boolean
+  showOptional?: boolean
+  tooltip?: string
   className?: string
+  labelClassName?: string
 } & Omit<InputProps, 'className' | 'onChange' | 'onBlur' | 'value' | 'id'>
 
 const TextField = ({
   label,
-  labelOptions,
+  isRequired,
+  showOptional,
+  tooltip,
   className,
+  labelClassName,
   ...inputProps
 }: TextFieldProps) => {
   const field = useFieldContext<string>()
@@ -24,7 +29,10 @@ const TextField = ({
       <Label
         htmlFor={field.name}
         label={label}
-        {...(labelOptions ?? {})}
+        isRequired={isRequired}
+        showOptional={showOptional}
+        tooltip={tooltip}
+        className={labelClassName}
       />
       <Input
         id={field.name}

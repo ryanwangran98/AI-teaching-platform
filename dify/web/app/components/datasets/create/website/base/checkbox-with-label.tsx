@@ -12,7 +12,6 @@ type Props = {
   label: string
   labelClassName?: string
   tooltip?: string
-  testId?: string
 }
 
 const CheckboxWithLabel: FC<Props> = ({
@@ -22,11 +21,10 @@ const CheckboxWithLabel: FC<Props> = ({
   label,
   labelClassName,
   tooltip,
-  testId,
 }) => {
   return (
     <label className={cn(className, 'flex h-7 items-center space-x-2')}>
-      <Checkbox checked={isChecked} onCheck={() => onChange(!isChecked)} id={testId} />
+      <Checkbox checked={isChecked} onCheck={() => onChange(!isChecked)} />
       <div className={cn('text-sm font-normal text-text-secondary', labelClassName)}>{label}</div>
       {tooltip && (
         <Tooltip

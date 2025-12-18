@@ -6,14 +6,7 @@ type Props = {
 }
 
 const VideoGallery: React.FC<Props> = ({ srcs }) => {
-  const validSrcs = srcs.filter(src => src)
-  if (validSrcs.length === 0) return null
-
-  return (
-    <div className="my-3">
-      <VideoPlayer srcs={validSrcs} />
-    </div>
-  )
+  return (<><br/>{srcs.map((src, index) => (<React.Fragment key={`video_${index}`}><br/><VideoPlayer src={src}/></React.Fragment>))}</>)
 }
 
 export default React.memo(VideoGallery)

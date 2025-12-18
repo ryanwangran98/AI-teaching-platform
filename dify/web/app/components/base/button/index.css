@@ -60,7 +60,6 @@
     @apply
     border-[0.5px]
     shadow-xs
-    backdrop-blur-[5px]
     bg-components-button-secondary-bg
     border-components-button-secondary-border
     hover:bg-components-button-secondary-bg-hover
@@ -70,7 +69,6 @@
 
   .btn-secondary.btn-disabled {
     @apply
-    backdrop-blur-sm
     bg-components-button-secondary-bg-disabled
     border-components-button-secondary-border-disabled
     text-components-button-secondary-text-disabled;

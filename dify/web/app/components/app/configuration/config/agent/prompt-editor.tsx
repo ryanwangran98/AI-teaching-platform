@@ -51,9 +51,7 @@ const Editor: FC<Props> = ({
   const handleOpenExternalDataToolModal = () => {
     setShowExternalDataToolModal({
       payload: {},
-      onSaveCallback: (newExternalDataTool?: ExternalDataTool) => {
-        if (!newExternalDataTool)
-          return
+      onSaveCallback: (newExternalDataTool: ExternalDataTool) => {
         setExternalDataToolsConfig([...externalDataToolsConfig, newExternalDataTool])
       },
       onValidateBeforeSaveCallback: (newExternalDataTool: ExternalDataTool) => {

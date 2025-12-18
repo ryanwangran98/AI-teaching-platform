@@ -55,7 +55,6 @@ const Panel: FC<NodePanelProps<ListFilterNodeType>> = ({
             value={inputs.variable || []}
             onChange={handleVarChanges}
             filterVar={filterVar}
-            isSupportFileVar={false}
             typePlaceHolder='Array'
           />
         </Field>

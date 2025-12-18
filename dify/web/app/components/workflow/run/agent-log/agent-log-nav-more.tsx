@@ -9,7 +9,7 @@ import Button from '@/app/components/base/button'
 import type { AgentLogItemWithChildren } from '@/types/workflow'
 
 type AgentLogNavMoreProps = {
-  options: AgentLogItemWithChildren[]
+  options: { id: string; label: string }[]
   onShowAgentOrToolLog: (detail?: AgentLogItemWithChildren) => void
 }
 const AgentLogNavMore = ({
@@ -41,10 +41,10 @@ const AgentLogNavMore = ({
           {
             options.map(option => (
               <div
-                key={option.message_id}
+                key={option.id}
                 className='system-md-regular flex h-8 cursor-pointer items-center rounded-lg px-2 text-text-secondary hover:bg-state-base-hover'
                 onClick={() => {
-                  onShowAgentOrToolLog(option)
+                  onShowAgentOrToolLog(option as AgentLogItemWithChildren)
                   setOpen(false)
                 }}
               >

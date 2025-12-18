@@ -65,7 +65,7 @@ class Storage:
                 from extensions.storage.volcengine_tos_storage import VolcengineTosStorage
 
                 return VolcengineTosStorage
-            case StorageType.SUPABASE:
+            case StorageType.SUPBASE:
                 from extensions.storage.supabase_storage import SupabaseStorage
 
                 return SupabaseStorage
@@ -85,7 +85,7 @@ class Storage:
             case _:
                 raise ValueError(f"unsupported storage type {storage_type}")
 
-    def save(self, filename: str, data: bytes):
+    def save(self, filename, data):
         self.storage_runner.save(filename, data)
 
     @overload
@@ -112,7 +112,7 @@ class Storage:
     def exists(self, filename):
         return self.storage_runner.exists(filename)
 
-    def delete(self, filename: str):
+    def delete(self, filename):
         return self.storage_runner.delete(filename)
 
     def scan(self, path: str, files: bool = True, directories: bool = False) -> list[str]:

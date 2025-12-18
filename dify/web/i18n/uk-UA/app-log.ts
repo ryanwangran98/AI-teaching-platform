@@ -1,7 +1,7 @@
 const translation = {
   title: 'Журнали',
   description: 'Журнали фіксують робочий статус додатка, включаючи введення користувачів та відповіді штучного інтелекту.',
-  dateTimeFormat: 'MM/DD/YYYY hh:mm:ss A',
+  dateTimeFormat: 'MM/DD/YYYY hh:mm A',
   table: {
     header: {
       updatedTime: 'Час оновлення',
@@ -19,7 +19,6 @@ const translation = {
       tokens: 'ТОКЕНИ',
       user: 'КІНЦЕВИЙ КОРИСТУВАЧ АБО ОБЛІКОВИЙ ЗАПИС',
       version: 'ВЕРСІЯ',
-      triggered_from: 'АКТИВУЄТЬСЯ ВІД',
     },
     pagination: {
       previous: 'Попередня',
@@ -66,8 +65,6 @@ const translation = {
       quarterToDate: 'Квартал до сьогодні',
       yearToDate: 'Рік до сьогодні',
       allTime: 'За весь час',
-      last30days: 'Останні 30 днів',
-      custom: 'Користувацький',
     },
     annotation: {
       all: 'Всі',
@@ -85,7 +82,6 @@ const translation = {
     workflowTitle: 'Деталі Журналу',
     fileListDetail: 'Деталь',
     fileListLabel: 'Подробиці файлу',
-    testWithParams: 'Тест з параметрами',
   },
   promptLog: 'Журнал Запитань',
   agentLog: 'Журнал агента',
@@ -96,16 +92,6 @@ const translation = {
     iterations: 'Ітерації',
     iteration: 'Ітерація',
     finalProcessing: 'Остаточна обробка',
-  },
-  dateFormat: 'ДД/ММ/РРРР',
-  triggerBy: {
-    debugging: 'Налагодження',
-    appRun: 'Веб-додаток',
-    webhook: 'Вебхук',
-    schedule: 'Розклад',
-    plugin: 'Плагін',
-    ragPipelineRun: 'Конвеєр RAG',
-    ragPipelineDebugging: 'Виправлення помилок RAG',
   },
 }
 

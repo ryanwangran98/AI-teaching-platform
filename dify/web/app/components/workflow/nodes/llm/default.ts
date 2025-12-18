@@ -1,9 +1,8 @@
 // import { RETRIEVAL_OUTPUT_STRUCT } from '../../constants'
-import { AppModeEnum } from '@/types/app'
 import { BlockEnum, EditionType } from '../../types'
 import { type NodeDefault, type PromptItem, PromptRole } from '../../types'
 import type { LLMNodeType } from './types'
-import { genNodeMetaData } from '@/app/components/workflow/utils'
+import { ALL_CHAT_AVAILABLE_BLOCKS, ALL_COMPLETION_AVAILABLE_BLOCKS } from '@/app/components/workflow/blocks'
 
 const RETRIEVAL_OUTPUT_STRUCT = `{
   "content": "",
@@ -27,17 +26,12 @@ const RETRIEVAL_OUTPUT_STRUCT = `{
 
 const i18nPrefix = 'workflow.errorMsg'
 
-const metaData = genNodeMetaData({
-  sort: 1,
-  type: BlockEnum.LLM,
-})
 const nodeDefault: NodeDefault<LLMNodeType> = {
-  metaData,
   defaultValue: {
     model: {
       provider: '',
       name: '',
-      mode: AppModeEnum.CHAT,
+      mode: 'chat',
       completion_params: {
         temperature: 0.7,
       },
@@ -58,13 +52,23 @@ const nodeDefault: NodeDefault<LLMNodeType> = {
     '#context#': [RETRIEVAL_OUTPUT_STRUCT],
     '#files#': [],
   },
+  getAvailablePrevNodes(isChatMode: boolean) {
+    const nodes = isChatMode
+      ? ALL_CHAT_AVAILABLE_BLOCKS
+      : ALL_COMPLETION_AVAILABLE_BLOCKS.filter(type => type !== BlockEnum.End)
+    return nodes
+  },
+  getAvailableNextNodes(isChatMode: boolean) {
+    const nodes = isChatMode ? ALL_CHAT_AVAILABLE_BLOCKS : ALL_COMPLETION_AVAILABLE_BLOCKS
+    return nodes
+  },
   checkValid(payload: LLMNodeType, t: any) {
     let errorMessages = ''
     if (!errorMessages && !payload.model.provider)
       errorMessages = t(`${i18nPrefix}.fieldRequired`, { field: t(`${i18nPrefix}.fields.model`) })
 
     if (!errorMessages && !payload.memory) {
-      const isChatModel = payload.model.mode === AppModeEnum.CHAT
+      const isChatModel = payload.model.mode === 'chat'
       const isPromptEmpty = isChatModel
         ? !(payload.prompt_template as PromptItem[]).some((t) => {
           if (t.edition_type === EditionType.jinja2)
@@ -78,14 +82,14 @@ const nodeDefault: NodeDefault<LLMNodeType> = {
     }
 
     if (!errorMessages && !!payload.memory) {
-      const isChatModel = payload.model.mode === AppModeEnum.CHAT
+      const isChatModel = payload.model.mode === 'chat'
       // payload.memory.query_prompt_template not pass is default: {{#sys.query#}}
       if (isChatModel && !!payload.memory.query_prompt_template && !payload.memory.query_prompt_template.includes('{{#sys.query#}}'))
         errorMessages = t('workflow.nodes.llm.sysQueryInUser')
     }
 
     if (!errorMessages) {
-      const isChatModel = payload.model.mode === AppModeEnum.CHAT
+      const isChatModel = payload.model.mode === 'chat'
       const isShowVars = (() => {
         if (isChatModel)
           return (payload.prompt_template as PromptItem[]).some(item => item.edition_type === EditionType.jinja2)

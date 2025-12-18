@@ -1,7 +1,7 @@
 'use client'
 import { useTranslation } from 'react-i18next'
 import { formatFileSize, formatNumber, formatTime } from '@/utils/format'
-import { ChunkingMode, type DocType } from '@/models/datasets'
+import { type DocType, ProcessMode } from '@/models/datasets'
 import useTimestamp from '@/hooks/use-timestamp'
 
 export type inputType = 'input' | 'select' | 'textarea'
@@ -248,17 +248,9 @@ export const useMetadataMap = (): MetadataMap => {
       text: t('datasetDocuments.metadata.type.technicalParameters'),
       allowEdit: false,
       subFieldsMap: {
-        'doc_form': {
+        'dataset_process_rule.mode': {
           label: t(`${fieldPrefix}.technicalParameters.segmentSpecification`),
-          render: (value) => {
-            if (value === ChunkingMode.text)
-              return t('dataset.chunkingMode.general')
-            if (value === ChunkingMode.qa)
-              return t('dataset.chunkingMode.qa')
-            if (value === ChunkingMode.parentChild)
-              return t('dataset.chunkingMode.parentChild')
-            return '--'
-          },
+          render: value => value === ProcessMode.general ? (t('datasetDocuments.embedding.custom') as string) : (t('datasetDocuments.embedding.hierarchical') as string),
         },
         'dataset_process_rule.rules.segmentation.max_tokens': {
           label: t(`${fieldPrefix}.technicalParameters.segmentLength`),

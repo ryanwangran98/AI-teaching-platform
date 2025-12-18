@@ -127,7 +127,7 @@ export default class AudioPlayer {
     }
     catch {
       this.isLoadData = false
-      this.callback?.('error')
+      this.callback && this.callback('error')
     }
   }
 
@@ -137,14 +137,15 @@ export default class AudioPlayer {
       if (this.audioContext.state === 'suspended') {
         this.audioContext.resume().then((_) => {
           this.audio.play()
-          this.callback?.('play')
+          this.callback && this.callback('play')
         })
       }
       else if (this.audio.ended) {
         this.audio.play()
-        this.callback?.('play')
+        this.callback && this.callback('play')
       }
-      this.callback?.('play')
+      if (this.callback)
+        this.callback('play')
     }
     else {
       this.isLoadData = true
@@ -188,24 +189,24 @@ export default class AudioPlayer {
       if (this.audio.paused) {
         this.audioContext.resume().then((_) => {
           this.audio.play()
-          this.callback?.('play')
+          this.callback && this.callback('play')
         })
       }
       else if (this.audio.ended) {
         this.audio.play()
-        this.callback?.('play')
+        this.callback && this.callback('play')
       }
       else if (this.audio.played) { /* empty */ }
 
       else {
         this.audio.play()
-        this.callback?.('play')
+        this.callback && this.callback('play')
       }
     }
   }
 
   public pauseAudio() {
-    this.callback?.('paused')
+    this.callback && this.callback('paused')
     this.audio.pause()
     this.audioContext.suspend()
   }

@@ -1,6 +1,6 @@
 'use client'
 import type { FC } from 'react'
-import React, { useCallback, useEffect, useRef, useState } from 'react'
+import React, { useCallback, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { Placement } from '@floating-ui/react'
 import {
@@ -20,20 +20,17 @@ import type { SiteInfo } from '@/models/share'
 import cn from '@/utils/classnames'
 import { AccessMode } from '@/models/access-control'
 import { useWebAppStore } from '@/context/web-app-context'
-import { webAppLogout } from '@/service/webapp-auth'
 
 type Props = {
   data?: SiteInfo
   placement?: Placement
   hideLogout?: boolean
-  forceClose?: boolean
 }
 
 const MenuDropdown: FC<Props> = ({
   data,
   placement,
   hideLogout,
-  forceClose,
 }) => {
   const webAppAccessMode = useWebAppStore(s => s.webAppAccessMode)
   const router = useRouter()
@@ -50,18 +47,13 @@ const MenuDropdown: FC<Props> = ({
     setOpen(!openRef.current)
   }, [setOpen])
 
-  const shareCode = useWebAppStore(s => s.shareCode)
-  const handleLogout = useCallback(async () => {
-    await webAppLogout(shareCode!)
+  const handleLogout = useCallback(() => {
+    localStorage.removeItem('token')
+    localStorage.removeItem('webapp_access_token')
     router.replace(`/webapp-signin?redirect_url=${pathname}`)
-  }, [router, pathname, webAppLogout, shareCode])
+  }, [router, pathname])
 
   const [show, setShow] = useState(false)
-
-  useEffect(() => {
-    if (forceClose)
-      setOpen(false)
-  }, [forceClose, setOpen])
 
   return (
     <>

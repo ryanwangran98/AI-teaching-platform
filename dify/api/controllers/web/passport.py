@@ -1,52 +1,46 @@
 import uuid
 from datetime import UTC, datetime, timedelta
 
-from flask import make_response, request
-from flask_restx import Resource
+from flask import request
+from flask_restful import Resource
 from sqlalchemy import func, select
 from werkzeug.exceptions import NotFound, Unauthorized
 
 from configs import dify_config
-from constants import HEADER_NAME_APP_CODE
-from controllers.web import web_ns
+from controllers.web import api
 from controllers.web.error import WebAppAuthRequiredError
 from extensions.ext_database import db
 from libs.passport import PassportService
-from libs.token import extract_webapp_access_token
 from models.model import App, EndUser, Site
+from services.enterprise.enterprise_service import EnterpriseService
 from services.feature_service import FeatureService
 from services.webapp_auth_service import WebAppAuthService, WebAppAuthType
 
 
-@web_ns.route("/passport")
 class PassportResource(Resource):
     """Base resource for passport."""
 
-    @web_ns.doc("get_passport")
-    @web_ns.doc(description="Get authentication passport for web application access")
-    @web_ns.doc(
-        responses={
-            200: "Passport retrieved successfully",
-            401: "Unauthorized - missing app code or invalid authentication",
-            404: "Application or user not found",
-        }
-    )
     def get(self):
         system_features = FeatureService.get_system_features()
-        app_code = request.headers.get(HEADER_NAME_APP_CODE)
+        app_code = request.headers.get("X-App-Code")
         user_id = request.args.get("user_id")
-        access_token = extract_webapp_access_token(request)
+        web_app_access_token = request.args.get("web_app_access_token")
+
         if app_code is None:
             raise Unauthorized("X-App-Code header is missing.")
+
+        # exchange token for enterprise logined web user
+        enterprise_user_decoded = decode_enterprise_webapp_user_id(web_app_access_token)
+        if enterprise_user_decoded:
+            # a web user has already logged in, exchange a token for this app without redirecting to the login page
+            return exchange_token_for_existing_web_user(
+                app_code=app_code, enterprise_user_decoded=enterprise_user_decoded
+            )
+
         if system_features.webapp_auth.enabled:
-            enterprise_user_decoded = decode_enterprise_webapp_user_id(access_token)
-            app_auth_type = WebAppAuthService.get_app_auth_type(app_code=app_code)
-            if app_auth_type != WebAppAuthType.PUBLIC:
-                if not enterprise_user_decoded:
-                    raise WebAppAuthRequiredError()
-                return exchange_token_for_existing_web_user(
-                    app_code=app_code, enterprise_user_decoded=enterprise_user_decoded, auth_type=app_auth_type
-                )
+            app_settings = EnterpriseService.WebAppAuth.get_app_access_mode_by_code(app_code=app_code)
+            if not app_settings or not app_settings.access_mode == "public":
+                raise WebAppAuthRequiredError()
 
         # get site from db and check if it is normal
         site = db.session.scalar(select(Site).where(Site.code == app_code, Site.status == "normal"))
@@ -95,12 +89,12 @@ class PassportResource(Resource):
 
         tk = PassportService().issue(payload)
 
-        response = make_response(
-            {
-                "access_token": tk,
-            }
-        )
-        return response
+        return {
+            "access_token": tk,
+        }
+
+
+api.add_resource(PassportResource, "/passport")
 
 
 def decode_enterprise_webapp_user_id(jwt_token: str | None):
@@ -117,7 +111,7 @@ def decode_enterprise_webapp_user_id(jwt_token: str | None):
     return decoded
 
 
-def exchange_token_for_existing_web_user(app_code: str, enterprise_user_decoded: dict, auth_type: WebAppAuthType):
+def exchange_token_for_existing_web_user(app_code: str, enterprise_user_decoded: dict):
     """
     Exchange a token for an existing web user session.
     """
@@ -125,8 +119,6 @@ def exchange_token_for_existing_web_user(app_code: str, enterprise_user_decoded:
     end_user_id = enterprise_user_decoded.get("end_user_id")
     session_id = enterprise_user_decoded.get("session_id")
     user_auth_type = enterprise_user_decoded.get("auth_type")
-    exchanged_token_expires_unix = enterprise_user_decoded.get("exp")
-
     if not user_auth_type:
         raise Unauthorized("Missing auth_type in the token.")
 
@@ -138,11 +130,13 @@ def exchange_token_for_existing_web_user(app_code: str, enterprise_user_decoded:
     if not app_model or app_model.status != "normal" or not app_model.enable_site:
         raise NotFound()
 
-    if auth_type == WebAppAuthType.PUBLIC:
+    app_auth_type = WebAppAuthService.get_app_auth_type(app_code=app_code)
+
+    if app_auth_type == WebAppAuthType.PUBLIC:
         return _exchange_for_public_app_token(app_model, site, enterprise_user_decoded)
-    elif auth_type == WebAppAuthType.EXTERNAL and user_auth_type != "external":
+    elif app_auth_type == WebAppAuthType.EXTERNAL and user_auth_type != "external":
         raise WebAppAuthRequiredError("Please login as external user.")
-    elif auth_type == WebAppAuthType.INTERNAL and user_auth_type != "internal":
+    elif app_auth_type == WebAppAuthType.INTERNAL and user_auth_type != "internal":
         raise WebAppAuthRequiredError("Please login as internal user.")
 
     end_user = None
@@ -168,11 +162,8 @@ def exchange_token_for_existing_web_user(app_code: str, enterprise_user_decoded:
         )
         db.session.add(end_user)
         db.session.commit()
-
-    exp = int((datetime.now(UTC) + timedelta(minutes=dify_config.ACCESS_TOKEN_EXPIRE_MINUTES)).timestamp())
-    if exchanged_token_expires_unix:
-        exp = int(exchanged_token_expires_unix)
-
+    exp_dt = datetime.now(UTC) + timedelta(minutes=dify_config.ACCESS_TOKEN_EXPIRE_MINUTES)
+    exp = int(exp_dt.timestamp())
     payload = {
         "iss": site.id,
         "sub": "Web API Passport",
@@ -186,12 +177,9 @@ def exchange_token_for_existing_web_user(app_code: str, enterprise_user_decoded:
         "exp": exp,
     }
     token: str = PassportService().issue(payload)
-    resp = make_response(
-        {
-            "access_token": token,
-        }
-    )
-    return resp
+    return {
+        "access_token": token,
+    }
 
 
 def _exchange_for_public_app_token(app_model, site, token_decoded):
@@ -224,12 +212,9 @@ def _exchange_for_public_app_token(app_model, site, token_decoded):
 
     tk = PassportService().issue(payload)
 
-    resp = make_response(
-        {
-            "access_token": tk,
-        }
-    )
-    return resp
+    return {
+        "access_token": tk,
+    }
 
 
 def generate_session_id():

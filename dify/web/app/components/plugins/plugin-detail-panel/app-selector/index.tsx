@@ -15,9 +15,31 @@ import type {
   OffsetOptions,
   Placement,
 } from '@floating-ui/react'
-import { useInfiniteAppList } from '@/service/use-apps'
+import useSWRInfinite from 'swr/infinite'
+import { fetchAppList } from '@/service/apps'
+import type { AppListResponse } from '@/models/app'
 
 const PAGE_SIZE = 20
+
+const getKey = (
+  pageIndex: number,
+  previousPageData: AppListResponse,
+  searchText: string,
+) => {
+  if (pageIndex === 0 || (previousPageData && previousPageData.has_more)) {
+    const params: any = {
+      url: 'apps',
+      params: {
+        page: pageIndex + 1,
+        limit: PAGE_SIZE,
+        name: searchText,
+      },
+    }
+
+    return params
+  }
+  return null
+}
 
 type Props = {
   value?: {
@@ -50,40 +72,38 @@ const AppSelector: FC<Props> = ({
   const [searchText, setSearchText] = useState('')
   const [isLoadingMore, setIsLoadingMore] = useState(false)
 
-  const {
-    data,
-    isLoading,
-    isFetchingNextPage,
-    fetchNextPage,
-    hasNextPage,
-  } = useInfiniteAppList({
-    page: 1,
-    limit: PAGE_SIZE,
-    name: searchText,
-  })
+  const { data, isLoading, setSize } = useSWRInfinite(
+    (pageIndex: number, previousPageData: AppListResponse) => getKey(pageIndex, previousPageData, searchText),
+    fetchAppList,
+    {
+      revalidateFirstPage: true,
+      shouldRetryOnError: false,
+      dedupingInterval: 500,
+      errorRetryCount: 3,
+    },
+  )
 
-  const pages = data?.pages ?? []
   const displayedApps = useMemo(() => {
-    if (!pages.length) return []
-    return pages.flatMap(({ data: apps }) => apps)
-  }, [pages])
+    if (!data) return []
+    return data.flatMap(({ data: apps }) => apps)
+  }, [data])
 
-  const hasMore = hasNextPage ?? true
+  const hasMore = data?.at(-1)?.has_more ?? true
 
   const handleLoadMore = useCallback(async () => {
-    if (isLoadingMore || isFetchingNextPage || !hasMore) return
+    if (isLoadingMore || !hasMore) return
 
     setIsLoadingMore(true)
     try {
-      await fetchNextPage()
+      await setSize((size: number) => size + 1)
     }
-    finally {
+ finally {
       // Add a small delay to ensure state updates are complete
       setTimeout(() => {
         setIsLoadingMore(false)
       }, 300)
     }
-  }, [isLoadingMore, isFetchingNextPage, hasMore, fetchNextPage])
+  }, [isLoadingMore, hasMore, setSize])
 
   const handleTriggerClick = () => {
     if (disabled) return
@@ -165,7 +185,7 @@ const AppSelector: FC<Props> = ({
                 onSelect={handleSelectApp}
                 scope={scope || 'all'}
                 apps={displayedApps}
-                isLoading={isLoading || isLoadingMore || isFetchingNextPage}
+                isLoading={isLoading || isLoadingMore}
                 hasMore={hasMore}
                 onLoadMore={handleLoadMore}
                 searchText={searchText}

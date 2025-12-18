@@ -1,4 +1,4 @@
-from typing import Literal, Union
+from typing import Literal, Optional, Union
 
 from pydantic import BaseModel
 
@@ -11,7 +11,7 @@ class AuthorizationConfig(BaseModel):
 
 class Authorization(BaseModel):
     type: Literal["no-auth", "api-key"]
-    config: AuthorizationConfig | None = None
+    config: Optional[AuthorizationConfig] = None
 
 
 class ProcessStatusSetting(BaseModel):
@@ -22,5 +22,5 @@ class ProcessStatusSetting(BaseModel):
 class ExternalKnowledgeApiSetting(BaseModel):
     url: str
     request_method: str
-    headers: dict | None = None
-    params: dict | None = None
+    headers: Optional[dict] = None
+    params: Optional[dict] = None

@@ -28,8 +28,7 @@ const CSVUploader: FC<Props> = ({
   const handleDragEnter = (e: DragEvent) => {
     e.preventDefault()
     e.stopPropagation()
-    if (e.target !== dragRef.current)
-      setDragging(true)
+    e.target !== dragRef.current && setDragging(true)
   }
   const handleDragOver = (e: DragEvent) => {
     e.preventDefault()
@@ -38,8 +37,7 @@ const CSVUploader: FC<Props> = ({
   const handleDragLeave = (e: DragEvent) => {
     e.preventDefault()
     e.stopPropagation()
-    if (e.target === dragRef.current)
-      setDragging(false)
+    e.target === dragRef.current && setDragging(false)
   }
   const handleDrop = (e: DragEvent) => {
     e.preventDefault()
@@ -114,7 +112,7 @@ const CSVUploader: FC<Props> = ({
             <div className='hidden items-center group-hover:flex'>
               <Button variant='secondary' onClick={selectHandle}>{t('datasetCreation.stepOne.uploader.change')}</Button>
               <div className='mx-2 h-4 w-px bg-divider-regular' />
-              <div className='cursor-pointer p-2' onClick={removeFile} data-testid="remove-file-button">
+              <div className='cursor-pointer p-2' onClick={removeFile}>
                 <RiDeleteBinLine className='h-4 w-4 text-text-tertiary' />
               </div>
             </div>

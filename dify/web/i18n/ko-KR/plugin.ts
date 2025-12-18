@@ -6,8 +6,6 @@ const translation = {
     extensions: '확장',
     tools: '도구',
     bundles: '번들',
-    datasources: '데이터 소스',
-    triggers: '유발 요인',
   },
   categorySingle: {
     extension: '확장',
@@ -15,8 +13,6 @@ const translation = {
     agent: '에이전트 전략',
     bundle: '보따리',
     model: '모델',
-    datasource: '데이터 소스',
-    trigger: '트리거',
   },
   list: {
     source: {
@@ -47,7 +43,6 @@ const translation = {
       update: '업데이트',
       remove: '제거',
       checkUpdate: '업데이트 확인',
-      back: '뒤로',
     },
     toolSelector: {
       empty: '\'+\' 버튼을 클릭하여 도구를 추가합니다. 여러 도구를 추가할 수 있습니다.',
@@ -208,11 +203,6 @@ const translation = {
     installingWithError: '{{installingLength}} 플러그인 설치, {{successLength}} 성공, {{errorLength}} 실패',
     installError: '{{errorLength}} 플러그인 설치 실패, 보려면 클릭하십시오.',
     clearAll: '모두 지우기',
-    installSuccess: '{{successLength}} plugins installed successfully',
-    installed: 'Installed',
-    runningPlugins: 'Installing Plugins',
-    successPlugins: 'Successfully Installed Plugins',
-    errorPlugins: 'Failed to Install Plugins',
   },
   installAction: '설치하다',
   searchTools: '검색 도구...',
@@ -256,12 +246,6 @@ const translation = {
     useOAuthAuth: 'OAuth 인증 사용하기',
     useApiAuthDesc: '자격증명을 구성한 후에는 작업 공간 내의 모든 구성원이 애플리케이션을 조정할 때 이 도구를 사용할 수 있습니다.',
     clientInfo: '이 도구 공급자에 대한 시스템 클라이언트 비밀이 발견되지 않았으므로 수동으로 설정해야 하며, redirect_uri는 다음을 사용하십시오.',
-    unavailable: '사용할 수 없음',
-    credentialUnavailable: '현재 자격 증명이 사용 불가능합니다. 관리자에게 문의하십시오.',
-    customCredentialUnavailable: '현재 사용자 정의 자격 증명이 사용 불가능합니다.',
-    credentialUnavailableInButton: '자격 증명 사용 불가능',
-    connectedWorkspace: '연결된 작업 공간',
-    emptyAuth: '인증을 구성하십시오.',
   },
   deprecated: '사용 중단됨',
   autoUpdate: {
@@ -313,12 +297,6 @@ const translation = {
     changeTimezone: '시간대를 변경하려면 <setTimezone>설정</setTimezone>으로 이동하세요.',
     specifyPluginsToUpdate: '업데이트할 플러그인을 지정하십시오.',
     excludeUpdate: '다음 {{num}} 플러그인은 자동 업데이트되지 않습니다.',
-  },
-  readmeInfo: {
-    title: '읽어보기',
-    needHelpCheckReadme: '도움이 필요하신가요? README를 확인하세요.',
-    noReadmeAvailable: '사용 가능한 README가 없습니다',
-    failedToFetch: 'README를 가져오지 못했습니다',
   },
 }
 

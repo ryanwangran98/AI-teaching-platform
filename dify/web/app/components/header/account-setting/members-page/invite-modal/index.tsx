@@ -17,9 +17,8 @@ import type { InvitationResult } from '@/models/common'
 import I18n from '@/context/i18n'
 import 'react-multi-email/dist/style.css'
 import { noop } from 'lodash-es'
-import { useProviderContextSelector } from '@/context/provider-context'
-import { useBoolean } from 'ahooks'
 
+import { useProviderContextSelector } from '@/context/provider-context'
 type IInviteModalProps = {
   isEmailSetup: boolean
   onCancel: () => void
@@ -50,15 +49,9 @@ const InviteModal = ({
   const { locale } = useContext(I18n)
   const [role, setRole] = useState<string>('normal')
 
-  const [isSubmitting, {
-    setTrue: setIsSubmitting,
-    setFalse: setIsSubmitted,
-  }] = useBoolean(false)
-
   const handleSend = useCallback(async () => {
-    if (isLimitExceeded || isSubmitting)
+    if (isLimitExceeded)
       return
-    setIsSubmitting()
     if (emails.map((email: string) => emailRegex.test(email)).every(Boolean)) {
       try {
         const { result, invitation_results } = await inviteMember({
@@ -77,8 +70,7 @@ const InviteModal = ({
     else {
       notify({ type: 'error', message: t('common.members.emailInvalid') })
     }
-    setIsSubmitted()
-  }, [isLimitExceeded, emails, role, locale, onCancel, onSend, notify, t, isSubmitting])
+  }, [isLimitExceeded, emails, role, locale, onCancel, onSend, notify, t])
 
   return (
     <div className={cn(s.wrap)}>
@@ -108,7 +100,7 @@ const InviteModal = ({
           <div className='mb-2 text-sm font-medium text-text-primary'>{t('common.members.email')}</div>
           <div className='mb-8 flex h-36 flex-col items-stretch'>
             <ReactMultiEmail
-              className={cn('h-full w-full border-components-input-border-active !bg-components-input-bg-normal px-3 pt-2 outline-none',
+              className={cn('w-full border-components-input-border-active !bg-components-input-bg-normal px-3 pt-2 outline-none',
                 'appearance-none overflow-y-auto rounded-lg text-sm !text-text-primary',
               )}
               autoFocus
@@ -141,7 +133,7 @@ const InviteModal = ({
             tabIndex={0}
             className='w-full'
             onClick={handleSend}
-            disabled={!emails.length || isLimitExceeded || isSubmitting}
+            disabled={!emails.length || isLimitExceeded}
             variant='primary'
           >
             {t('common.members.sendInvite')}

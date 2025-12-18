@@ -1,4 +1,4 @@
-from typing import Literal
+from typing import Literal, Optional
 
 from pydantic import BaseModel, Field
 
@@ -20,7 +20,7 @@ class IfElseNodeData(BaseNodeData):
         logical_operator: Literal["and", "or"]
         conditions: list[Condition]
 
-    logical_operator: Literal["and", "or"] | None = "and"
-    conditions: list[Condition] | None = Field(default=None, deprecated=True)
+    logical_operator: Optional[Literal["and", "or"]] = "and"
+    conditions: Optional[list[Condition]] = Field(default=None, deprecated=True)
 
-    cases: list[Case] | None = None
+    cases: Optional[list[Case]] = None

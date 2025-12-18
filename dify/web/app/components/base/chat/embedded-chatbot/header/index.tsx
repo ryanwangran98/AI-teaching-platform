@@ -36,7 +36,6 @@ const Header: FC<IHeaderProps> = ({
     appData,
     currentConversationId,
     inputsForms,
-    allInputsHidden,
   } = useEmbeddedChatbotContext()
 
   const isClient = typeof window !== 'undefined'
@@ -125,7 +124,7 @@ const Header: FC<IHeaderProps> = ({
               </ActionButton>
             </Tooltip>
           )}
-          {currentConversationId && inputsForms.length > 0 && !allInputsHidden && (
+          {currentConversationId && inputsForms.length > 0 && (
             <ViewFormDropdown />
           )}
         </div>
@@ -136,7 +135,7 @@ const Header: FC<IHeaderProps> = ({
   return (
     <div
       className={cn('flex h-14 shrink-0 items-center justify-between rounded-t-2xl px-3')}
-      style={CssTransform(theme?.headerBorderBottomStyle ?? '')}
+      style={Object.assign({}, CssTransform(theme?.backgroundHeaderColorStyle ?? ''), CssTransform(theme?.headerBorderBottomStyle ?? ''))}
     >
       <div className="flex grow items-center space-x-3">
         {customerIcon}
@@ -172,7 +171,7 @@ const Header: FC<IHeaderProps> = ({
             </ActionButton>
           </Tooltip>
         )}
-        {currentConversationId && inputsForms.length > 0 && !allInputsHidden && (
+        {currentConversationId && inputsForms.length > 0 && (
           <ViewFormDropdown iconColor={theme?.colorPathOnHeader} />
         )}
       </div>

@@ -1,7 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useChatContext } from '../chat/chat/context'
-import cn from '@/utils/classnames'
 
 const hasEndThink = (children: any): boolean => {
   if (typeof children === 'string')
@@ -37,11 +35,10 @@ const removeEndThink = (children: any): any => {
 }
 
 const useThinkTimer = (children: any) => {
-  const { isResponding } = useChatContext()
-  const [startTime] = useState(() => Date.now())
+  const [startTime] = useState(Date.now())
   const [elapsedTime, setElapsedTime] = useState(0)
   const [isComplete, setIsComplete] = useState(false)
-  const timerRef = useRef<NodeJS.Timeout | null>(null)
+  const timerRef = useRef<NodeJS.Timeout>()
 
   useEffect(() => {
     if (isComplete) return
@@ -57,33 +54,23 @@ const useThinkTimer = (children: any) => {
   }, [startTime, isComplete])
 
   useEffect(() => {
-    if (hasEndThink(children) || !isResponding)
+    if (hasEndThink(children))
       setIsComplete(true)
-  }, [children, isResponding])
+  }, [children])
 
   return { elapsedTime, isComplete }
 }
 
-type ThinkBlockProps = React.ComponentProps<'details'> & {
-  'data-think'?: boolean
-}
-
-const ThinkBlock = ({ children, ...props }: ThinkBlockProps) => {
+export const ThinkBlock = ({ children, ...props }: any) => {
   const { elapsedTime, isComplete } = useThinkTimer(children)
   const displayContent = removeEndThink(children)
   const { t } = useTranslation()
-  const { 'data-think': isThink = false, className, open, ...rest } = props
 
-  if (!isThink)
+  if (!(props['data-think'] ?? false))
     return (<details {...props}>{children}</details>)
 
   return (
-    <details
-      {...rest}
-      data-think={isThink}
-      className={cn('group', className)}
-      open={isComplete ? open : true}
-    >
+    <details {...(!isComplete && { open: true })} className="group">
       <summary className="flex cursor-pointer select-none list-none items-center whitespace-nowrap pl-2 font-bold text-text-secondary">
         <div className="flex shrink-0 items-center">
           <svg

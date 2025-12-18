@@ -7,7 +7,6 @@ import { useTranslation } from 'react-i18next'
 import type {
   DefaultModel,
   FormValue,
-  ModelFeatureEnum,
 } from '@/app/components/header/account-setting/model-provider-page/declarations'
 import { ModelStatusEnum, ModelTypeEnum } from '@/app/components/header/account-setting/model-provider-page/declarations'
 import ModelSelector from '@/app/components/header/account-setting/model-provider-page/model-selector'
@@ -58,7 +57,7 @@ const ModelParameterModal: FC<ModelParameterModalProps> = ({
   const { isAPIKeySet } = useProviderContext()
   const [open, setOpen] = useState(false)
   const scopeArray = scope.split('&')
-  const scopeFeatures = useMemo((): ModelFeatureEnum[] => {
+  const scopeFeatures = useMemo(() => {
     if (scopeArray.includes('all'))
       return []
     return scopeArray.filter(item => ![
@@ -68,7 +67,7 @@ const ModelParameterModal: FC<ModelParameterModalProps> = ({
       ModelTypeEnum.moderation,
       ModelTypeEnum.speech2text,
       ModelTypeEnum.tts,
-    ].includes(item as ModelTypeEnum)).map(item => item as ModelFeatureEnum)
+    ].includes(item as ModelTypeEnum))
   }, [scopeArray])
 
   const { data: textGenerationList } = useModelList(ModelTypeEnum.textGeneration)
@@ -137,7 +136,6 @@ const ModelParameterModal: FC<ModelParameterModalProps> = ({
           provider,
           model,
           value?.completion_params,
-          isAdvancedMode,
         )
         nextCompletionParams = filtered
 
@@ -149,7 +147,7 @@ const ModelParameterModal: FC<ModelParameterModalProps> = ({
           })
         }
       }
-      catch {
+      catch (e) {
         Toast.notify({ type: 'error', message: t('common.error') })
       }
     }
@@ -167,7 +165,7 @@ const ModelParameterModal: FC<ModelParameterModalProps> = ({
 
   const handleLLMParamsChange = (newParams: FormValue) => {
     const newValue = {
-      ...value?.completionParams,
+      ...(value?.completionParams || {}),
       completion_params: newParams,
     }
     setModel({
@@ -250,7 +248,7 @@ const ModelParameterModal: FC<ModelParameterModalProps> = ({
                 />
               </div>
               {(currentModel?.model_type === ModelTypeEnum.textGeneration || currentModel?.model_type === ModelTypeEnum.tts) && (
-                <div className='my-3 h-px bg-divider-subtle' />
+                <div className='my-3 h-[1px] bg-divider-subtle' />
               )}
               {currentModel?.model_type === ModelTypeEnum.textGeneration && (
                 <LLMParamsPanel

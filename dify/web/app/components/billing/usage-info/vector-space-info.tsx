@@ -30,7 +30,6 @@ const VectorSpaceInfo: FC<Props> = ({
       usage={usage.vectorSpace}
       total={total.vectorSpace}
       unit='MB'
-      unitPosition='inline'
     />
   )
 }

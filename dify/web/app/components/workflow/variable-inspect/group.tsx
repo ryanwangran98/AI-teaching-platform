@@ -40,7 +40,7 @@ const Group = ({
   const { t } = useTranslation()
   const [isCollapsed, setIsCollapsed] = useState(false)
 
-  const toolIcon = useToolIcon(nodeData?.nodePayload)
+  const toolIcon = useToolIcon(nodeData?.nodePayload as any)
 
   const isEnv = varType === VarInInspectType.environment
   const isChatVar = varType === VarInInspectType.conversation

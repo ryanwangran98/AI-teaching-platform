@@ -1,9 +1,8 @@
 import json
 import logging
 import uuid
-from collections.abc import Callable
 from functools import wraps
-from typing import Any, Concatenate, ParamSpec, TypeVar
+from typing import Any, Optional
 
 from mo_vector.client import MoVectorClient  # type: ignore
 from pydantic import BaseModel, model_validator
@@ -19,21 +18,6 @@ from models.dataset import Dataset
 
 logger = logging.getLogger(__name__)
 
-P = ParamSpec("P")
-R = TypeVar("R")
-
-T = TypeVar("T", bound="MatrixoneVector")
-
-
-def ensure_client(func: Callable[Concatenate[T, P], R]):
-    @wraps(func)
-    def wrapper(self: T, *args: P.args, **kwargs: P.kwargs):
-        if self.client is None:
-            self.client = self._get_client(None, False)
-        return func(self, *args, **kwargs)
-
-    return wrapper
-
 
 class MatrixoneConfig(BaseModel):
     host: str = "localhost"
@@ -45,7 +29,7 @@ class MatrixoneConfig(BaseModel):
 
     @model_validator(mode="before")
     @classmethod
-    def validate_config(cls, values: dict):
+    def validate_config(cls, values: dict) -> dict:
         if not values["host"]:
             raise ValueError("config host is required")
         if not values["port"]:
@@ -57,6 +41,16 @@ class MatrixoneConfig(BaseModel):
         if not values["database"]:
             raise ValueError("config database is required")
         return values
+
+
+def ensure_client(func):
+    @wraps(func)
+    def wrapper(self, *args, **kwargs):
+        if self.client is None:
+            self.client = self._get_client(None, False)
+        return func(self, *args, **kwargs)
+
+    return wrapper
 
 
 class MatrixoneVector(BaseVector):
@@ -86,7 +80,7 @@ class MatrixoneVector(BaseVector):
             self.client = self._get_client(len(embeddings[0]), True)
         return self.add_texts(texts, embeddings)
 
-    def _get_client(self, dimension: int | None = None, create_table: bool = False) -> MoVectorClient:
+    def _get_client(self, dimension: Optional[int] = None, create_table: bool = False) -> MoVectorClient:
         """
         Create a new client for the collection.
 
@@ -105,9 +99,9 @@ class MatrixoneVector(BaseVector):
                 return client
             try:
                 client.create_full_text_index()
-                redis_client.set(collection_exist_cache_key, 1, ex=3600)
-            except Exception:
+            except Exception as e:
                 logger.exception("Failed to create full text index")
+            redis_client.set(collection_exist_cache_key, 1, ex=3600)
             return client
 
     def add_texts(self, documents: list[Document], embeddings: list[list[float]], **kwargs):
@@ -115,7 +109,7 @@ class MatrixoneVector(BaseVector):
             self.client = self._get_client(len(embeddings[0]), True)
         assert self.client is not None
         ids = []
-        for doc in documents:
+        for _, doc in enumerate(documents):
             if doc.metadata is not None:
                 doc_id = doc.metadata.get("doc_id", str(uuid.uuid4()))
                 ids.append(doc_id)
@@ -134,7 +128,7 @@ class MatrixoneVector(BaseVector):
         return len(result) > 0
 
     @ensure_client
-    def delete_by_ids(self, ids: list[str]):
+    def delete_by_ids(self, ids: list[str]) -> None:
         assert self.client is not None
         if not ids:
             return
@@ -147,7 +141,7 @@ class MatrixoneVector(BaseVector):
         return [result.id for result in results]
 
     @ensure_client
-    def delete_by_metadata_field(self, key: str, value: str):
+    def delete_by_metadata_field(self, key: str, value: str) -> None:
         assert self.client is not None
         self.client.delete(filter={key: value})
 
@@ -213,7 +207,7 @@ class MatrixoneVector(BaseVector):
         return docs
 
     @ensure_client
-    def delete(self):
+    def delete(self) -> None:
         assert self.client is not None
         self.client.delete()
 

@@ -1,14 +1,15 @@
 import concurrent.futures
+import datetime
 import json
 import logging
 import re
 import threading
 import time
 import uuid
-from typing import Any
+from typing import Any, Optional, cast
 
-from flask import Flask, current_app
-from sqlalchemy import select
+from flask import current_app
+from flask_login import current_user
 from sqlalchemy.orm.exc import ObjectDeletedError
 
 from configs import dify_config
@@ -19,9 +20,8 @@ from core.model_runtime.entities.model_entities import ModelType
 from core.rag.cleaner.clean_processor import CleanProcessor
 from core.rag.datasource.keyword.keyword_factory import Keyword
 from core.rag.docstore.dataset_docstore import DatasetDocumentStore
-from core.rag.extractor.entity.datasource_type import DatasourceType
-from core.rag.extractor.entity.extract_setting import ExtractSetting, NotionInfo, WebsiteInfo
-from core.rag.index_processor.constant.index_type import IndexStructureType
+from core.rag.extractor.entity.extract_setting import ExtractSetting
+from core.rag.index_processor.constant.index_type import IndexType
 from core.rag.index_processor.index_processor_base import BaseIndexProcessor
 from core.rag.index_processor.index_processor_factory import IndexProcessorFactory
 from core.rag.models.document import ChildDocument, Document
@@ -30,19 +30,15 @@ from core.rag.splitter.fixed_text_splitter import (
     FixedRecursiveCharacterTextSplitter,
 )
 from core.rag.splitter.text_splitter import TextSplitter
-from core.tools.utils.web_reader_tool import get_image_upload_file_ids
+from core.tools.utils.rag_web_reader import get_image_upload_file_ids
 from extensions.ext_database import db
 from extensions.ext_redis import redis_client
 from extensions.ext_storage import storage
 from libs import helper
-from libs.datetime_utils import naive_utc_now
-from models import Account
 from models.dataset import ChildChunk, Dataset, DatasetProcessRule, DocumentSegment
 from models.dataset import Document as DatasetDocument
 from models.model import UploadFile
 from services.feature_service import FeatureService
-
-logger = logging.getLogger(__name__)
 
 
 class IndexingRunner:
@@ -50,89 +46,64 @@ class IndexingRunner:
         self.storage = storage
         self.model_manager = ModelManager()
 
-    def _handle_indexing_error(self, document_id: str, error: Exception) -> None:
-        """Handle indexing errors by updating document status."""
-        logger.exception("consume document failed")
-        document = db.session.get(DatasetDocument, document_id)
-        if document:
-            document.indexing_status = "error"
-            error_message = getattr(error, "description", str(error))
-            document.error = str(error_message)
-            document.stopped_at = naive_utc_now()
-            db.session.commit()
-
     def run(self, dataset_documents: list[DatasetDocument]):
         """Run the indexing process."""
         for dataset_document in dataset_documents:
-            document_id = dataset_document.id
             try:
-                # Re-query the document to ensure it's bound to the current session
-                requeried_document = db.session.get(DatasetDocument, document_id)
-                if not requeried_document:
-                    logger.warning("Document not found, skipping document id: %s", document_id)
-                    continue
-
                 # get dataset
-                dataset = db.session.query(Dataset).filter_by(id=requeried_document.dataset_id).first()
+                dataset = db.session.query(Dataset).filter_by(id=dataset_document.dataset_id).first()
 
                 if not dataset:
                     raise ValueError("no dataset found")
+
                 # get the process rule
-                stmt = select(DatasetProcessRule).where(
-                    DatasetProcessRule.id == requeried_document.dataset_process_rule_id
+                processing_rule = (
+                    db.session.query(DatasetProcessRule)
+                    .where(DatasetProcessRule.id == dataset_document.dataset_process_rule_id)
+                    .first()
                 )
-                processing_rule = db.session.scalar(stmt)
                 if not processing_rule:
                     raise ValueError("no process rule found")
-                index_type = requeried_document.doc_form
+                index_type = dataset_document.doc_form
                 index_processor = IndexProcessorFactory(index_type).init_index_processor()
                 # extract
-                text_docs = self._extract(index_processor, requeried_document, processing_rule.to_dict())
+                text_docs = self._extract(index_processor, dataset_document, processing_rule.to_dict())
 
                 # transform
-                current_user = db.session.query(Account).filter_by(id=requeried_document.created_by).first()
-                if not current_user:
-                    raise ValueError("no current user found")
-                current_user.set_tenant_id(dataset.tenant_id)
                 documents = self._transform(
-                    index_processor,
-                    dataset,
-                    text_docs,
-                    requeried_document.doc_language,
-                    processing_rule.to_dict(),
-                    current_user=current_user,
+                    index_processor, dataset, text_docs, dataset_document.doc_language, processing_rule.to_dict()
                 )
                 # save segment
-                self._load_segments(dataset, requeried_document, documents)
+                self._load_segments(dataset, dataset_document, documents)
 
                 # load
                 self._load(
                     index_processor=index_processor,
                     dataset=dataset,
-                    dataset_document=requeried_document,
+                    dataset_document=dataset_document,
                     documents=documents,
                 )
             except DocumentIsPausedError:
-                raise DocumentIsPausedError(f"Document paused, document id: {document_id}")
+                raise DocumentIsPausedError(f"Document paused, document id: {dataset_document.id}")
             except ProviderTokenNotInitError as e:
-                self._handle_indexing_error(document_id, e)
+                dataset_document.indexing_status = "error"
+                dataset_document.error = str(e.description)
+                dataset_document.stopped_at = datetime.datetime.now(datetime.UTC).replace(tzinfo=None)
+                db.session.commit()
             except ObjectDeletedError:
-                logger.warning("Document deleted, document id: %s", document_id)
+                logging.warning("Document deleted, document id: %s", dataset_document.id)
             except Exception as e:
-                self._handle_indexing_error(document_id, e)
+                logging.exception("consume document failed")
+                dataset_document.indexing_status = "error"
+                dataset_document.error = str(e)
+                dataset_document.stopped_at = datetime.datetime.now(datetime.UTC).replace(tzinfo=None)
+                db.session.commit()
 
     def run_in_splitting_status(self, dataset_document: DatasetDocument):
         """Run the indexing process when the index_status is splitting."""
-        document_id = dataset_document.id
         try:
-            # Re-query the document to ensure it's bound to the current session
-            requeried_document = db.session.get(DatasetDocument, document_id)
-            if not requeried_document:
-                logger.warning("Document not found: %s", document_id)
-                return
-
             # get dataset
-            dataset = db.session.query(Dataset).filter_by(id=requeried_document.dataset_id).first()
+            dataset = db.session.query(Dataset).filter_by(id=dataset_document.dataset_id).first()
 
             if not dataset:
                 raise ValueError("no dataset found")
@@ -140,69 +111,60 @@ class IndexingRunner:
             # get exist document_segment list and delete
             document_segments = (
                 db.session.query(DocumentSegment)
-                .filter_by(dataset_id=dataset.id, document_id=requeried_document.id)
+                .filter_by(dataset_id=dataset.id, document_id=dataset_document.id)
                 .all()
             )
 
             for document_segment in document_segments:
                 db.session.delete(document_segment)
-                if requeried_document.doc_form == IndexStructureType.PARENT_CHILD_INDEX:
+                if dataset_document.doc_form == IndexType.PARENT_CHILD_INDEX:
                     # delete child chunks
                     db.session.query(ChildChunk).where(ChildChunk.segment_id == document_segment.id).delete()
             db.session.commit()
             # get the process rule
-            stmt = select(DatasetProcessRule).where(DatasetProcessRule.id == requeried_document.dataset_process_rule_id)
-            processing_rule = db.session.scalar(stmt)
+            processing_rule = (
+                db.session.query(DatasetProcessRule)
+                .where(DatasetProcessRule.id == dataset_document.dataset_process_rule_id)
+                .first()
+            )
             if not processing_rule:
                 raise ValueError("no process rule found")
 
-            index_type = requeried_document.doc_form
+            index_type = dataset_document.doc_form
             index_processor = IndexProcessorFactory(index_type).init_index_processor()
             # extract
-            text_docs = self._extract(index_processor, requeried_document, processing_rule.to_dict())
+            text_docs = self._extract(index_processor, dataset_document, processing_rule.to_dict())
 
             # transform
-            current_user = db.session.query(Account).filter_by(id=requeried_document.created_by).first()
-            if not current_user:
-                raise ValueError("no current user found")
-            current_user.set_tenant_id(dataset.tenant_id)
             documents = self._transform(
-                index_processor,
-                dataset,
-                text_docs,
-                requeried_document.doc_language,
-                processing_rule.to_dict(),
-                current_user=current_user,
+                index_processor, dataset, text_docs, dataset_document.doc_language, processing_rule.to_dict()
             )
             # save segment
-            self._load_segments(dataset, requeried_document, documents)
+            self._load_segments(dataset, dataset_document, documents)
 
             # load
             self._load(
-                index_processor=index_processor,
-                dataset=dataset,
-                dataset_document=requeried_document,
-                documents=documents,
+                index_processor=index_processor, dataset=dataset, dataset_document=dataset_document, documents=documents
             )
         except DocumentIsPausedError:
-            raise DocumentIsPausedError(f"Document paused, document id: {document_id}")
+            raise DocumentIsPausedError(f"Document paused, document id: {dataset_document.id}")
         except ProviderTokenNotInitError as e:
-            self._handle_indexing_error(document_id, e)
+            dataset_document.indexing_status = "error"
+            dataset_document.error = str(e.description)
+            dataset_document.stopped_at = datetime.datetime.now(datetime.UTC).replace(tzinfo=None)
+            db.session.commit()
         except Exception as e:
-            self._handle_indexing_error(document_id, e)
+            logging.exception("consume document failed")
+            dataset_document.indexing_status = "error"
+            dataset_document.error = str(e)
+            dataset_document.stopped_at = datetime.datetime.now(datetime.UTC).replace(tzinfo=None)
+            db.session.commit()
 
     def run_in_indexing_status(self, dataset_document: DatasetDocument):
         """Run the indexing process when the index_status is indexing."""
-        document_id = dataset_document.id
         try:
-            # Re-query the document to ensure it's bound to the current session
-            requeried_document = db.session.get(DatasetDocument, document_id)
-            if not requeried_document:
-                logger.warning("Document not found: %s", document_id)
-                return
-
             # get dataset
-            dataset = db.session.query(Dataset).filter_by(id=requeried_document.dataset_id).first()
+            dataset = db.session.query(Dataset).filter_by(id=dataset_document.dataset_id).first()
 
             if not dataset:
                 raise ValueError("no dataset found")
@@ -210,7 +172,7 @@ class IndexingRunner:
             # get exist document_segment list and delete
             document_segments = (
                 db.session.query(DocumentSegment)
-                .filter_by(dataset_id=dataset.id, document_id=requeried_document.id)
+                .filter_by(dataset_id=dataset.id, document_id=dataset_document.id)
                 .all()
             )
 
@@ -228,7 +190,7 @@ class IndexingRunner:
                                 "dataset_id": document_segment.dataset_id,
                             },
                         )
-                        if requeried_document.doc_form == IndexStructureType.PARENT_CHILD_INDEX:
+                        if dataset_document.doc_form == IndexType.PARENT_CHILD_INDEX:
                             child_chunks = document_segment.get_child_chunks()
                             if child_chunks:
                                 child_documents = []
@@ -245,30 +207,42 @@ class IndexingRunner:
                                     child_documents.append(child_document)
                                 document.children = child_documents
                         documents.append(document)
+
             # build index
-            index_type = requeried_document.doc_form
+            # get the process rule
+            processing_rule = (
+                db.session.query(DatasetProcessRule)
+                .where(DatasetProcessRule.id == dataset_document.dataset_process_rule_id)
+                .first()
+            )
+
+            index_type = dataset_document.doc_form
             index_processor = IndexProcessorFactory(index_type).init_index_processor()
             self._load(
-                index_processor=index_processor,
-                dataset=dataset,
-                dataset_document=requeried_document,
-                documents=documents,
+                index_processor=index_processor, dataset=dataset, dataset_document=dataset_document, documents=documents
             )
         except DocumentIsPausedError:
-            raise DocumentIsPausedError(f"Document paused, document id: {document_id}")
+            raise DocumentIsPausedError(f"Document paused, document id: {dataset_document.id}")
         except ProviderTokenNotInitError as e:
-            self._handle_indexing_error(document_id, e)
+            dataset_document.indexing_status = "error"
+            dataset_document.error = str(e.description)
+            dataset_document.stopped_at = datetime.datetime.now(datetime.UTC).replace(tzinfo=None)
+            db.session.commit()
         except Exception as e:
-            self._handle_indexing_error(document_id, e)
+            logging.exception("consume document failed")
+            dataset_document.indexing_status = "error"
+            dataset_document.error = str(e)
+            dataset_document.stopped_at = datetime.datetime.now(datetime.UTC).replace(tzinfo=None)
+            db.session.commit()
 
     def indexing_estimate(
         self,
         tenant_id: str,
         extract_settings: list[ExtractSetting],
         tmp_processing_rule: dict,
-        doc_form: str | None = None,
+        doc_form: Optional[str] = None,
         doc_language: str = "English",
-        dataset_id: str | None = None,
+        dataset_id: Optional[str] = None,
         indexing_technique: str = "economy",
     ) -> IndexingEstimate:
         """
@@ -306,9 +280,7 @@ class IndexingRunner:
                     tenant_id=tenant_id,
                     model_type=ModelType.TEXT_EMBEDDING,
                 )
-        # keep separate, avoid union-list ambiguity
-        preview_texts: list[PreviewDetail] = []
-        qa_preview_texts: list[QAPreviewDetail] = []
+        preview_texts = []  # type: ignore
 
         total_segments = 0
         index_type = doc_form
@@ -321,10 +293,9 @@ class IndexingRunner:
             text_docs = index_processor.extract(extract_setting, process_rule_mode=tmp_processing_rule["mode"])
             documents = index_processor.transform(
                 text_docs,
-                current_user=None,
                 embedding_model_instance=embedding_model_instance,
                 process_rule=processing_rule.to_dict(),
-                tenant_id=tenant_id,
+                tenant_id=current_user.current_tenant_id,
                 doc_language=doc_language,
                 preview=True,
             )
@@ -332,27 +303,26 @@ class IndexingRunner:
             for document in documents:
                 if len(preview_texts) < 10:
                     if doc_form and doc_form == "qa_model":
-                        qa_detail = QAPreviewDetail(
+                        preview_detail = QAPreviewDetail(
                             question=document.page_content, answer=document.metadata.get("answer") or ""
                         )
-                        qa_preview_texts.append(qa_detail)
+                        preview_texts.append(preview_detail)
                     else:
-                        preview_detail = PreviewDetail(content=document.page_content)
+                        preview_detail = PreviewDetail(content=document.page_content)  # type: ignore
                         if document.children:
-                            preview_detail.child_chunks = [child.page_content for child in document.children]
+                            preview_detail.child_chunks = [child.page_content for child in document.children]  # type: ignore
                         preview_texts.append(preview_detail)
 
                 # delete image files and related db records
                 image_upload_file_ids = get_image_upload_file_ids(document.page_content)
                 for upload_file_id in image_upload_file_ids:
-                    stmt = select(UploadFile).where(UploadFile.id == upload_file_id)
-                    image_file = db.session.scalar(stmt)
+                    image_file = db.session.query(UploadFile).where(UploadFile.id == upload_file_id).first()
                     if image_file is None:
                         continue
                     try:
                         storage.delete(image_file.key)
                     except Exception:
-                        logger.exception(
+                        logging.exception(
                             "Delete image_files failed while indexing_estimate, \
                                           image_upload_file_is: %s",
                             upload_file_id,
@@ -360,8 +330,8 @@ class IndexingRunner:
                     db.session.delete(image_file)
 
         if doc_form and doc_form == "qa_model":
-            return IndexingEstimate(total_segments=total_segments * 20, qa_preview=qa_preview_texts, preview=[])
-        return IndexingEstimate(total_segments=total_segments, preview=preview_texts)
+            return IndexingEstimate(total_segments=total_segments * 20, qa_preview=preview_texts, preview=[])
+        return IndexingEstimate(total_segments=total_segments, preview=preview_texts)  # type: ignore
 
     def _extract(
         self, index_processor: BaseIndexProcessor, dataset_document: DatasetDocument, process_rule: dict
@@ -375,14 +345,14 @@ class IndexingRunner:
         if dataset_document.data_source_type == "upload_file":
             if not data_source_info or "upload_file_id" not in data_source_info:
                 raise ValueError("no upload file found")
-            stmt = select(UploadFile).where(UploadFile.id == data_source_info["upload_file_id"])
-            file_detail = db.session.scalars(stmt).one_or_none()
+
+            file_detail = (
+                db.session.query(UploadFile).where(UploadFile.id == data_source_info["upload_file_id"]).one_or_none()
+            )
 
             if file_detail:
                 extract_setting = ExtractSetting(
-                    datasource_type=DatasourceType.FILE,
-                    upload_file=file_detail,
-                    document_model=dataset_document.doc_form,
+                    datasource_type="upload_file", upload_file=file_detail, document_model=dataset_document.doc_form
                 )
                 text_docs = index_processor.extract(extract_setting, process_rule_mode=process_rule["mode"])
         elif dataset_document.data_source_type == "notion_import":
@@ -393,17 +363,14 @@ class IndexingRunner:
             ):
                 raise ValueError("no notion import info found")
             extract_setting = ExtractSetting(
-                datasource_type=DatasourceType.NOTION,
-                notion_info=NotionInfo.model_validate(
-                    {
-                        "credential_id": data_source_info["credential_id"],
-                        "notion_workspace_id": data_source_info["notion_workspace_id"],
-                        "notion_obj_id": data_source_info["notion_page_id"],
-                        "notion_page_type": data_source_info["type"],
-                        "document": dataset_document,
-                        "tenant_id": dataset_document.tenant_id,
-                    }
-                ),
+                datasource_type="notion_import",
+                notion_info={
+                    "notion_workspace_id": data_source_info["notion_workspace_id"],
+                    "notion_obj_id": data_source_info["notion_page_id"],
+                    "notion_page_type": data_source_info["type"],
+                    "document": dataset_document,
+                    "tenant_id": dataset_document.tenant_id,
+                },
                 document_model=dataset_document.doc_form,
             )
             text_docs = index_processor.extract(extract_setting, process_rule_mode=process_rule["mode"])
@@ -416,17 +383,15 @@ class IndexingRunner:
             ):
                 raise ValueError("no website import info found")
             extract_setting = ExtractSetting(
-                datasource_type=DatasourceType.WEBSITE,
-                website_info=WebsiteInfo.model_validate(
-                    {
-                        "provider": data_source_info["provider"],
-                        "job_id": data_source_info["job_id"],
-                        "tenant_id": dataset_document.tenant_id,
-                        "url": data_source_info["url"],
-                        "mode": data_source_info["mode"],
-                        "only_main_content": data_source_info["only_main_content"],
-                    }
-                ),
+                datasource_type="website_crawl",
+                website_info={
+                    "provider": data_source_info["provider"],
+                    "job_id": data_source_info["job_id"],
+                    "tenant_id": dataset_document.tenant_id,
+                    "url": data_source_info["url"],
+                    "mode": data_source_info["mode"],
+                    "only_main_content": data_source_info["only_main_content"],
+                },
                 document_model=dataset_document.doc_form,
             )
             text_docs = index_processor.extract(extract_setting, process_rule_mode=process_rule["mode"])
@@ -435,11 +400,13 @@ class IndexingRunner:
             document_id=dataset_document.id,
             after_indexing_status="splitting",
             extra_update_params={
-                DatasetDocument.parsing_completed_at: naive_utc_now(),
+                DatasetDocument.word_count: sum(len(text_doc.page_content) for text_doc in text_docs),
+                DatasetDocument.parsing_completed_at: datetime.datetime.now(datetime.UTC).replace(tzinfo=None),
             },
         )
 
         # replace doc id to document model id
+        text_docs = cast(list[Document], text_docs)
         for text_doc in text_docs:
             if text_doc.metadata is not None:
                 text_doc.metadata["document_id"] = dataset_document.id
@@ -462,12 +429,11 @@ class IndexingRunner:
         max_tokens: int,
         chunk_overlap: int,
         separator: str,
-        embedding_model_instance: ModelInstance | None,
+        embedding_model_instance: Optional[ModelInstance],
     ) -> TextSplitter:
         """
         Get the NodeParser object according to the processing rule.
         """
-        character_splitter: TextSplitter
         if processing_rule_mode in ["custom", "hierarchical"]:
             # The user-defined segmentation rule
             max_segmentation_tokens_length = dify_config.INDEXING_MAX_SEGMENTATION_TOKENS_LENGTH
@@ -494,7 +460,7 @@ class IndexingRunner:
                 embedding_model_instance=embedding_model_instance,
             )
 
-        return character_splitter
+        return character_splitter  # type: ignore
 
     def _split_to_documents_for_estimate(
         self, text_docs: list[Document], splitter: TextSplitter, processing_rule: DatasetProcessRule
@@ -553,7 +519,7 @@ class IndexingRunner:
         dataset: Dataset,
         dataset_document: DatasetDocument,
         documents: list[Document],
-    ):
+    ) -> None:
         """
         insert index and update document/segment status to completed
         """
@@ -570,11 +536,7 @@ class IndexingRunner:
         # chunk nodes by chunk size
         indexing_start_at = time.perf_counter()
         tokens = 0
-        create_keyword_thread = None
-        if (
-            dataset_document.doc_form != IndexStructureType.PARENT_CHILD_INDEX
-            and dataset.indexing_technique == "economy"
-        ):
+        if dataset_document.doc_form != IndexType.PARENT_CHILD_INDEX and dataset.indexing_technique == "economy":
             # create keyword index
             create_keyword_thread = threading.Thread(
                 target=self._process_keyword_index,
@@ -612,11 +574,7 @@ class IndexingRunner:
 
                 for future in futures:
                     tokens += future.result()
-        if (
-            dataset_document.doc_form != IndexStructureType.PARENT_CHILD_INDEX
-            and dataset.indexing_technique == "economy"
-            and create_keyword_thread is not None
-        ):
+        if dataset_document.doc_form != IndexType.PARENT_CHILD_INDEX and dataset.indexing_technique == "economy":
             create_keyword_thread.join()
         indexing_end_at = time.perf_counter()
 
@@ -626,7 +584,7 @@ class IndexingRunner:
             after_indexing_status="completed",
             extra_update_params={
                 DatasetDocument.tokens: tokens,
-                DatasetDocument.completed_at: naive_utc_now(),
+                DatasetDocument.completed_at: datetime.datetime.now(datetime.UTC).replace(tzinfo=None),
                 DatasetDocument.indexing_latency: indexing_end_at - indexing_start_at,
                 DatasetDocument.error: None,
             },
@@ -651,20 +609,14 @@ class IndexingRunner:
                     {
                         DocumentSegment.status: "completed",
                         DocumentSegment.enabled: True,
-                        DocumentSegment.completed_at: naive_utc_now(),
+                        DocumentSegment.completed_at: datetime.datetime.now(datetime.UTC).replace(tzinfo=None),
                     }
                 )
 
                 db.session.commit()
 
     def _process_chunk(
-        self,
-        flask_app: Flask,
-        index_processor: BaseIndexProcessor,
-        chunk_documents: list[Document],
-        dataset: Dataset,
-        dataset_document: DatasetDocument,
-        embedding_model_instance: ModelInstance | None,
+        self, flask_app, index_processor, chunk_documents, dataset, dataset_document, embedding_model_instance
     ):
         with flask_app.app_context():
             # check document is paused
@@ -675,15 +627,8 @@ class IndexingRunner:
                 page_content_list = [document.page_content for document in chunk_documents]
                 tokens += sum(embedding_model_instance.get_text_embedding_num_tokens(page_content_list))
 
-            multimodal_documents = []
-            for document in chunk_documents:
-                if document.attachments and dataset.is_multimodal:
-                    multimodal_documents.extend(document.attachments)
-
             # load index
-            index_processor.load(
-                dataset, chunk_documents, multimodal_documents=multimodal_documents, with_keywords=False
-            )
+            index_processor.load(dataset, chunk_documents, with_keywords=False)
 
             document_ids = [document.metadata["doc_id"] for document in chunk_documents]
             db.session.query(DocumentSegment).where(
@@ -695,7 +640,7 @@ class IndexingRunner:
                 {
                     DocumentSegment.status: "completed",
                     DocumentSegment.enabled: True,
-                    DocumentSegment.completed_at: naive_utc_now(),
+                    DocumentSegment.completed_at: datetime.datetime.now(datetime.UTC).replace(tzinfo=None),
                 }
             )
 
@@ -712,8 +657,8 @@ class IndexingRunner:
 
     @staticmethod
     def _update_document_index_status(
-        document_id: str, after_indexing_status: str, extra_update_params: dict | None = None
-    ):
+        document_id: str, after_indexing_status: str, extra_update_params: Optional[dict] = None
+    ) -> None:
         """
         Update the document indexing status.
         """
@@ -732,7 +677,7 @@ class IndexingRunner:
         db.session.commit()
 
     @staticmethod
-    def _update_segments_by_document(dataset_document_id: str, update_params: dict):
+    def _update_segments_by_document(dataset_document_id: str, update_params: dict) -> None:
         """
         Update the document segment by document id.
         """
@@ -746,7 +691,6 @@ class IndexingRunner:
         text_docs: list[Document],
         doc_language: str,
         process_rule: dict,
-        current_user: Account | None = None,
     ) -> list[Document]:
         # get embedding model instance
         embedding_model_instance = None
@@ -766,7 +710,6 @@ class IndexingRunner:
 
         documents = index_processor.transform(
             text_docs,
-            current_user,
             embedding_model_instance=embedding_model_instance,
             process_rule=process_rule,
             tenant_id=dataset.tenant_id,
@@ -775,26 +718,23 @@ class IndexingRunner:
 
         return documents
 
-    def _load_segments(self, dataset: Dataset, dataset_document: DatasetDocument, documents: list[Document]):
+    def _load_segments(self, dataset, dataset_document, documents):
         # save node to document segment
         doc_store = DatasetDocumentStore(
             dataset=dataset, user_id=dataset_document.created_by, document_id=dataset_document.id
         )
 
         # add document segments
-        doc_store.add_documents(
-            docs=documents, save_child=dataset_document.doc_form == IndexStructureType.PARENT_CHILD_INDEX
-        )
+        doc_store.add_documents(docs=documents, save_child=dataset_document.doc_form == IndexType.PARENT_CHILD_INDEX)
 
         # update document status to indexing
-        cur_time = naive_utc_now()
+        cur_time = datetime.datetime.now(datetime.UTC).replace(tzinfo=None)
         self._update_document_index_status(
             document_id=dataset_document.id,
             after_indexing_status="indexing",
             extra_update_params={
                 DatasetDocument.cleaning_completed_at: cur_time,
                 DatasetDocument.splitting_completed_at: cur_time,
-                DatasetDocument.word_count: sum(len(doc.page_content) for doc in documents),
             },
         )
 
@@ -803,7 +743,7 @@ class IndexingRunner:
             dataset_document_id=dataset_document.id,
             update_params={
                 DocumentSegment.status: "indexing",
-                DocumentSegment.indexing_at: naive_utc_now(),
+                DocumentSegment.indexing_at: datetime.datetime.now(datetime.UTC).replace(tzinfo=None),
             },
         )
         pass

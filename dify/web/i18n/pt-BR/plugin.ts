@@ -6,8 +6,6 @@ const translation = {
     models: 'Modelos',
     agents: 'Estratégias do agente',
     tools: 'Ferramentas',
-    datasources: 'Fontes de dados',
-    triggers: 'Gatilhos',
   },
   categorySingle: {
     model: 'Modelo',
@@ -15,8 +13,6 @@ const translation = {
     agent: 'Estratégia do agente',
     extension: 'Extensão',
     tool: 'Ferramenta',
-    datasource: 'Fonte de dados',
-    trigger: 'Gatilho',
   },
   list: {
     source: {
@@ -47,7 +43,6 @@ const translation = {
       detail: 'Detalhes',
       remove: 'Retirar',
       viewDetail: 'Ver detalhes',
-      back: 'Voltar',
     },
     toolSelector: {
       uninstalledLink: 'Gerenciar em plug-ins',
@@ -208,11 +203,6 @@ const translation = {
     installingWithError: 'Instalando plug-ins {{installingLength}}, {{successLength}} sucesso, {{errorLength}} falhou',
     installing: 'Instalando plugins {{installingLength}}, 0 feito.',
     clearAll: 'Apagar tudo',
-    installSuccess: '{{successLength}} plugins installed successfully',
-    installed: 'Installed',
-    runningPlugins: 'Installing Plugins',
-    successPlugins: 'Successfully Installed Plugins',
-    errorPlugins: 'Failed to Install Plugins',
   },
   installAction: 'Instalar',
   endpointsEnabled: '{{num}} conjuntos de endpoints habilitados',
@@ -256,12 +246,6 @@ const translation = {
     addOAuth: 'Adicionar OAuth',
     useApiAuthDesc: 'Após configurar as credenciais, todos os membros dentro do espaço de trabalho podem usar esta ferramenta ao orquestrar aplicações.',
     clientInfo: 'Como não foram encontrados segredos de cliente do sistema para este provedor de ferramentas, é necessário configurá-lo manualmente. Para redirect_uri, use',
-    customCredentialUnavailable: 'Credenciais personalizadas atualmente indisponíveis',
-    unavailable: 'Indisponível',
-    credentialUnavailable: 'Credenciais atualmente indisponíveis. Por favor, contate o administrador.',
-    credentialUnavailableInButton: 'Credencial indisponível',
-    emptyAuth: 'Configure a autenticação',
-    connectedWorkspace: 'Espaço de trabalho conectado',
   },
   deprecated: 'Obsoleto',
   autoUpdate: {
@@ -313,12 +297,6 @@ const translation = {
     nextUpdateTime: 'Próxima atualização automática: {{time}}',
     partialUPdate: 'Apenas os seguintes {{num}} plugins serão atualizados automaticamente',
     updateSettings: 'Atualizar Configurações',
-  },
-  readmeInfo: {
-    title: 'LEIA-ME',
-    needHelpCheckReadme: 'Precisa de ajuda? Confira o README.',
-    noReadmeAvailable: 'Nenhum README disponível',
-    failedToFetch: 'Falha ao buscar o README',
   },
 }
 

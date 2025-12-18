@@ -1,17 +1,14 @@
-from flask_restx import Resource, fields
+from flask_restful import Resource
 
-from . import console_ns
+from controllers.console import api
 
 
-@console_ns.route("/ping")
 class PingApi(Resource):
-    @console_ns.doc("health_check")
-    @console_ns.doc(description="Health check endpoint for connection testing")
-    @console_ns.response(
-        200,
-        "Success",
-        console_ns.model("PingResponse", {"result": fields.String(description="Health check result", example="pong")}),
-    )
     def get(self):
-        """Health check endpoint for connection testing"""
+        """
+        For connection health check
+        """
         return {"result": "pong"}
+
+
+api.add_resource(PingApi, "/ping")

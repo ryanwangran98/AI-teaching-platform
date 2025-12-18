@@ -1,21 +1,20 @@
-from enum import StrEnum, auto
+from enum import StrEnum
 
 
 class CommonParameterType(StrEnum):
     SECRET_INPUT = "secret-input"
     TEXT_INPUT = "text-input"
-    SELECT = auto()
-    STRING = auto()
-    NUMBER = auto()
-    FILE = auto()
-    FILES = auto()
+    SELECT = "select"
+    STRING = "string"
+    NUMBER = "number"
+    FILE = "file"
+    FILES = "files"
     SYSTEM_FILES = "system-files"
-    BOOLEAN = auto()
+    BOOLEAN = "boolean"
     APP_SELECTOR = "app-selector"
     MODEL_SELECTOR = "model-selector"
     TOOLS_SELECTOR = "array[tools]"
-    CHECKBOX = "checkbox"
-    ANY = auto()
+    ANY = "any"
 
     # Dynamic select parameter
     # Once you are not sure about the available options until authorization is done
@@ -24,29 +23,29 @@ class CommonParameterType(StrEnum):
 
     # TOOL_SELECTOR = "tool-selector"
     # MCP object and array type parameters
-    ARRAY = auto()
-    OBJECT = auto()
+    ARRAY = "array"
+    OBJECT = "object"
 
 
 class AppSelectorScope(StrEnum):
-    ALL = auto()
-    CHAT = auto()
-    WORKFLOW = auto()
-    COMPLETION = auto()
+    ALL = "all"
+    CHAT = "chat"
+    WORKFLOW = "workflow"
+    COMPLETION = "completion"
 
 
 class ModelSelectorScope(StrEnum):
-    LLM = auto()
+    LLM = "llm"
     TEXT_EMBEDDING = "text-embedding"
-    RERANK = auto()
-    TTS = auto()
-    SPEECH2TEXT = auto()
-    MODERATION = auto()
-    VISION = auto()
+    RERANK = "rerank"
+    TTS = "tts"
+    SPEECH2TEXT = "speech2text"
+    MODERATION = "moderation"
+    VISION = "vision"
 
 
 class ToolSelectorScope(StrEnum):
-    ALL = auto()
-    CUSTOM = auto()
-    BUILTIN = auto()
-    WORKFLOW = auto()
+    ALL = "all"
+    CUSTOM = "custom"
+    BUILTIN = "builtin"
+    WORKFLOW = "workflow"

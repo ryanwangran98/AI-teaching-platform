@@ -40,8 +40,7 @@ const VersionInfoModal: FC<VersionInfoModalProps> = ({
       return
     }
     else {
-      if (titleError)
-        setTitleError(false)
+      titleError && setTitleError(false)
     }
 
     if (releaseNotes.length > RELEASE_NOTES_MAX_LENGTH) {
@@ -53,8 +52,7 @@ const VersionInfoModal: FC<VersionInfoModalProps> = ({
       return
     }
     else {
-      if (releaseNotesError)
-        setReleaseNotesError(false)
+      releaseNotesError && setReleaseNotesError(false)
     }
 
     onPublish({ title, releaseNotes, id: versionInfo?.id })

@@ -37,11 +37,10 @@ config.set_main_option('sqlalchemy.url', get_engine_url())
 # my_important_option = config.get_main_option("my_important_option")
 # ... etc.
 
-from models.base import TypeBase
-
+from models.base import Base
 
 def get_metadata():
-    return TypeBase.metadata
+    return Base.metadata
 
 def include_object(object, name, type_, reflected, compare_to):
     if type_ == "foreign_key_constraint":

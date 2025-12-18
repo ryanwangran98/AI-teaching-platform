@@ -30,7 +30,6 @@ const Panel: FC<NodePanelProps<EndNodeType>> = ({
 
         <Field
           title={t(`${i18nPrefix}.output.variable`)}
-          required
           operations={
             !readOnly ? <AddButton onClick={handleAddVariable} /> : undefined
           }

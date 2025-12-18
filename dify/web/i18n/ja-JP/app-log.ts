@@ -1,8 +1,7 @@
 const translation = {
   title: 'ログ',
   description: 'ログは、アプリケーションの実行状態を記録します。ユーザーの入力や AI の応答などが含まれます。',
-  dateTimeFormat: 'YYYY/MM/DD hh:mm:ss A',
-  dateFormat: 'YYYY/MM/DD',
+  dateTimeFormat: 'YYYY/MM/DD hh:mm A',
   table: {
     header: {
       updatedTime: '更新時間',
@@ -20,7 +19,6 @@ const translation = {
       tokens: 'トークン',
       user: 'エンドユーザーまたはアカウント',
       version: 'バージョン',
-      triggered_from: 'トリガー方法',
     },
     pagination: {
       previous: '前へ',
@@ -60,7 +58,6 @@ const translation = {
     period: {
       today: '今日',
       last7days: '過去 7 日間',
-      last30days: '過去 30 日間',
       last4weeks: '過去 4 週間',
       last3months: '過去 3 ヶ月',
       last12months: '過去 12 ヶ月',
@@ -68,7 +65,6 @@ const translation = {
       quarterToDate: '四半期初から今日まで',
       yearToDate: '年初から今日まで',
       allTime: 'すべての期間',
-      custom: 'カスタム',
     },
     annotation: {
       all: 'すべて',
@@ -86,7 +82,6 @@ const translation = {
     workflowTitle: 'ログの詳細',
     fileListLabel: 'ファイルの詳細',
     fileListDetail: '詳細',
-    testWithParams: 'パラメータ付きテスト',
   },
   promptLog: 'プロンプトログ',
   agentLog: 'エージェントログ',
@@ -97,15 +92,6 @@ const translation = {
     iterations: '反復',
     iteration: '反復',
     finalProcessing: '最終処理',
-  },
-  triggerBy: {
-    debugging: 'デバッグ',
-    appRun: 'ウェブアプリ',
-    webhook: 'Webhook',
-    schedule: 'スケジュール',
-    plugin: 'プラグイン',
-    ragPipelineRun: 'RAGパイプライン',
-    ragPipelineDebugging: 'RAGデバッグ',
   },
 }
 

@@ -8,7 +8,7 @@ import {
 import { useTranslation } from 'react-i18next'
 import useSWR from 'swr'
 import { useLocalStorageState } from 'ahooks'
-import { produce } from 'immer'
+import produce from 'immer'
 import type {
   Callback,
   ChatConfig,
@@ -122,31 +122,19 @@ export const useChatWithHistory = (installedAppInfo?: InstalledApp) => {
     setLocaleFromProps()
   }, [appData])
 
-  const [sidebarCollapseState, setSidebarCollapseState] = useState<boolean>(() => {
-    if (typeof window !== 'undefined') {
-      try {
-        const localState = localStorage.getItem('webappSidebarCollapse')
-        return localState === 'collapsed'
-      }
-      catch {
-        // localStorage may be disabled in private browsing mode or by security settings
-        // fallback to default value
-        return false
-      }
-    }
-    return false
-  })
+  const [sidebarCollapseState, setSidebarCollapseState] = useState<boolean>(false)
   const handleSidebarCollapse = useCallback((state: boolean) => {
     if (appId) {
       setSidebarCollapseState(state)
-      try {
-        localStorage.setItem('webappSidebarCollapse', state ? 'collapsed' : 'expanded')
-      }
-      catch {
-        // localStorage may be disabled, continue without persisting state
-      }
+      localStorage.setItem('webappSidebarCollapse', state ? 'collapsed' : 'expanded')
     }
   }, [appId, setSidebarCollapseState])
+  useEffect(() => {
+    if (appId) {
+      const localState = localStorage.getItem('webappSidebarCollapse')
+      setSidebarCollapseState(localState === 'collapsed')
+    }
+  }, [appId])
   const [conversationIdInfo, setConversationIdInfo] = useLocalStorageState<Record<string, Record<string, string>>>(CONVERSATION_ID_INFO, {
     defaultValue: {},
   })
@@ -222,28 +210,18 @@ export const useChatWithHistory = (installedAppInfo?: InstalledApp) => {
 
         return {
           ...item.paragraph,
-          default: value || item.default || item.paragraph.default,
+          default: value || item.default,
           type: 'paragraph',
         }
       }
       if (item.number) {
-        const convertedNumber = Number(initInputs[item.number.variable])
+        const convertedNumber = Number(initInputs[item.number.variable]) ?? undefined
         return {
           ...item.number,
-          default: convertedNumber || item.default || item.number.default,
+          default: convertedNumber || item.default,
           type: 'number',
         }
       }
-
-      if (item.checkbox) {
-        const preset = initInputs[item.checkbox.variable] === true
-        return {
-          ...item.checkbox,
-          default: preset || item.default || item.checkbox.default,
-          type: 'checkbox',
-        }
-      }
-
       if (item.select) {
         const isInputInOptions = item.select.options.includes(initInputs[item.select.variable])
         return {
@@ -267,20 +245,13 @@ export const useChatWithHistory = (installedAppInfo?: InstalledApp) => {
         }
       }
 
-      if (item.json_object) {
-        return {
-          ...item.json_object,
-          type: 'json_object',
-        }
-      }
-
       let value = initInputs[item['text-input'].variable]
       if (value && item['text-input'].max_length && value.length > item['text-input'].max_length)
         value = value.slice(0, item['text-input'].max_length)
 
       return {
         ...item['text-input'],
-        default: value || item.default || item['text-input'].default,
+        default: value || item.default,
         type: 'text-input',
       }
     })
@@ -369,7 +340,7 @@ export const useChatWithHistory = (installedAppInfo?: InstalledApp) => {
 
     let hasEmptyInput = ''
     let fileIsUploading = false
-    const requiredVars = inputsForms.filter(({ required, type }) => required && type !== InputVarType.checkbox)
+    const requiredVars = inputsForms.filter(({ required }) => required)
     if (requiredVars.length) {
       requiredVars.forEach(({ variable, label, type }) => {
         if (hasEmptyInput)
@@ -421,13 +392,9 @@ export const useChatWithHistory = (installedAppInfo?: InstalledApp) => {
     currentChatInstanceRef.current.handleStop()
     setShowNewConversationItemInList(true)
     handleChangeConversation('')
-    const conversationInputs: Record<string, any> = {}
-    inputsForms.forEach((item: any) => {
-      conversationInputs[item.variable] = item.default || null
-    })
-    handleNewConversationInputsChange(conversationInputs)
+    handleNewConversationInputsChange(await getRawInputsFromUrlParams())
     setClearChatList(true)
-  }, [handleChangeConversation, setShowNewConversationItemInList, handleNewConversationInputsChange, setClearChatList, inputsForms])
+  }, [handleChangeConversation, setShowNewConversationItemInList, handleNewConversationInputsChange, setClearChatList])
   const handleUpdateConversationList = useCallback(() => {
     mutateAppConversationData()
     mutateAppPinnedConversationData()
@@ -522,7 +489,7 @@ export const useChatWithHistory = (installedAppInfo?: InstalledApp) => {
   }, [mutateAppConversationData, handleConversationIdInfoChange])
 
   const handleFeedback = useCallback(async (messageId: string, feedback: Feedback) => {
-    await updateFeedback({ url: `/messages/${messageId}/feedbacks`, body: { rating: feedback.rating, content: feedback.content } }, isInstalledApp, appId)
+    await updateFeedback({ url: `/messages/${messageId}/feedbacks`, body: { rating: feedback.rating } }, isInstalledApp, appId)
     notify({ type: 'success', message: t('common.api.success') })
   }, [isInstalledApp, appId, t, notify])
 

@@ -6,8 +6,6 @@ const translation = {
     all: 'Cały',
     tools: 'Narzędzia',
     models: 'Modele',
-    datasources: 'Źródła danych',
-    triggers: 'Czynniki wywołujące',
   },
   categorySingle: {
     model: 'Model',
@@ -15,8 +13,6 @@ const translation = {
     bundle: 'Pakiet',
     agent: 'Strategia agenta',
     tool: 'Narzędzie',
-    datasource: 'Źródło danych',
-    trigger: 'Spust',
   },
   list: {
     source: {
@@ -47,7 +43,6 @@ const translation = {
       install: 'Instalować',
       viewDetail: 'Pokaż szczegóły',
       info: 'Informacje o wtyczce',
-      back: 'Wstecz',
     },
     toolSelector: {
       unsupportedContent2: 'Kliknij, aby zmienić wersję.',
@@ -208,11 +203,6 @@ const translation = {
     installingWithSuccess: 'Instalacja wtyczek {{installingLength}}, {{successLength}} powodzenie.',
     clearAll: 'Wyczyść wszystko',
     installingWithError: 'Instalacja wtyczek {{installingLength}}, {{successLength}} powodzenie, {{errorLength}} niepowodzenie',
-    installSuccess: '{{successLength}} plugins installed successfully',
-    installed: 'Installed',
-    runningPlugins: 'Installing Plugins',
-    successPlugins: 'Successfully Installed Plugins',
-    errorPlugins: 'Failed to Install Plugins',
   },
   search: 'Szukać',
   installFrom: 'ZAINSTALUJ Z',
@@ -256,12 +246,6 @@ const translation = {
     addOAuth: 'Dodaj OAuth',
     useApiAuthDesc: 'Po skonfigurowaniu poświadczeń wszyscy członkowie w przestrzeni roboczej mogą korzystać z tego narzędzia podczas orkiestracji aplikacji.',
     clientInfo: 'Ponieważ nie znaleziono tajemnic klientów systemu dla tego dostawcy narzędzi, wymagane jest ręczne skonfigurowanie, dla redirect_uri proszę użyć',
-    unavailable: 'Niedostępny',
-    customCredentialUnavailable: 'Niestandardowe dane logowania są obecnie niedostępne',
-    credentialUnavailable: 'Kredencje są obecnie niedostępne. Proszę skontaktować się z administratorem.',
-    credentialUnavailableInButton: 'Credential niedostępny',
-    connectedWorkspace: 'Połączona przestrzeń robocza',
-    emptyAuth: 'Skonfiguruj uwierzytelnianie',
   },
   deprecated: 'Nieaktualny',
   autoUpdate: {
@@ -313,12 +297,6 @@ const translation = {
     excludeUpdate: 'Następujące {{num}} wtyczki nie będą aktualizować się automatycznie',
     changeTimezone: 'Aby zmienić strefę czasową, przejdź do <setTimezone>Ustawienia</setTimezone>',
     partialUPdate: 'Tylko następujące {{num}} wtyczki będą się automatycznie aktualizować',
-  },
-  readmeInfo: {
-    title: 'PRZECZYTAJMNIE',
-    needHelpCheckReadme: 'Potrzebujesz pomocy? Sprawdź plik README.',
-    noReadmeAvailable: 'Brak dostępnego pliku README',
-    failedToFetch: 'Nie udało się pobrać pliku README',
   },
 }
 

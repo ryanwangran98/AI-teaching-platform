@@ -12,7 +12,6 @@ import AppUnavailable from '../../base/app-unavailable'
 import { useGetUserCanAccessApp } from '@/service/access-control'
 import { useGetInstalledAppAccessModeByAppId, useGetInstalledAppMeta, useGetInstalledAppParams } from '@/service/use-explore'
 import type { AppData } from '@/models/share'
-import { AppModeEnum } from '@/types/app'
 
 export type IInstalledAppProps = {
   id: string
@@ -103,13 +102,13 @@ const InstalledApp: FC<IInstalledAppProps> = ({
   }
   return (
     <div className='h-full bg-background-default py-2 pl-0 pr-2 sm:p-2'>
-      {installedApp?.app.mode !== AppModeEnum.COMPLETION && installedApp?.app.mode !== AppModeEnum.WORKFLOW && (
+      {installedApp?.app.mode !== 'completion' && installedApp?.app.mode !== 'workflow' && (
         <ChatWithHistory installedAppInfo={installedApp} className='overflow-hidden rounded-2xl shadow-md' />
       )}
-      {installedApp?.app.mode === AppModeEnum.COMPLETION && (
+      {installedApp?.app.mode === 'completion' && (
         <TextGenerationApp isInstalledApp installedAppInfo={installedApp} />
       )}
-      {installedApp?.app.mode === AppModeEnum.WORKFLOW && (
+      {installedApp?.app.mode === 'workflow' && (
         <TextGenerationApp isWorkflow isInstalledApp installedAppInfo={installedApp} />
       )}
     </div>

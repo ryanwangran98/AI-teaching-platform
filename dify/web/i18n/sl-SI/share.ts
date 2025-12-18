@@ -71,9 +71,8 @@ const translation = {
       moreThanMaxLengthLine: 'Vrstica {{rowIndex}}: vrednost {{varName}} ne sme biti daljša od {{maxLength}} znakov',
       atLeastOne: 'Prosimo, vnesite vsaj eno vrstico v naloženo datoteko.',
     },
-    execution: 'Zagon',
-    executions: '{{num}} zagonov',
-    stopRun: 'Ustavi izvajanje',
+    execution: 'IZVEDBA',
+    executions: '{{num}} IZVRŠITEV',
   },
   login: {
     backToHome: 'Nazaj na začetno stran',

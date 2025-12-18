@@ -24,7 +24,6 @@ import { AlertTriangle } from '@/app/components/base/icons/src/vender/solid/aler
 import AppIcon from '@/app/components/base/app-icon'
 import { useStore as useAppStore } from '@/app/components/app/store'
 import { noop } from 'lodash-es'
-import { AppModeEnum } from '@/types/app'
 
 type SwitchAppModalProps = {
   show: boolean
@@ -78,7 +77,7 @@ const SwitchAppModal = ({ show, appDetail, inAppDetail = false, onSuccess, onClo
         isCurrentWorkspaceEditor,
         {
           id: newAppID,
-          mode: appDetail.mode === AppModeEnum.COMPLETION ? AppModeEnum.WORKFLOW : AppModeEnum.ADVANCED_CHAT,
+          mode: appDetail.mode === 'completion' ? 'workflow' : 'advanced-chat',
         },
         removeOriginal ? replace : push,
       )

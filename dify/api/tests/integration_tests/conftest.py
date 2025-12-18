@@ -1,4 +1,3 @@
-import os
 import pathlib
 import random
 import secrets
@@ -10,13 +9,12 @@ from flask.testing import FlaskClient
 from sqlalchemy.orm import Session
 
 from app_factory import create_app
-from extensions.ext_database import db
-from models import Account, DifySetup, Tenant, TenantAccountJoin
+from models import Account, DifySetup, Tenant, TenantAccountJoin, db
 from services.account_service import AccountService, RegisterService
 
 
 # Loading the .env file if it exists
-def _load_env():
+def _load_env() -> None:
     current_file_path = pathlib.Path(__file__).absolute()
     # Items later in the list have higher precedence.
     files_to_load = [".env", "vdb.env"]
@@ -33,10 +31,6 @@ def _load_env():
 
 
 _load_env()
-# Override storage root to tmp to avoid polluting repo during local runs
-os.environ["OPENDAL_FS_ROOT"] = "/tmp/dify-storage"
-os.environ.setdefault("STORAGE_TYPE", "opendal")
-os.environ.setdefault("OPENDAL_SCHEME", "fs")
 
 _CACHED_APP = create_app()
 
@@ -63,7 +57,6 @@ def setup_account(request) -> Generator[Account, None, None]:
             name=name,
             password=secrets.token_hex(16),
             ip_address="localhost",
-            language="en-US",
         )
 
     with _CACHED_APP.test_request_context():

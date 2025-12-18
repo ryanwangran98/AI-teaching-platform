@@ -4,16 +4,16 @@ import React, { useCallback, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { intersectionBy } from 'lodash-es'
 import { useContext } from 'use-context-selector'
-import { produce } from 'immer'
+import produce from 'immer'
 import { v4 as uuid4 } from 'uuid'
 import { useFormattingChangedDispatcher } from '../debug/hooks'
 import FeaturePanel from '../base/feature-panel'
 import OperationBtn from '../base/operation-btn'
-import CardItem from './card-item'
+import CardItem from './card-item/item'
 import ParamsConfig from './params-config'
 import ContextVar from './context-var'
 import ConfigContext from '@/context/debug-configuration'
-import { AppModeEnum } from '@/types/app'
+import { AppType } from '@/types/app'
 import type { DataSet } from '@/models/datasets'
 import {
   getMultipleRetrievalConfig,
@@ -65,40 +65,13 @@ const DatasetConfig: FC = () => {
   const onRemove = (id: string) => {
     const filteredDataSets = dataSet.filter(item => item.id !== id)
     setDataSet(filteredDataSets)
-    const { datasets, retrieval_model, score_threshold_enabled, ...restConfigs } = datasetConfigs
-    const {
-      top_k,
-      score_threshold,
-      reranking_model,
-      reranking_mode,
-      weights,
-      reranking_enable,
-    } = restConfigs
-    const oldRetrievalConfig = {
-      top_k,
-      score_threshold,
-      reranking_model: (reranking_model && reranking_model.reranking_provider_name && reranking_model.reranking_model_name) ? {
-        provider: reranking_model.reranking_provider_name,
-        model: reranking_model.reranking_model_name,
-      } : undefined,
-      reranking_mode,
-      weights,
-      reranking_enable,
-    }
-    const retrievalConfig = getMultipleRetrievalConfig(oldRetrievalConfig, filteredDataSets, dataSet, {
+    const retrievalConfig = getMultipleRetrievalConfig(datasetConfigs as any, filteredDataSets, dataSet, {
       provider: currentRerankProvider?.provider,
       model: currentRerankModel?.model,
     })
     setDatasetConfigs({
-      ...datasetConfigsRef.current,
+      ...(datasetConfigs as any),
       ...retrievalConfig,
-      reranking_model: {
-        reranking_provider_name: retrievalConfig?.reranking_model?.provider || '',
-        reranking_model_name: retrievalConfig?.reranking_model?.model || '',
-      },
-      retrieval_model,
-      score_threshold_enabled,
-      datasets,
     })
     const {
       allExternal,
@@ -232,7 +205,7 @@ const DatasetConfig: FC = () => {
       draft.metadata_model_config = {
         provider: model.provider,
         name: model.modelId,
-        mode: model.mode || AppModeEnum.CHAT,
+        mode: model.mode || 'chat',
         completion_params: draft.metadata_model_config?.completion_params || { temperature: 0.7 },
       }
     })
@@ -302,7 +275,7 @@ const DatasetConfig: FC = () => {
         />
       </div>
 
-      {mode === AppModeEnum.COMPLETION && dataSet.length > 0 && (
+      {mode === AppType.completion && dataSet.length > 0 && (
         <ContextVar
           value={selectedContextVar?.key}
           options={promptVariablesToSelect}

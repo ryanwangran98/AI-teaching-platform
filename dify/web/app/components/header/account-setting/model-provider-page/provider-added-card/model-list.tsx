@@ -5,7 +5,7 @@ import {
   RiArrowRightSLine,
 } from '@remixicon/react'
 import type {
-  Credential,
+  CustomConfigurationModelFixedFields,
   ModelItem,
   ModelProvider,
 } from '../declarations'
@@ -13,36 +13,34 @@ import {
   ConfigurationMethodEnum,
 } from '../declarations'
 // import Tab from './tab'
+import AddModelButton from './add-model-button'
 import ModelListItem from './model-list-item'
 import { useModalContextSelector } from '@/context/modal-context'
 import { useAppContext } from '@/context/app-context'
-import {
-  AddCustomModel,
-  ManageCustomModelCredentials,
-} from '@/app/components/header/account-setting/model-provider-page/model-auth'
 
 type ModelListProps = {
   provider: ModelProvider
   models: ModelItem[]
   onCollapse: () => void
+  onConfig: (currentCustomConfigurationModelFixedFields?: CustomConfigurationModelFixedFields) => void
   onChange?: (provider: string) => void
 }
 const ModelList: FC<ModelListProps> = ({
   provider,
   models,
   onCollapse,
+  onConfig,
   onChange,
 }) => {
   const { t } = useTranslation()
   const configurativeMethods = provider.configurate_methods.filter(method => method !== ConfigurationMethodEnum.fetchFromRemote)
   const { isCurrentWorkspaceManager } = useAppContext()
   const isConfigurable = configurativeMethods.includes(ConfigurationMethodEnum.customizableModel)
+
   const setShowModelLoadBalancingModal = useModalContextSelector(state => state.setShowModelLoadBalancingModal)
-  const onModifyLoadBalancing = useCallback((model: ModelItem, credential?: Credential) => {
+  const onModifyLoadBalancing = useCallback((model: ModelItem) => {
     setShowModelLoadBalancingModal({
       provider,
-      credential,
-      configurateMethod: model.fetch_from,
       model: model!,
       open: !!model,
       onClose: () => setShowModelLoadBalancingModal(null),
@@ -67,18 +65,17 @@ const ModelList: FC<ModelListProps> = ({
               <RiArrowRightSLine className='mr-0.5 h-4 w-4 rotate-90' />
             </span>
           </span>
+          {/* {
+            isConfigurable && canSystemConfig && (
+              <span className='flex items-center'>
+                <Tab active='all' onSelect={() => {}} />
+              </span>
+            )
+          } */}
           {
             isConfigurable && isCurrentWorkspaceManager && (
               <div className='flex grow justify-end'>
-                <ManageCustomModelCredentials
-                  provider={provider}
-                  currentCustomConfigurationModelFixedFields={undefined}
-                />
-                <AddCustomModel
-                  provider={provider}
-                  configurationMethod={ConfigurationMethodEnum.customizableModel}
-                  currentCustomConfigurationModelFixedFields={undefined}
-                />
+                <AddModelButton onClick={() => onConfig()} />
               </div>
             )
           }
@@ -86,11 +83,12 @@ const ModelList: FC<ModelListProps> = ({
         {
           models.map(model => (
             <ModelListItem
-              key={`${model.model}-${model.model_type}-${model.fetch_from}`}
+              key={model.model}
               {...{
                 model,
                 provider,
                 isConfigurable,
+                onConfig,
                 onModifyLoadBalancing,
               }}
             />

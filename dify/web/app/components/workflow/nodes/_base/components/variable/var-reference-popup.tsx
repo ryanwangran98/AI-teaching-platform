@@ -1,11 +1,10 @@
 'use client'
 import type { FC } from 'react'
-import React, { useMemo } from 'react'
+import React from 'react'
 import { useTranslation } from 'react-i18next'
 import VarReferenceVars from './var-reference-vars'
 import type { NodeOutPutVar, ValueSelector, Var } from '@/app/components/workflow/types'
 import ListEmpty from '@/app/components/base/list-empty'
-import { useStore } from '@/app/components/workflow/store'
 import { useDocLink } from '@/context/i18n'
 
 type Props = {
@@ -15,7 +14,6 @@ type Props = {
   itemWidth?: number
   isSupportFileVar?: boolean
   zIndex?: number
-  preferSchemaType?: boolean
 }
 const VarReferencePopup: FC<Props> = ({
   vars,
@@ -24,12 +22,8 @@ const VarReferencePopup: FC<Props> = ({
   itemWidth,
   isSupportFileVar = true,
   zIndex,
-  preferSchemaType,
 }) => {
   const { t } = useTranslation()
-  const pipelineId = useStore(s => s.pipelineId)
-  const showManageRagInputFields = useMemo(() => !!pipelineId, [pipelineId])
-  const setShowInputFieldPanel = useStore(s => s.setShowInputFieldPanel)
   const docLink = useDocLink()
   // max-h-[300px] overflow-y-auto todo: use portal to handle long list
   return (
@@ -69,9 +63,6 @@ const VarReferencePopup: FC<Props> = ({
           itemWidth={itemWidth}
           isSupportFileVar={isSupportFileVar}
           zIndex={zIndex}
-          showManageInputField={showManageRagInputFields}
-          onManageInputField={() => setShowInputFieldPanel?.(true)}
-          preferSchemaType={preferSchemaType}
         />
       }
     </div >

@@ -2,8 +2,7 @@
 import type { FC } from 'react'
 import { useTranslation } from 'react-i18next'
 import React, { useCallback, useEffect, useRef, useState } from 'react'
-import { produce, setAutoFreeze } from 'immer'
-import cloneDeep from 'lodash-es/cloneDeep'
+import produce, { setAutoFreeze } from 'immer'
 import { useBoolean } from 'ahooks'
 import {
   RiAddLine,
@@ -24,7 +23,7 @@ import {
   APP_CHAT_WITH_MULTIPLE_MODEL,
   APP_CHAT_WITH_MULTIPLE_MODEL_RESTART,
 } from './types'
-import { AppModeEnum, ModelModeType, TransferMethod } from '@/types/app'
+import { AppType, ModelModeType, TransferMethod } from '@/types/app'
 import ChatUserInput from '@/app/components/app/configuration/debug/chat-user-input'
 import PromptValuePanel from '@/app/components/app/configuration/prompt-value-panel'
 import ConfigContext from '@/context/debug-configuration'
@@ -35,9 +34,9 @@ import { RefreshCcw01 } from '@/app/components/base/icons/src/vender/line/arrows
 import TooltipPlus from '@/app/components/base/tooltip'
 import ActionButton, { ActionButtonState } from '@/app/components/base/action-button'
 import type { ModelConfig as BackendModelConfig, VisionFile, VisionSettings } from '@/types/app'
-import { formatBooleanInputs, promptVariablesToUserInputsForm } from '@/utils/model-config'
+import { promptVariablesToUserInputsForm } from '@/utils/model-config'
 import TextGeneration from '@/app/components/app/text-generate/item'
-import { DEFAULT_CHAT_PROMPT_CONFIG, DEFAULT_COMPLETION_PROMPT_CONFIG, IS_CE_EDITION } from '@/config'
+import { IS_CE_EDITION } from '@/config'
 import type { Inputs } from '@/models/debug'
 import { useDefaultModel } from '@/app/components/header/account-setting/model-provider-page/hooks'
 import { ModelFeatureEnum, ModelTypeEnum } from '@/app/components/header/account-setting/model-provider-page/declarations'
@@ -91,7 +90,6 @@ const Debug: FC<IDebug> = ({
     completionParams,
     hasSetContextVar,
     datasetConfigs,
-    externalDataToolsConfig,
   } = useContext(ConfigContext)
   const { eventEmitter } = useEventEmitterContextContext()
   const { data: text2speechDefaultModel } = useDefaultModel(ModelTypeEnum.textEmbedding)
@@ -111,7 +109,7 @@ const Debug: FC<IDebug> = ({
       setIsShowFormattingChangeConfirm(true)
   }, [formattingChanged])
 
-  const debugWithSingleModelRef = React.useRef<DebugWithSingleModelRefType>(null!)
+  const debugWithSingleModelRef = React.useRef<DebugWithSingleModelRefType | null>(null)
   const handleClearConversation = () => {
     debugWithSingleModelRef.current?.handleRestart()
   }
@@ -144,7 +142,7 @@ const Debug: FC<IDebug> = ({
   const [completionFiles, setCompletionFiles] = useState<VisionFile[]>([])
 
   const checkCanSend = useCallback(() => {
-    if (isAdvancedMode && mode !== AppModeEnum.COMPLETION) {
+    if (isAdvancedMode && mode !== AppType.completion) {
       if (modelModeType === ModelModeType.completion) {
         if (!hasSetBlockStatus.history) {
           notify({ type: 'error', message: t('appDebug.otherError.historyNoBeEmpty') })
@@ -225,8 +223,8 @@ const Debug: FC<IDebug> = ({
     const postModelConfig: BackendModelConfig = {
       pre_prompt: !isAdvancedMode ? modelConfig.configs.prompt_template : '',
       prompt_type: promptMode,
-      chat_prompt_config: isAdvancedMode ? chatPromptConfig : cloneDeep(DEFAULT_CHAT_PROMPT_CONFIG),
-      completion_prompt_config: isAdvancedMode ? completionPromptConfig : cloneDeep(DEFAULT_COMPLETION_PROMPT_CONFIG),
+      chat_prompt_config: {},
+      completion_prompt_config: {},
       user_input_form: promptVariablesToUserInputsForm(modelConfig.configs.prompt_variables),
       dataset_query_variable: contextVar || '',
       dataset_configs: {
@@ -253,12 +251,15 @@ const Debug: FC<IDebug> = ({
       suggested_questions_after_answer: suggestedQuestionsAfterAnswerConfig,
       speech_to_text: speechToTextConfig,
       retriever_resource: citationConfig,
-      system_parameters: modelConfig.system_parameters,
-      external_data_tools: externalDataToolsConfig,
+    }
+
+    if (isAdvancedMode) {
+      postModelConfig.chat_prompt_config = chatPromptConfig
+      postModelConfig.completion_prompt_config = completionPromptConfig
     }
 
     const data: Record<string, any> = {
-      inputs: formatBooleanInputs(modelConfig.configs.prompt_variables, inputs),
+      inputs,
       model_config: postModelConfig,
     }
 
@@ -410,7 +411,7 @@ const Debug: FC<IDebug> = ({
                 )
                 : null
             }
-            {mode !== AppModeEnum.COMPLETION && (
+            {mode !== AppType.completion && (
               <>
                 <TooltipPlus
                   popupContent={t('common.operation.refresh')}
@@ -435,14 +436,14 @@ const Debug: FC<IDebug> = ({
             )}
           </div>
         </div>
-        {mode !== AppModeEnum.COMPLETION && expanded && (
+        {mode !== AppType.completion && expanded && (
           <div className='mx-3'>
             <ChatUserInput inputs={inputs} />
           </div>
         )}
-        {mode === AppModeEnum.COMPLETION && (
+        {mode === AppType.completion && (
           <PromptValuePanel
-            appType={mode as AppModeEnum}
+            appType={mode as AppType}
             onSend={handleSendTextCompletion}
             inputs={inputs}
             visionConfig={{
@@ -490,7 +491,7 @@ const Debug: FC<IDebug> = ({
         !debugWithMultipleModel && (
           <div className="flex grow flex-col" ref={ref}>
             {/* Chat */}
-            {mode !== AppModeEnum.COMPLETION && (
+            {mode !== AppType.completion && (
               <div className='h-0 grow overflow-hidden'>
                 <DebugWithSingleModel
                   ref={debugWithSingleModelRef}
@@ -499,7 +500,7 @@ const Debug: FC<IDebug> = ({
               </div>
             )}
             {/* Text  Generation */}
-            {mode === AppModeEnum.COMPLETION && (
+            {mode === AppType.completion && (
               <>
                 {(completionRes || isResponding) && (
                   <>
@@ -528,7 +529,7 @@ const Debug: FC<IDebug> = ({
                 )}
               </>
             )}
-            {mode === AppModeEnum.COMPLETION && showPromptLogModal && (
+            {mode === AppType.completion && showPromptLogModal && (
               <PromptLogModal
                 width={width}
                 currentLogItem={currentLogItem}

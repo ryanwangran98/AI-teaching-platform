@@ -1,10 +1,9 @@
 import React, { type FC, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useKeyPress } from 'ahooks'
-import { useDocumentContext } from '../../context'
+import { useDocumentContext } from '../../index'
 import Button from '@/app/components/base/button'
 import { getKeyboardKeyCodeBySystem, getKeyboardKeyNameBySystem } from '@/app/components/workflow/utils'
-import { ChunkingMode } from '@/models/datasets'
 
 type IActionButtonsProps = {
   handleCancel: () => void
@@ -13,7 +12,6 @@ type IActionButtonsProps = {
   actionType?: 'edit' | 'add'
   handleRegeneration?: () => void
   isChildChunk?: boolean
-  showRegenerationButton?: boolean
 }
 
 const ActionButtons: FC<IActionButtonsProps> = ({
@@ -23,10 +21,9 @@ const ActionButtons: FC<IActionButtonsProps> = ({
   actionType = 'edit',
   handleRegeneration,
   isChildChunk = false,
-  showRegenerationButton = true,
 }) => {
   const { t } = useTranslation()
-  const docForm = useDocumentContext(s => s.docForm)
+  const mode = useDocumentContext(s => s.mode)
   const parentMode = useDocumentContext(s => s.parentMode)
 
   useKeyPress(['esc'], (e) => {
@@ -43,8 +40,8 @@ const ActionButtons: FC<IActionButtonsProps> = ({
   { exactMatch: true, useCapture: true })
 
   const isParentChildParagraphMode = useMemo(() => {
-    return docForm === ChunkingMode.parentChild && parentMode === 'paragraph'
-  }, [docForm, parentMode])
+    return mode === 'hierarchical' && parentMode === 'paragraph'
+  }, [mode, parentMode])
 
   return (
     <div className='flex items-center gap-x-2'>
@@ -56,7 +53,7 @@ const ActionButtons: FC<IActionButtonsProps> = ({
           <span className='system-kbd rounded-[4px] bg-components-kbd-bg-gray px-[1px] text-text-tertiary'>ESC</span>
         </div>
       </Button>
-      {(isParentChildParagraphMode && actionType === 'edit' && !isChildChunk && showRegenerationButton)
+      {(isParentChildParagraphMode && actionType === 'edit' && !isChildChunk)
         ? <Button
           onClick={handleRegeneration}
           disabled={loading}

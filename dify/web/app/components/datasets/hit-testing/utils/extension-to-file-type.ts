@@ -7,6 +7,9 @@ export const extensionToFileType = (extension: string): FileAppearanceTypeEnum =
     case 'doc':
     case 'docx':
       return FileAppearanceTypeEnum.word
+    case 'txt':
+    case 'epub':
+      return FileAppearanceTypeEnum.document
     case 'md':
     case 'mdx':
     case 'markdown':
@@ -15,8 +18,6 @@ export const extensionToFileType = (extension: string): FileAppearanceTypeEnum =
     case 'xls':
     case 'xlsx':
       return FileAppearanceTypeEnum.excel
-    case 'txt':
-    case 'epub':
     case 'html':
     case 'htm':
     case 'xml':

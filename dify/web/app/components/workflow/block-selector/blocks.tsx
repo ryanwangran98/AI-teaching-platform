@@ -3,58 +3,42 @@ import {
   useCallback,
   useMemo,
 } from 'react'
-import { useStoreApi } from 'reactflow'
 import { useTranslation } from 'react-i18next'
 import { groupBy } from 'lodash-es'
 import BlockIcon from '../block-icon'
 import { BlockEnum } from '../types'
-import type { NodeDefault } from '../types'
+import {
+  useIsChatMode,
+  useNodesExtraData,
+} from '../hooks'
 import { BLOCK_CLASSIFICATIONS } from './constants'
 import { useBlocks } from './hooks'
+import type { ToolDefaultValue } from './types'
 import Tooltip from '@/app/components/base/tooltip'
 import Badge from '@/app/components/base/badge'
 
 type BlocksProps = {
   searchText: string
-  onSelect: (type: BlockEnum) => void
+  onSelect: (type: BlockEnum, tool?: ToolDefaultValue) => void
   availableBlocksTypes?: BlockEnum[]
-  blocks?: NodeDefault[]
 }
 const Blocks = ({
   searchText,
   onSelect,
   availableBlocksTypes = [],
-  blocks: blocksFromProps,
 }: BlocksProps) => {
   const { t } = useTranslation()
-  const store = useStoreApi()
-  const blocksFromHooks = useBlocks()
-
-  // Use external blocks if provided, otherwise fallback to hook-based blocks
-  const blocks = blocksFromProps || blocksFromHooks.map(block => ({
-    metaData: {
-      classification: block.classification,
-      sort: 0, // Default sort order
-      type: block.type,
-      title: block.title,
-      author: 'Dify',
-      description: block.description,
-    },
-    defaultValue: {},
-    checkValid: () => ({ isValid: true }),
-  }) as NodeDefault)
+  const isChatMode = useIsChatMode()
+  const nodesExtraData = useNodesExtraData()
+  const blocks = useBlocks()
 
   const groups = useMemo(() => {
     return BLOCK_CLASSIFICATIONS.reduce((acc, classification) => {
-      const grouped = groupBy(blocks, 'metaData.classification')
-      const list = (grouped[classification] || []).filter((block) => {
-        // Filter out trigger types from Blocks tab
-        if (block.metaData.type === BlockEnum.TriggerWebhook
-            || block.metaData.type === BlockEnum.TriggerSchedule
-            || block.metaData.type === BlockEnum.TriggerPlugin)
+      const list = groupBy(blocks, 'classification')[classification].filter((block) => {
+        if (block.type === BlockEnum.Answer && !isChatMode)
           return false
 
-        return block.metaData.title.toLowerCase().includes(searchText.toLowerCase()) && availableBlocksTypes.includes(block.metaData.type)
+        return block.title.toLowerCase().includes(searchText.toLowerCase()) && availableBlocksTypes.includes(block.type)
       })
 
       return {
@@ -62,19 +46,11 @@ const Blocks = ({
         [classification]: list,
       }
     }, {} as Record<string, typeof blocks>)
-  }, [blocks, searchText, availableBlocksTypes])
+  }, [blocks, isChatMode, searchText, availableBlocksTypes])
   const isEmpty = Object.values(groups).every(list => !list.length)
 
   const renderGroup = useCallback((classification: string) => {
-    const list = groups[classification].sort((a, b) => (a.metaData.sort || 0) - (b.metaData.sort || 0))
-    const { getNodes } = store.getState()
-    const nodes = getNodes()
-    const hasKnowledgeBaseNode = nodes.some(node => node.data.type === BlockEnum.KnowledgeBase)
-    const filteredList = list.filter((block) => {
-      if (hasKnowledgeBaseNode)
-        return block.metaData.type !== BlockEnum.KnowledgeBase
-      return true
-    })
+    const list = groups[classification]
 
     return (
       <div
@@ -82,43 +58,43 @@ const Blocks = ({
         className='mb-1 last-of-type:mb-0'
       >
         {
-          classification !== '-' && !!filteredList.length && (
+          classification !== '-' && !!list.length && (
             <div className='flex h-[22px] items-start px-3 text-xs font-medium text-text-tertiary'>
               {t(`workflow.tabs.${classification}`)}
             </div>
           )
         }
         {
-          filteredList.map(block => (
+          list.map(block => (
             <Tooltip
-              key={block.metaData.type}
+              key={block.type}
               position='right'
-              popupClassName='w-[200px] rounded-xl'
+              popupClassName='w-[200px]'
               needsDelay={false}
               popupContent={(
                 <div>
                   <BlockIcon
                     size='md'
                     className='mb-2'
-                    type={block.metaData.type}
+                    type={block.type}
                   />
-                  <div className='system-md-medium mb-1 text-text-primary'>{block.metaData.title}</div>
-                  <div className='system-xs-regular text-text-tertiary'>{block.metaData.description}</div>
+                  <div className='system-md-medium mb-1 text-text-primary'>{block.title}</div>
+                  <div className='system-xs-regular text-text-tertiary'>{nodesExtraData[block.type].about}</div>
                 </div>
               )}
             >
               <div
-                key={block.metaData.type}
+                key={block.type}
                 className='flex h-8 w-full cursor-pointer items-center rounded-lg px-3 hover:bg-state-base-hover'
-                onClick={() => onSelect(block.metaData.type)}
+                onClick={() => onSelect(block.type)}
               >
                 <BlockIcon
                   className='mr-2 shrink-0'
-                  type={block.metaData.type}
+                  type={block.type}
                 />
-                <div className='grow text-sm text-text-secondary'>{block.metaData.title}</div>
+                <div className='grow text-sm text-text-secondary'>{block.title}</div>
                 {
-                  block.metaData.type === BlockEnum.LoopEnd && (
+                  block.type === BlockEnum.LoopEnd && (
                     <Badge
                       text={t('workflow.nodes.loop.loopNode')}
                       className='ml-2 shrink-0'
@@ -131,10 +107,10 @@ const Blocks = ({
         }
       </div>
     )
-  }, [groups, onSelect, t, store])
+  }, [groups, nodesExtraData, onSelect, t])
 
   return (
-    <div className='max-h-[480px] max-w-[500px] overflow-y-auto p-1'>
+    <div className='p-1'>
       {
         isEmpty && (
           <div className='flex h-[22px] items-center px-3 text-xs font-medium text-text-tertiary'>{t('workflow.tabs.noResult')}</div>

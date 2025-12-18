@@ -211,7 +211,8 @@ class AgentChatAppGenerator(MessageBasedAppGenerator):
             user=user,
             stream=streaming,
         )
-        return AgentChatAppGenerateResponseConverter.convert(response=response, invoke_from=invoke_from)
+        # FIXME: Type hinting issue here, ignore it for now, will fix it later
+        return AgentChatAppGenerateResponseConverter.convert(response=response, invoke_from=invoke_from)  # type: ignore
 
     def _generate_worker(
         self,
@@ -221,7 +222,7 @@ class AgentChatAppGenerator(MessageBasedAppGenerator):
         queue_manager: AppQueueManager,
         conversation_id: str,
         message_id: str,
-    ):
+    ) -> None:
         """
         Generate worker in a new thread.
         :param flask_app: Flask app

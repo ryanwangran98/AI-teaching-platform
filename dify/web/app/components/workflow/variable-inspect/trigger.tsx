@@ -95,11 +95,7 @@ const VariableInspectTrigger: FC = () => {
             className={cn('system-xs-medium flex h-6 cursor-pointer items-center rounded-md border-[0.5px] border-effects-highlight bg-components-actionbar-bg px-1 text-text-tertiary shadow-lg backdrop-blur-sm hover:bg-components-actionbar-bg-accent hover:text-text-accent',
               nodesReadOnly && 'cursor-not-allowed text-text-disabled hover:bg-transparent hover:text-text-disabled',
             )}
-            onClick={() => {
-              if (getNodesReadOnly())
-                return
-              handleClearAll()
-            }}
+            onClick={handleClearAll}
           >
             {t('workflow.debug.variableInspect.trigger.clear')}
           </div>
@@ -111,7 +107,7 @@ const VariableInspectTrigger: FC = () => {
             className='system-xs-medium flex h-6 cursor-pointer items-center gap-1 rounded-md border-[0.5px] border-effects-highlight bg-components-actionbar-bg px-2 text-text-accent shadow-lg backdrop-blur-sm hover:bg-components-actionbar-bg-accent'
             onClick={() => setShowVariableInspectPanel(true)}
           >
-            <RiLoader2Line className='h-4 w-4 animate-spin' />
+            <RiLoader2Line className='h-4 w-4' />
             <span className='text-text-accent'>{t('workflow.debug.variableInspect.trigger.running')}</span>
           </div>
           {isPreviewRunning && (

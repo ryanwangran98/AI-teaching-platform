@@ -1,3 +1,5 @@
+from typing import Optional
+
 from pydantic import Field, PositiveInt
 from pydantic_settings import BaseSettings
 
@@ -7,7 +9,7 @@ class PGVectorConfig(BaseSettings):
     Configuration settings for PGVector (PostgreSQL with vector extension)
     """
 
-    PGVECTOR_HOST: str | None = Field(
+    PGVECTOR_HOST: Optional[str] = Field(
         description="Hostname or IP address of the PostgreSQL server with PGVector extension (e.g., 'localhost')",
         default=None,
     )
@@ -17,17 +19,17 @@ class PGVectorConfig(BaseSettings):
         default=5433,
     )
 
-    PGVECTOR_USER: str | None = Field(
+    PGVECTOR_USER: Optional[str] = Field(
         description="Username for authenticating with the PostgreSQL database",
         default=None,
     )
 
-    PGVECTOR_PASSWORD: str | None = Field(
+    PGVECTOR_PASSWORD: Optional[str] = Field(
         description="Password for authenticating with the PostgreSQL database",
         default=None,
     )
 
-    PGVECTOR_DATABASE: str | None = Field(
+    PGVECTOR_DATABASE: Optional[str] = Field(
         description="Name of the PostgreSQL database to connect to",
         default=None,
     )

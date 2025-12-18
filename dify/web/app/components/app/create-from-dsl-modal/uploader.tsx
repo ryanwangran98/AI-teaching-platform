@@ -17,16 +17,12 @@ export type Props = {
   file: File | undefined
   updateFile: (file?: File) => void
   className?: string
-  accept?: string
-  displayName?: string
 }
 
 const Uploader: FC<Props> = ({
   file,
   updateFile,
   className,
-  accept = '.yaml,.yml',
-  displayName = 'YAML',
 }) => {
   const { t } = useTranslation()
   const { notify } = useContext(ToastContext)
@@ -38,8 +34,7 @@ const Uploader: FC<Props> = ({
   const handleDragEnter = (e: DragEvent) => {
     e.preventDefault()
     e.stopPropagation()
-    if (e.target !== dragRef.current)
-      setDragging(true)
+    e.target !== dragRef.current && setDragging(true)
   }
   const handleDragOver = (e: DragEvent) => {
     e.preventDefault()
@@ -48,8 +43,7 @@ const Uploader: FC<Props> = ({
   const handleDragLeave = (e: DragEvent) => {
     e.preventDefault()
     e.stopPropagation()
-    if (e.target === dragRef.current)
-      setDragging(false)
+    e.target === dragRef.current && setDragging(false)
   }
   const handleDrop = (e: DragEvent) => {
     e.preventDefault()
@@ -101,9 +95,9 @@ const Uploader: FC<Props> = ({
       <input
         ref={fileUploader}
         style={{ display: 'none' }}
-        type='file'
-        id='fileUploader'
-        accept={accept}
+        type="file"
+        id="fileUploader"
+        accept='.yaml,.yml'
         onChange={fileChangeHandle}
       />
       <div ref={dropRef}>
@@ -122,12 +116,12 @@ const Uploader: FC<Props> = ({
         {file && (
           <div className={cn('group flex items-center rounded-lg border-[0.5px] border-components-panel-border bg-components-panel-on-panel-item-bg shadow-xs', ' hover:bg-components-panel-on-panel-item-bg-hover')}>
             <div className='flex items-center justify-center p-3'>
-              <YamlIcon className='h-6 w-6 shrink-0' />
+              <YamlIcon className="h-6 w-6 shrink-0" />
             </div>
             <div className='flex grow flex-col items-start gap-0.5 py-1 pr-2'>
               <span className='font-inter max-w-[calc(100%_-_30px)] overflow-hidden text-ellipsis whitespace-nowrap text-[12px] font-medium leading-4 text-text-secondary'>{file.name}</span>
               <div className='font-inter flex h-3 items-center gap-1 self-stretch text-[10px] font-medium uppercase leading-3 text-text-tertiary'>
-                <span>{displayName}</span>
+                <span>YAML</span>
                 <span className='text-text-quaternary'>·</span>
                 <span>{formatFileSize(file.size)}</span>
               </div>

@@ -1,11 +1,13 @@
 import type { FC } from 'react'
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import useSWR from 'swr'
 import { useContext } from 'use-context-selector'
 import { useTranslation } from 'react-i18next'
+import { omit } from 'lodash-es'
 import { RiLoader2Line, RiPauseCircleLine, RiPlayCircleLine } from '@remixicon/react'
 import Image from 'next/image'
 import { FieldInfo } from '../metadata'
-import { useDocumentContext } from '../context'
+import { useDocumentContext } from '../index'
 import { IndexingType } from '../../../create/step-two'
 import { indexMethodIcon, retrievalIcon } from '../../../create/icons'
 import EmbeddingSkeleton from './skeleton'
@@ -19,10 +21,10 @@ import type { CommonResponse } from '@/models/common'
 import { asyncRunSafe, sleep } from '@/utils'
 import {
   fetchIndexingStatus as doFetchIndexingStatus,
+  fetchProcessRule,
   pauseDocIndexing,
   resumeDocIndexing,
 } from '@/service/datasets'
-import { useProcessRule } from '@/service/knowledge/use-dataset'
 
 type IEmbeddingDetailProps = {
   datasetId?: string
@@ -129,7 +131,7 @@ const RuleDetail: FC<IRuleDetailProps> = React.memo(({
     />
     <FieldInfo
       label={t('datasetSettings.form.retrievalSetting.title')}
-      displayedValue={t(`dataset.retrieval.${indexingType === IndexingType.ECONOMICAL ? 'keyword_search' : retrievalMethod}.title`) as string}
+      displayedValue={t(`dataset.retrieval.${indexingType === IndexingType.ECONOMICAL ? 'invertedIndex' : retrievalMethod}.title`) as string}
       valueIcon={
         <Image
           className='size-4'
@@ -205,7 +207,12 @@ const EmbeddingDetail: FC<IEmbeddingDetailProps> = ({
     }
   }, [startQueryStatus, stopQueryStatus])
 
-  const { data: ruleDetail } = useProcessRule(localDocumentId)
+  const { data: ruleDetail } = useSWR({
+    action: 'fetchProcessRule',
+    params: { documentId: localDocumentId },
+  }, apiParams => fetchProcessRule(omit(apiParams, 'action')), {
+    revalidateOnFocus: false,
+  })
 
   const isEmbedding = useMemo(() => ['indexing', 'splitting', 'parsing', 'cleaning'].includes(indexingStatusDetail?.indexing_status || ''), [indexingStatusDetail])
   const isEmbeddingCompleted = useMemo(() => ['completed'].includes(indexingStatusDetail?.indexing_status || ''), [indexingStatusDetail])

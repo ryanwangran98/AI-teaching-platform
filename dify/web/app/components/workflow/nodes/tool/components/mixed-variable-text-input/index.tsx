@@ -10,7 +10,6 @@ import type {
 } from '@/app/components/workflow/types'
 import { BlockEnum } from '@/app/components/workflow/types'
 import cn from '@/utils/classnames'
-import { useStore } from '@/app/components/workflow/store'
 
 type MixedVariableTextInputProps = {
   readOnly?: boolean
@@ -18,9 +17,6 @@ type MixedVariableTextInputProps = {
   availableNodes?: Node[]
   value?: string
   onChange?: (text: string) => void
-  showManageInputField?: boolean
-  onManageInputField?: () => void
-  disableVariableInsertion?: boolean
 }
 const MixedVariableTextInput = ({
   readOnly = false,
@@ -28,18 +24,12 @@ const MixedVariableTextInput = ({
   availableNodes = [],
   value = '',
   onChange,
-  showManageInputField,
-  onManageInputField,
-  disableVariableInsertion = false,
 }: MixedVariableTextInputProps) => {
   const { t } = useTranslation()
-  const controlPromptEditorRerenderKey = useStore(s => s.controlPromptEditorRerenderKey)
-
   return (
     <PromptEditor
-      key={controlPromptEditorRerenderKey}
       wrapperClassName={cn(
-        'min-h-8 w-full rounded-lg border border-transparent bg-components-input-bg-normal px-2 py-1',
+        'w-full rounded-lg border border-transparent bg-components-input-bg-normal px-2 py-1',
         'hover:border-components-input-border-hover hover:bg-components-input-bg-hover',
         'focus-within:border-components-input-border-active focus-within:bg-components-input-bg-active focus-within:shadow-xs',
       )}
@@ -47,7 +37,7 @@ const MixedVariableTextInput = ({
       editable={!readOnly}
       value={value}
       workflowVariableBlock={{
-        show: !disableVariableInsertion,
+        show: true,
         variables: nodesOutputVars || [],
         workflowNodesMap: availableNodes.reduce((acc, node) => {
           acc[node.id] = {
@@ -62,10 +52,8 @@ const MixedVariableTextInput = ({
           }
           return acc
         }, {} as any),
-        showManageInputField,
-        onManageInputField,
       }}
-      placeholder={<Placeholder disableVariableInsertion={disableVariableInsertion} />}
+      placeholder={<Placeholder />}
       onChange={onChange}
     />
   )

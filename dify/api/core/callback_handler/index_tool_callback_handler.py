@@ -1,13 +1,11 @@
 import logging
 from collections.abc import Sequence
 
-from sqlalchemy import select
-
 from core.app.apps.base_app_queue_manager import AppQueueManager, PublishFrom
 from core.app.entities.app_invoke_entities import InvokeFrom
 from core.app.entities.queue_entities import QueueRetrieverResourcesEvent
 from core.rag.entities.citation_metadata import RetrievalSourceMetadata
-from core.rag.index_processor.constant.index_type import IndexStructureType
+from core.rag.index_processor.constant.index_type import IndexType
 from core.rag.models.document import Document
 from extensions.ext_database import db
 from models.dataset import ChildChunk, DatasetQuery, DocumentSegment
@@ -21,14 +19,14 @@ class DatasetIndexToolCallbackHandler:
 
     def __init__(
         self, queue_manager: AppQueueManager, app_id: str, message_id: str, user_id: str, invoke_from: InvokeFrom
-    ):
+    ) -> None:
         self._queue_manager = queue_manager
         self._app_id = app_id
         self._message_id = message_id
         self._user_id = user_id
         self._invoke_from = invoke_from
 
-    def on_query(self, query: str, dataset_id: str):
+    def on_query(self, query: str, dataset_id: str) -> None:
         """
         Handle query.
         """
@@ -46,28 +44,30 @@ class DatasetIndexToolCallbackHandler:
         db.session.add(dataset_query)
         db.session.commit()
 
-    def on_tool_end(self, documents: list[Document]):
+    def on_tool_end(self, documents: list[Document]) -> None:
         """Handle tool end."""
         for document in documents:
             if document.metadata is not None:
                 document_id = document.metadata["document_id"]
-                dataset_document_stmt = select(DatasetDocument).where(DatasetDocument.id == document_id)
-                dataset_document = db.session.scalar(dataset_document_stmt)
+                dataset_document = db.session.query(DatasetDocument).where(DatasetDocument.id == document_id).first()
                 if not dataset_document:
                     _logger.warning(
                         "Expected DatasetDocument record to exist, but none was found, document_id=%s",
                         document_id,
                     )
                     continue
-                if dataset_document.doc_form == IndexStructureType.PARENT_CHILD_INDEX:
-                    child_chunk_stmt = select(ChildChunk).where(
-                        ChildChunk.index_node_id == document.metadata["doc_id"],
-                        ChildChunk.dataset_id == dataset_document.dataset_id,
-                        ChildChunk.document_id == dataset_document.id,
+                if dataset_document.doc_form == IndexType.PARENT_CHILD_INDEX:
+                    child_chunk = (
+                        db.session.query(ChildChunk)
+                        .where(
+                            ChildChunk.index_node_id == document.metadata["doc_id"],
+                            ChildChunk.dataset_id == dataset_document.dataset_id,
+                            ChildChunk.document_id == dataset_document.id,
+                        )
+                        .first()
                     )
-                    child_chunk = db.session.scalar(child_chunk_stmt)
                     if child_chunk:
-                        _ = (
+                        segment = (
                             db.session.query(DocumentSegment)
                             .where(DocumentSegment.id == child_chunk.segment_id)
                             .update(

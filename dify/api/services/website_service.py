@@ -1,9 +1,9 @@
 import datetime
 import json
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, Optional
 
-import httpx
+import requests
 from flask_login import current_user
 
 from core.helper import encrypter
@@ -11,7 +11,7 @@ from core.rag.extractor.firecrawl.firecrawl_app import FirecrawlApp
 from core.rag.extractor.watercrawl.provider import WaterCrawlProvider
 from extensions.ext_redis import redis_client
 from extensions.ext_storage import storage
-from services.datasource_provider_service import DatasourceProviderService
+from services.auth.api_key_auth_service import ApiKeyAuthService
 
 
 @dataclass
@@ -21,10 +21,9 @@ class CrawlOptions:
     limit: int = 1
     crawl_sub_pages: bool = False
     only_main_content: bool = False
-    includes: str | None = None
-    excludes: str | None = None
-    prompt: str | None = None
-    max_depth: int | None = None
+    includes: Optional[str] = None
+    excludes: Optional[str] = None
+    max_depth: Optional[int] = None
     use_sitemap: bool = True
 
     def get_include_paths(self) -> list[str]:
@@ -71,7 +70,6 @@ class WebsiteCrawlApiRequest:
             only_main_content=self.options.get("only_main_content", False),
             includes=self.options.get("includes"),
             excludes=self.options.get("excludes"),
-            prompt=self.options.get("prompt"),
             max_depth=self.options.get("max_depth"),
             use_sitemap=self.options.get("use_sitemap", True),
         )
@@ -105,6 +103,7 @@ class WebsiteCrawlStatusApiRequest:
     def from_args(cls, args: dict, job_id: str) -> "WebsiteCrawlStatusApiRequest":
         """Create from Flask-RESTful parsed arguments."""
         provider = args.get("provider")
+
         if not provider:
             raise ValueError("Provider is required")
         if not job_id:
@@ -117,28 +116,12 @@ class WebsiteService:
     """Service class for website crawling operations using different providers."""
 
     @classmethod
-    def _get_credentials_and_config(cls, tenant_id: str, provider: str) -> tuple[Any, Any]:
+    def _get_credentials_and_config(cls, tenant_id: str, provider: str) -> tuple[dict, dict]:
         """Get and validate credentials for a provider."""
-        if provider == "firecrawl":
-            plugin_id = "langgenius/firecrawl_datasource"
-        elif provider == "watercrawl":
-            plugin_id = "langgenius/watercrawl_datasource"
-        elif provider == "jinareader":
-            plugin_id = "langgenius/jina_datasource"
-        else:
-            raise ValueError("Invalid provider")
-        datasource_provider_service = DatasourceProviderService()
-        credential = datasource_provider_service.get_datasource_credentials(
-            tenant_id=tenant_id,
-            provider=provider,
-            plugin_id=plugin_id,
-        )
-        if provider == "firecrawl":
-            return credential.get("firecrawl_api_key"), credential
-        elif provider in {"watercrawl", "jinareader"}:
-            return credential.get("api_key"), credential
-        else:
-            raise ValueError("Invalid provider")
+        credentials = ApiKeyAuthService.get_auth_credentials(tenant_id, "website", provider)
+        if not credentials or "config" not in credentials:
+            raise ValueError("No valid credentials found for the provider")
+        return credentials, credentials["config"]
 
     @classmethod
     def _get_decrypted_api_key(cls, tenant_id: str, config: dict) -> str:
@@ -149,7 +132,7 @@ class WebsiteService:
         return encrypter.decrypt_token(tenant_id=tenant_id, token=api_key)
 
     @classmethod
-    def document_create_args_validate(cls, args: dict):
+    def document_create_args_validate(cls, args: dict) -> None:
         """Validate arguments for document creation."""
         try:
             WebsiteCrawlApiRequest.from_args(args)
@@ -161,7 +144,8 @@ class WebsiteService:
         """Crawl a URL using the specified provider with typed request."""
         request = api_request.to_crawl_request()
 
-        api_key, config = cls._get_credentials_and_config(current_user.current_tenant_id, request.provider)
+        _, config = cls._get_credentials_and_config(current_user.current_tenant_id, request.provider)
+        api_key = cls._get_decrypted_api_key(current_user.current_tenant_id, config)
 
         if request.provider == "firecrawl":
             return cls._crawl_with_firecrawl(request=request, api_key=api_key, config=config)
@@ -176,7 +160,6 @@ class WebsiteService:
     def _crawl_with_firecrawl(cls, request: CrawlRequest, api_key: str, config: dict) -> dict[str, Any]:
         firecrawl_app = FirecrawlApp(api_key=api_key, base_url=config.get("base_url"))
 
-        params: dict[str, Any]
         if not request.options.crawl_sub_pages:
             params = {
                 "includePaths": [],
@@ -191,10 +174,8 @@ class WebsiteService:
                 "limit": request.options.limit,
                 "scrapeOptions": {"onlyMainContent": request.options.only_main_content},
             }
-
-        # Add optional prompt for Firecrawl v2 crawl-params compatibility
-        if request.options.prompt:
-            params["prompt"] = request.options.prompt
+            if request.options.max_depth:
+                params["maxDepth"] = request.options.max_depth
 
         job_id = firecrawl_app.crawl_url(request.url, params)
         website_crawl_time_cache_key = f"website_crawl_{job_id}"
@@ -221,15 +202,15 @@ class WebsiteService:
     @classmethod
     def _crawl_with_jinareader(cls, request: CrawlRequest, api_key: str) -> dict[str, Any]:
         if not request.options.crawl_sub_pages:
-            response = httpx.get(
+            response = requests.get(
                 f"https://r.jina.ai/{request.url}",
                 headers={"Accept": "application/json", "Authorization": f"Bearer {api_key}"},
             )
             if response.json().get("code") != 200:
-                raise ValueError("Failed to crawl:")
+                raise ValueError("Failed to crawl")
             return {"status": "active", "data": response.json().get("data")}
         else:
-            response = httpx.post(
+            response = requests.post(
                 "https://adaptivecrawl-kir3wx7b3a-uc.a.run.app",
                 json={
                     "url": request.url,
@@ -254,7 +235,8 @@ class WebsiteService:
     @classmethod
     def get_crawl_status_typed(cls, api_request: WebsiteCrawlStatusApiRequest) -> dict[str, Any]:
         """Get crawl status using typed request."""
-        api_key, config = cls._get_credentials_and_config(current_user.current_tenant_id, api_request.provider)
+        _, config = cls._get_credentials_and_config(current_user.current_tenant_id, api_request.provider)
+        api_key = cls._get_decrypted_api_key(current_user.current_tenant_id, config)
 
         if api_request.provider == "firecrawl":
             return cls._get_firecrawl_status(api_request.job_id, api_key, config)
@@ -292,7 +274,7 @@ class WebsiteService:
 
     @classmethod
     def _get_jinareader_status(cls, job_id: str, api_key: str) -> dict[str, Any]:
-        response = httpx.post(
+        response = requests.post(
             "https://adaptivecrawlstatus-kir3wx7b3a-uc.a.run.app",
             headers={"Content-Type": "application/json", "Authorization": f"Bearer {api_key}"},
             json={"taskId": job_id},
@@ -308,7 +290,7 @@ class WebsiteService:
         }
 
         if crawl_status_data["status"] == "completed":
-            response = httpx.post(
+            response = requests.post(
                 "https://adaptivecrawlstatus-kir3wx7b3a-uc.a.run.app",
                 headers={"Content-Type": "application/json", "Authorization": f"Bearer {api_key}"},
                 json={"taskId": job_id, "urls": list(data.get("processed", {}).keys())},
@@ -328,7 +310,8 @@ class WebsiteService:
 
     @classmethod
     def get_crawl_url_data(cls, job_id: str, provider: str, url: str, tenant_id: str) -> dict[str, Any] | None:
-        api_key, config = cls._get_credentials_and_config(tenant_id, provider)
+        _, config = cls._get_credentials_and_config(tenant_id, provider)
+        api_key = cls._get_decrypted_api_key(tenant_id, config)
 
         if provider == "firecrawl":
             return cls._get_firecrawl_url_data(job_id, url, api_key, config)
@@ -367,7 +350,7 @@ class WebsiteService:
     @classmethod
     def _get_jinareader_url_data(cls, job_id: str, url: str, api_key: str) -> dict[str, Any] | None:
         if not job_id:
-            response = httpx.get(
+            response = requests.get(
                 f"https://r.jina.ai/{url}",
                 headers={"Accept": "application/json", "Authorization": f"Bearer {api_key}"},
             )
@@ -376,7 +359,7 @@ class WebsiteService:
             return dict(response.json().get("data", {}))
         else:
             # Get crawl status first
-            status_response = httpx.post(
+            status_response = requests.post(
                 "https://adaptivecrawlstatus-kir3wx7b3a-uc.a.run.app",
                 headers={"Content-Type": "application/json", "Authorization": f"Bearer {api_key}"},
                 json={"taskId": job_id},
@@ -386,7 +369,7 @@ class WebsiteService:
                 raise ValueError("Crawl job is not completed")
 
             # Get processed data
-            data_response = httpx.post(
+            data_response = requests.post(
                 "https://adaptivecrawlstatus-kir3wx7b3a-uc.a.run.app",
                 headers={"Content-Type": "application/json", "Authorization": f"Bearer {api_key}"},
                 json={"taskId": job_id, "urls": list(status_data.get("processed", {}).keys())},
@@ -401,7 +384,8 @@ class WebsiteService:
     def get_scrape_url_data(cls, provider: str, url: str, tenant_id: str, only_main_content: bool) -> dict[str, Any]:
         request = ScrapeRequest(provider=provider, url=url, tenant_id=tenant_id, only_main_content=only_main_content)
 
-        api_key, config = cls._get_credentials_and_config(tenant_id=request.tenant_id, provider=request.provider)
+        _, config = cls._get_credentials_and_config(tenant_id=request.tenant_id, provider=request.provider)
+        api_key = cls._get_decrypted_api_key(tenant_id=request.tenant_id, config=config)
 
         if request.provider == "firecrawl":
             return cls._scrape_with_firecrawl(request=request, api_key=api_key, config=config)

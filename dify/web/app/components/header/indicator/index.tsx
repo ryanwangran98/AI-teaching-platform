@@ -46,15 +46,14 @@ export default function Indicator({
   className = '',
 }: IndicatorProps) {
   return (
-    <div
-      data-testid="status-indicator"
-      className={classNames(
-        'h-2 w-2 rounded-[3px] border border-solid',
-        BACKGROUND_MAP[color],
-        BORDER_MAP[color],
-        SHADOW_MAP[color],
-        className,
-      )}
-    />
+    <div className={classNames(
+      'h-2 w-2 rounded-[3px] border border-solid',
+      BACKGROUND_MAP[color],
+      BORDER_MAP[color],
+      SHADOW_MAP[color],
+      className,
+    )}>
+
+    </div>
   )
 }

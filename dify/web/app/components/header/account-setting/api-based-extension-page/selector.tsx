@@ -16,7 +16,6 @@ import {
 } from '@/app/components/base/icons/src/vender/line/arrows'
 import { useModalContext } from '@/context/modal-context'
 import { fetchApiBasedExtensionList } from '@/service/common'
-import { ACCOUNT_SETTING_TAB } from '@/app/components/header/account-setting/constants'
 
 type ApiBasedExtensionSelectorProps = {
   value: string
@@ -84,7 +83,7 @@ const ApiBasedExtensionSelector: FC<ApiBasedExtensionSelectorProps> = ({
                 className='flex cursor-pointer items-center text-xs text-text-accent'
                 onClick={() => {
                   setOpen(false)
-                  setShowAccountSettingModal({ payload: ACCOUNT_SETTING_TAB.API_BASED_EXTENSION })
+                  setShowAccountSettingModal({ payload: 'api-based-extension' })
                 }}
               >
                 {t('common.apiBasedExtension.selector.manage')}
@@ -106,7 +105,7 @@ const ApiBasedExtensionSelector: FC<ApiBasedExtensionSelectorProps> = ({
               }
             </div>
           </div>
-          <div className='h-px bg-divider-regular' />
+          <div className='h-[1px] bg-divider-regular' />
           <div className='p-1'>
             <div
               className='flex h-8 cursor-pointer items-center px-3 text-sm text-text-accent'

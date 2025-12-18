@@ -1,7 +1,5 @@
-import contextlib
-import logging
 from collections.abc import Callable, Sequence
-from typing import Any, Union
+from typing import Any, Optional, Union
 
 from sqlalchemy import asc, desc, func, or_, select
 from sqlalchemy.orm import Session
@@ -14,7 +12,8 @@ from extensions.ext_database import db
 from factories import variable_factory
 from libs.datetime_utils import naive_utc_now
 from libs.infinite_scroll_pagination import InfiniteScrollPagination
-from models import Account, ConversationVariable
+from models import ConversationVariable
+from models.account import Account
 from models.model import App, Conversation, EndUser, Message
 from services.errors.conversation import (
     ConversationNotExistsError,
@@ -23,9 +22,6 @@ from services.errors.conversation import (
     LastConversationNotExistsError,
 )
 from services.errors.message import MessageNotExistsError
-from tasks.delete_conversation_task import delete_conversation_related_data
-
-logger = logging.getLogger(__name__)
 
 
 class ConversationService:
@@ -35,12 +31,12 @@ class ConversationService:
         *,
         session: Session,
         app_model: App,
-        user: Union[Account, EndUser] | None,
-        last_id: str | None,
+        user: Optional[Union[Account, EndUser]],
+        last_id: Optional[str],
         limit: int,
         invoke_from: InvokeFrom,
-        include_ids: Sequence[str] | None = None,
-        exclude_ids: Sequence[str] | None = None,
+        include_ids: Optional[Sequence[str]] = None,
+        exclude_ids: Optional[Sequence[str]] = None,
         sort_by: str = "-updated_at",
     ) -> InfiniteScrollPagination:
         if not user:
@@ -107,18 +103,18 @@ class ConversationService:
     @classmethod
     def _build_filter_condition(cls, sort_field: str, sort_direction: Callable, reference_conversation: Conversation):
         field_value = getattr(reference_conversation, sort_field)
-        if sort_direction is desc:
+        if sort_direction == desc:
             return getattr(Conversation, sort_field) < field_value
-
-        return getattr(Conversation, sort_field) > field_value
+        else:
+            return getattr(Conversation, sort_field) > field_value
 
     @classmethod
     def rename(
         cls,
         app_model: App,
         conversation_id: str,
-        user: Union[Account, EndUser] | None,
-        name: str | None,
+        user: Optional[Union[Account, EndUser]],
+        name: str,
         auto_generate: bool,
     ):
         conversation = cls.get_conversation(app_model, conversation_id, user)
@@ -146,18 +142,20 @@ class ConversationService:
             raise MessageNotExistsError()
 
         # generate conversation name
-        with contextlib.suppress(Exception):
+        try:
             name = LLMGenerator.generate_conversation_name(
                 app_model.tenant_id, message.query, conversation.id, app_model.id
             )
             conversation.name = name
+        except:
+            pass
 
         db.session.commit()
 
         return conversation
 
     @classmethod
-    def get_conversation(cls, app_model: App, conversation_id: str, user: Union[Account, EndUser] | None):
+    def get_conversation(cls, app_model: App, conversation_id: str, user: Optional[Union[Account, EndUser]]):
         conversation = (
             db.session.query(Conversation)
             .where(
@@ -177,31 +175,21 @@ class ConversationService:
         return conversation
 
     @classmethod
-    def delete(cls, app_model: App, conversation_id: str, user: Union[Account, EndUser] | None):
-        try:
-            logger.info(
-                "Initiating conversation deletion for app_name %s, conversation_id: %s",
-                app_model.name,
-                conversation_id,
-            )
+    def delete(cls, app_model: App, conversation_id: str, user: Optional[Union[Account, EndUser]]):
+        conversation = cls.get_conversation(app_model, conversation_id, user)
 
-            db.session.query(Conversation).where(Conversation.id == conversation_id).delete(synchronize_session=False)
-            db.session.commit()
-
-            delete_conversation_related_data.delay(conversation_id)
-
-        except Exception as e:
-            db.session.rollback()
-            raise e
+        conversation.is_deleted = True
+        conversation.updated_at = naive_utc_now()
+        db.session.commit()
 
     @classmethod
     def get_conversational_variable(
         cls,
         app_model: App,
         conversation_id: str,
-        user: Union[Account, EndUser] | None,
+        user: Optional[Union[Account, EndUser]],
         limit: int,
-        last_id: str | None,
+        last_id: Optional[str],
     ) -> InfiniteScrollPagination:
         conversation = cls.get_conversation(app_model, conversation_id, user)
 
@@ -221,8 +209,8 @@ class ConversationService:
                 # Filter for variables created after the last_id
                 stmt = stmt.where(ConversationVariable.created_at > last_variable.created_at)
 
-            # Apply limit to query: fetch one extra row to determine has_more
-            query_stmt = stmt.limit(limit + 1)
+            # Apply limit to query
+            query_stmt = stmt.limit(limit)  # Get one extra to check if there are more
             rows = session.scalars(query_stmt).all()
 
         has_more = False
@@ -247,9 +235,9 @@ class ConversationService:
         app_model: App,
         conversation_id: str,
         variable_id: str,
-        user: Union[Account, EndUser] | None,
+        user: Optional[Union[Account, EndUser]],
         new_value: Any,
-    ):
+    ) -> dict:
         """
         Update a conversation variable's value.
 
@@ -289,11 +277,6 @@ class ConversationService:
 
             # Validate that the new value type matches the expected variable type
             expected_type = SegmentType(current_variable.value_type)
-
-            # There is showing number in web ui but int in db
-            if expected_type == SegmentType.INTEGER:
-                expected_type = SegmentType.NUMBER
-
             if not expected_type.is_valid(new_value):
                 inferred_type = SegmentType.infer_segment_type(new_value)
                 raise ConversationVariableTypeMismatchError(

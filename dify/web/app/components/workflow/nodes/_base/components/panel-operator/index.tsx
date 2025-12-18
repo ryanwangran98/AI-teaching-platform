@@ -31,6 +31,7 @@ const PanelOperator = ({
     crossAxis: 53,
   },
   onOpenChange,
+  inNode,
   showHelpLink = true,
 }: PanelOperatorProps) => {
   const [open, setOpen] = useState(false)

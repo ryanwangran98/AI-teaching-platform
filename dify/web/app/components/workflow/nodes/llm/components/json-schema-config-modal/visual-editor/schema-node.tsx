@@ -99,7 +99,6 @@ const SchemaNode: FC<SchemaNodeProps> = ({
             indentLeft[depth - 1],
           )}>
             <button
-              type="button"
               onClick={handleExpand}
               className='py-0.5 text-text-tertiary hover:text-text-accent'
             >

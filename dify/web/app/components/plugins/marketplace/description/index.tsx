@@ -37,31 +37,23 @@ const Description = async ({
           )
         }
         <span className="body-md-medium relative z-[1] ml-1 text-text-secondary after:absolute after:bottom-[1.5px] after:left-0 after:h-2 after:w-full after:bg-text-text-selected after:content-['']">
-          {t('category.models')}
+          <span className='relative z-[2] lowercase'>{t('category.models')}</span>
         </span>
         ,
         <span className="body-md-medium relative z-[1] ml-1 text-text-secondary after:absolute after:bottom-[1.5px] after:left-0 after:h-2 after:w-full after:bg-text-text-selected after:content-['']">
-          {t('category.tools')}
+          <span className='relative z-[2] lowercase'>{t('category.tools')}</span>
         </span>
         ,
         <span className="body-md-medium relative z-[1] ml-1 text-text-secondary after:absolute after:bottom-[1.5px] after:left-0 after:h-2 after:w-full after:bg-text-text-selected after:content-['']">
-          {t('category.datasources')}
-        </span>
-        ,
-        <span className="body-md-medium relative z-[1] ml-1 text-text-secondary after:absolute after:bottom-[1.5px] after:left-0 after:h-2 after:w-full after:bg-text-text-selected after:content-['']">
-          {t('category.triggers')}
-        </span>
-        ,
-        <span className="body-md-medium relative z-[1] ml-1 text-text-secondary after:absolute after:bottom-[1.5px] after:left-0 after:h-2 after:w-full after:bg-text-text-selected after:content-['']">
-          {t('category.agents')}
+          <span className='relative z-[2] lowercase'>{t('category.agents')}</span>
         </span>
         ,
         <span className="body-md-medium relative z-[1] ml-1 mr-1 text-text-secondary after:absolute after:bottom-[1.5px] after:left-0 after:h-2 after:w-full after:bg-text-text-selected after:content-['']">
-          {t('category.extensions')}
+          <span className='relative z-[2] lowercase'>{t('category.extensions')}</span>
         </span>
         {t('marketplace.and')}
         <span className="body-md-medium relative z-[1] ml-1 mr-1 text-text-secondary after:absolute after:bottom-[1.5px] after:left-0 after:h-2 after:w-full after:bg-text-text-selected after:content-['']">
-          {t('category.bundles')}
+          <span className='relative z-[2] lowercase'>{t('category.bundles')}</span>
         </span>
         {
           !isZhHans && (

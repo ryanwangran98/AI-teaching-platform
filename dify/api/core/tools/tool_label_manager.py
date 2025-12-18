@@ -1,5 +1,3 @@
-from sqlalchemy import select
-
 from core.tools.__base.tool_provider import ToolProviderController
 from core.tools.builtin_tool.provider import BuiltinToolProviderController
 from core.tools.custom_tool.provider import ApiToolProviderController
@@ -56,13 +54,17 @@ class ToolLabelManager:
             return controller.tool_labels
         else:
             raise ValueError("Unsupported tool type")
-        stmt = select(ToolLabelBinding.label_name).where(
-            ToolLabelBinding.tool_id == provider_id,
-            ToolLabelBinding.tool_type == controller.provider_type.value,
-        )
-        labels = db.session.scalars(stmt).all()
 
-        return list(labels)
+        labels = (
+            db.session.query(ToolLabelBinding.label_name)
+            .where(
+                ToolLabelBinding.tool_id == provider_id,
+                ToolLabelBinding.tool_type == controller.provider_type.value,
+            )
+            .all()
+        )
+
+        return [label.label_name for label in labels]
 
     @classmethod
     def get_tools_labels(cls, tool_providers: list[ToolProviderController]) -> dict[str, list[str]]:
@@ -87,7 +89,9 @@ class ToolLabelManager:
             assert isinstance(controller, ApiToolProviderController | WorkflowToolProviderController)
             provider_ids.append(controller.provider_id)
 
-        labels = db.session.scalars(select(ToolLabelBinding).where(ToolLabelBinding.tool_id.in_(provider_ids))).all()
+        labels: list[ToolLabelBinding] = (
+            db.session.query(ToolLabelBinding).where(ToolLabelBinding.tool_id.in_(provider_ids)).all()
+        )
 
         tool_labels: dict[str, list[str]] = {label.tool_id: [] for label in labels}
 

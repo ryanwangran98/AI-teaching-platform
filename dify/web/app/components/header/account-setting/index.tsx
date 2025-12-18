@@ -21,7 +21,7 @@ import Button from '../../base/button'
 import MembersPage from './members-page'
 import LanguagePage from './language-page'
 import ApiBasedExtensionPage from './api-based-extension-page'
-import DataSourcePage from './data-source-page-new'
+import DataSourcePage from './data-source-page'
 import ModelProviderPage from './model-provider-page'
 import cn from '@/utils/classnames'
 import BillingPage from '@/app/components/billing/billing-page'
@@ -31,10 +31,6 @@ import { useProviderContext } from '@/context/provider-context'
 import { useAppContext } from '@/context/app-context'
 import MenuDialog from '@/app/components/header/account-setting/menu-dialog'
 import Input from '@/app/components/base/input'
-import {
-  ACCOUNT_SETTING_TAB,
-  type AccountSettingTab,
-} from '@/app/components/header/account-setting/constants'
 
 const iconClassName = `
   w-5 h-5 mr-2
@@ -42,12 +38,11 @@ const iconClassName = `
 
 type IAccountSettingProps = {
   onCancel: () => void
-  activeTab?: AccountSettingTab
-  onTabChange?: (tab: AccountSettingTab) => void
+  activeTab?: string
 }
 
 type GroupItem = {
-  key: AccountSettingTab
+  key: string
   name: string
   description?: string
   icon: React.JSX.Element
@@ -56,71 +51,56 @@ type GroupItem = {
 
 export default function AccountSetting({
   onCancel,
-  activeTab = ACCOUNT_SETTING_TAB.MEMBERS,
-  onTabChange,
+  activeTab = 'members',
 }: IAccountSettingProps) {
-  const [activeMenu, setActiveMenu] = useState<AccountSettingTab>(activeTab)
-  useEffect(() => {
-    setActiveMenu(activeTab)
-  }, [activeTab])
+  const [activeMenu, setActiveMenu] = useState(activeTab)
   const { t } = useTranslation()
   const { enableBilling, enableReplaceWebAppLogo } = useProviderContext()
   const { isCurrentWorkspaceDatasetOperator } = useAppContext()
 
-  const workplaceGroupItems: GroupItem[] = (() => {
+  const workplaceGroupItems = (() => {
     if (isCurrentWorkspaceDatasetOperator)
       return []
-
-    const items: GroupItem[] = [
+    return [
       {
-        key: ACCOUNT_SETTING_TAB.PROVIDER,
+        key: 'provider',
         name: t('common.settings.provider'),
         icon: <RiBrain2Line className={iconClassName} />,
         activeIcon: <RiBrain2Fill className={iconClassName} />,
       },
       {
-        key: ACCOUNT_SETTING_TAB.MEMBERS,
+        key: 'members',
         name: t('common.settings.members'),
         icon: <RiGroup2Line className={iconClassName} />,
         activeIcon: <RiGroup2Fill className={iconClassName} />,
       },
-    ]
-
-    if (enableBilling) {
-      items.push({
-        key: ACCOUNT_SETTING_TAB.BILLING,
+      {
+        // Use key false to hide this item
+        key: enableBilling ? 'billing' : false,
         name: t('common.settings.billing'),
         description: t('billing.plansCommon.receiptInfo'),
         icon: <RiMoneyDollarCircleLine className={iconClassName} />,
         activeIcon: <RiMoneyDollarCircleFill className={iconClassName} />,
-      })
-    }
-
-    items.push(
+      },
       {
-        key: ACCOUNT_SETTING_TAB.DATA_SOURCE,
+        key: 'data-source',
         name: t('common.settings.dataSource'),
         icon: <RiDatabase2Line className={iconClassName} />,
         activeIcon: <RiDatabase2Fill className={iconClassName} />,
       },
       {
-        key: ACCOUNT_SETTING_TAB.API_BASED_EXTENSION,
+        key: 'api-based-extension',
         name: t('common.settings.apiBasedExtension'),
         icon: <RiPuzzle2Line className={iconClassName} />,
         activeIcon: <RiPuzzle2Fill className={iconClassName} />,
       },
-    )
-
-    if (enableReplaceWebAppLogo || enableBilling) {
-      items.push({
-        key: ACCOUNT_SETTING_TAB.CUSTOM,
+      {
+        key: (enableReplaceWebAppLogo || enableBilling) ? 'custom' : false,
         name: t('custom.custom'),
         icon: <RiColorFilterLine className={iconClassName} />,
         activeIcon: <RiColorFilterFill className={iconClassName} />,
-      })
-    }
-
-    return items
+      },
+    ].filter(item => !!item.key) as GroupItem[]
   })()
 
   const media = useBreakpoints()
@@ -137,7 +117,7 @@ export default function AccountSetting({
       name: t('common.settings.generalGroup'),
       items: [
         {
-          key: ACCOUNT_SETTING_TAB.LANGUAGE,
+          key: 'language',
           name: t('common.settings.language'),
           icon: <RiTranslate2 className={iconClassName} />,
           activeIcon: <RiTranslate2 className={iconClassName} />,
@@ -187,10 +167,7 @@ export default function AccountSetting({
                             'mb-0.5 flex h-[37px] cursor-pointer items-center rounded-lg p-1 pl-3 text-sm',
                             activeMenu === item.key ? 'system-sm-semibold bg-state-base-active text-components-menu-item-text-active' : 'system-sm-medium text-components-menu-item-text')}
                           title={item.name}
-                          onClick={() => {
-                            setActiveMenu(item.key)
-                            onTabChange?.(item.key)
-                          }}
+                          onClick={() => setActiveMenu(item.key)}
                         >
                           {activeMenu === item.key ? item.activeIcon : item.icon}
                           {!isMobile && <div className='truncate'>{item.name}</div>}
@@ -204,7 +181,7 @@ export default function AccountSetting({
           </div>
         </div>
         <div className='relative flex w-[824px]'>
-          <div className='fixed right-6 top-6 z-[9999] flex flex-col items-center'>
+          <div className='absolute -right-11 top-6 z-[9999] flex flex-col items-center'>
             <Button
               variant='tertiary'
               size='large'

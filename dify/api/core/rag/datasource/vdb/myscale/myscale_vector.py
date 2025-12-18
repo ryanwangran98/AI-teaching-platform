@@ -1,7 +1,7 @@
 import json
 import logging
 import uuid
-from enum import StrEnum
+from enum import Enum
 from typing import Any
 
 from clickhouse_connect import get_client
@@ -15,8 +15,6 @@ from core.rag.embedding.embedding_base import Embeddings
 from core.rag.models.document import Document
 from models.dataset import Dataset
 
-logger = logging.getLogger(__name__)
-
 
 class MyScaleConfig(BaseModel):
     host: str
@@ -27,7 +25,7 @@ class MyScaleConfig(BaseModel):
     fts_params: str
 
 
-class SortOrder(StrEnum):
+class SortOrder(Enum):
     ASC = "ASC"
     DESC = "DESC"
 
@@ -55,7 +53,7 @@ class MyScaleVector(BaseVector):
         return self.add_texts(documents=texts, embeddings=embeddings, **kwargs)
 
     def _create_collection(self, dimension: int):
-        logger.info("create MyScale collection %s with dimension %s", self._collection_name, dimension)
+        logging.info("create MyScale collection %s with dimension %s", self._collection_name, dimension)
         self._client.command(f"CREATE DATABASE IF NOT EXISTS {self._config.database}")
         fts_params = f"('{self._config.fts_params}')" if self._config.fts_params else ""
         sql = f"""
@@ -101,7 +99,7 @@ class MyScaleVector(BaseVector):
         results = self._client.query(f"SELECT id FROM {self._config.database}.{self._collection_name} WHERE id='{id}'")
         return results.row_count > 0
 
-    def delete_by_ids(self, ids: list[str]):
+    def delete_by_ids(self, ids: list[str]) -> None:
         if not ids:
             return
         self._client.command(
@@ -114,7 +112,7 @@ class MyScaleVector(BaseVector):
         ).result_rows
         return [row[0] for row in rows]
 
-    def delete_by_metadata_field(self, key: str, value: str):
+    def delete_by_metadata_field(self, key: str, value: str) -> None:
         self._client.command(
             f"DELETE FROM {self._config.database}.{self._collection_name} WHERE metadata.{key}='{value}'"
         )
@@ -152,11 +150,11 @@ class MyScaleVector(BaseVector):
                 )
                 for r in self._client.query(sql).named_results()
             ]
-        except Exception:
-            logger.exception("Vector search operation failed")
+        except Exception as e:
+            logging.exception("\033[91m\033[1m%s\033[0m \033[95m%s\033[0m", type(e), str(e))  # noqa:TRY401
             return []
 
-    def delete(self):
+    def delete(self) -> None:
         self._client.command(f"DROP TABLE IF EXISTS {self._config.database}.{self._collection_name}")
 
 

@@ -1,6 +1,5 @@
 import array
 import json
-import logging
 import re
 import uuid
 from typing import Any
@@ -20,8 +19,6 @@ from core.rag.models.document import Document
 from extensions.ext_redis import redis_client
 from models.dataset import Dataset
 
-logger = logging.getLogger(__name__)
-
 oracledb.defaults.fetch_lobs = False
 
 
@@ -36,7 +33,7 @@ class OracleVectorConfig(BaseModel):
 
     @model_validator(mode="before")
     @classmethod
-    def validate_config(cls, values: dict):
+    def validate_config(cls, values: dict) -> dict:
         if not values["user"]:
             raise ValueError("config ORACLE_USER is required")
         if not values["password"]:
@@ -112,19 +109,8 @@ class OracleVector(BaseVector):
             )
 
     def _get_connection(self) -> Connection:
-        if self.config.is_autonomous:
-            connection = oracledb.connect(
-                user=self.config.user,
-                password=self.config.password,
-                dsn=self.config.dsn,
-                config_dir=self.config.config_dir,
-                wallet_location=self.config.wallet_location,
-                wallet_password=self.config.wallet_password,
-            )
-            return connection
-        else:
-            connection = oracledb.connect(user=self.config.user, password=self.config.password, dsn=self.config.dsn)
-            return connection
+        connection = oracledb.connect(user=self.config.user, password=self.config.password, dsn=self.config.dsn)
+        return connection
 
     def _create_connection_pool(self, config: OracleVectorConfig):
         pool_params = {
@@ -183,25 +169,22 @@ class OracleVector(BaseVector):
                             value,
                         )
                         conn.commit()
-                    except Exception:
-                        logger.exception("Failed to insert record %s into %s", value[0], self.table_name)
+                    except Exception as e:
+                        print(e)
             conn.close()
         return pks
 
     def text_exists(self, id: str) -> bool:
         with self._get_connection() as conn:
             with conn.cursor() as cur:
-                cur.execute(f"SELECT id FROM {self.table_name} WHERE id = :1", (id,))
+                cur.execute(f"SELECT id FROM {self.table_name} WHERE id = '%s'" % (id,))
                 return cur.fetchone() is not None
             conn.close()
 
     def get_by_ids(self, ids: list[str]) -> list[Document]:
-        if not ids:
-            return []
         with self._get_connection() as conn:
             with conn.cursor() as cur:
-                placeholders = ", ".join(f":{i + 1}" for i in range(len(ids)))
-                cur.execute(f"SELECT meta, text FROM {self.table_name} WHERE id IN ({placeholders})", ids)
+                cur.execute(f"SELECT meta, text FROM {self.table_name} WHERE id IN %s", (tuple(ids),))
                 docs = []
                 for record in cur:
                     docs.append(Document(page_content=record[1], metadata=record[0]))
@@ -209,20 +192,19 @@ class OracleVector(BaseVector):
             conn.close()
         return docs
 
-    def delete_by_ids(self, ids: list[str]):
+    def delete_by_ids(self, ids: list[str]) -> None:
         if not ids:
             return
         with self._get_connection() as conn:
             with conn.cursor() as cur:
-                placeholders = ", ".join(f":{i + 1}" for i in range(len(ids)))
-                cur.execute(f"DELETE FROM {self.table_name} WHERE id IN ({placeholders})", ids)
+                cur.execute(f"DELETE FROM {self.table_name} WHERE id IN %s" % (tuple(ids),))
             conn.commit()
             conn.close()
 
-    def delete_by_metadata_field(self, key: str, value: str):
+    def delete_by_metadata_field(self, key: str, value: str) -> None:
         with self._get_connection() as conn:
             with conn.cursor() as cur:
-                cur.execute(f"DELETE FROM {self.table_name} WHERE JSON_VALUE(meta, '$." + key + "') = :1", (value,))
+                cur.execute(f"DELETE FROM {self.table_name} WHERE meta->>%s = %s", (key, value))
             conn.commit()
             conn.close()
 
@@ -234,20 +216,12 @@ class OracleVector(BaseVector):
         :param top_k: The number of nearest neighbors to return, default is 5.
         :return: List of Documents that are nearest to the query vector.
         """
-        # Validate and sanitize top_k to prevent SQL injection
         top_k = kwargs.get("top_k", 4)
-        if not isinstance(top_k, int) or top_k <= 0 or top_k > 10000:
-            top_k = 4  # Use default if invalid
-
         document_ids_filter = kwargs.get("document_ids_filter")
         where_clause = ""
-        params = [numpy.array(query_vector)]
-
         if document_ids_filter:
-            placeholders = ", ".join(f":{i + 2}" for i in range(len(document_ids_filter)))
-            where_clause = f"WHERE JSON_VALUE(meta, '$.document_id') IN ({placeholders})"
-            params.extend(document_ids_filter)
-
+            document_ids = ", ".join(f"'{id}'" for id in document_ids_filter)
+            where_clause = f"WHERE metadata->>'document_id' in ({document_ids})"
         with self._get_connection() as conn:
             conn.inputtypehandler = self.input_type_handler
             conn.outputtypehandler = self.output_type_handler
@@ -256,7 +230,7 @@ class OracleVector(BaseVector):
                     f"""SELECT meta, text, vector_distance(embedding,(select to_vector(:1) from dual),cosine)
                     AS distance FROM {self.table_name}
                     {where_clause} ORDER BY distance fetch first {top_k} rows only""",
-                    params,
+                    [numpy.array(query_vector)],
                 )
                 docs = []
                 score_threshold = float(kwargs.get("score_threshold") or 0.0)
@@ -264,7 +238,7 @@ class OracleVector(BaseVector):
                     metadata, text, distance = record
                     score = 1 - distance
                     metadata["score"] = score
-                    if score >= score_threshold:
+                    if score > score_threshold:
                         docs.append(Document(page_content=text, metadata=metadata))
             conn.close()
         return docs
@@ -274,11 +248,9 @@ class OracleVector(BaseVector):
         import nltk  # type: ignore
         from nltk.corpus import stopwords  # type: ignore
 
-        # Validate and sanitize top_k to prevent SQL injection
         top_k = kwargs.get("top_k", 5)
-        if not isinstance(top_k, int) or top_k <= 0 or top_k > 10000:
-            top_k = 5  # Use default if invalid
         # just not implement fetch by score_threshold now, may be later
+        score_threshold = float(kwargs.get("score_threshold") or 0.0)
         if len(query) > 0:
             # Check which language the query is in
             zh_pattern = re.compile("[\u4e00-\u9fa5]+")
@@ -302,7 +274,8 @@ class OracleVector(BaseVector):
                     nltk.data.find("tokenizers/punkt")
                     nltk.data.find("corpora/stopwords")
                 except LookupError:
-                    raise LookupError("Unable to find the required NLTK data package: punkt and stopwords")
+                    nltk.download("punkt")
+                    nltk.download("stopwords")
                 e_str = re.sub(r"[^\w ]", "", query)
                 all_tokens = nltk.word_tokenize(e_str)
                 stop_words = stopwords.words("english")
@@ -313,21 +286,14 @@ class OracleVector(BaseVector):
                 with conn.cursor() as cur:
                     document_ids_filter = kwargs.get("document_ids_filter")
                     where_clause = ""
-                    params: dict[str, Any] = {"kk": " ACCUM ".join(entities)}
-
                     if document_ids_filter:
-                        placeholders = []
-                        for i, doc_id in enumerate(document_ids_filter):
-                            param_name = f"doc_id_{i}"
-                            placeholders.append(f":{param_name}")
-                            params[param_name] = doc_id
-                        where_clause = f" AND JSON_VALUE(meta, '$.document_id') IN ({', '.join(placeholders)}) "
-
+                        document_ids = ", ".join(f"'{id}'" for id in document_ids_filter)
+                        where_clause = f" AND metadata->>'document_id' in ({document_ids}) "
                     cur.execute(
                         f"""select meta, text, embedding FROM {self.table_name}
                     WHERE CONTAINS(text, :kk, 1) > 0  {where_clause}
                     order by score(1) desc fetch first {top_k} rows only""",
-                        params,
+                        kk=" ACCUM ".join(entities),
                     )
                     docs = []
                     for record in cur:
@@ -338,7 +304,7 @@ class OracleVector(BaseVector):
         else:
             return [Document(page_content="", metadata={})]
 
-    def delete(self):
+    def delete(self) -> None:
         with self._get_connection() as conn:
             with conn.cursor() as cur:
                 cur.execute(f"DROP TABLE IF EXISTS {self.table_name} cascade constraints")

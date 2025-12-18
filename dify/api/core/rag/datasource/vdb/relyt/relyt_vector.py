@@ -1,7 +1,6 @@
 import json
-import logging
 import uuid
-from typing import Any
+from typing import Any, Optional
 
 from pydantic import BaseModel, model_validator
 from sqlalchemy import Column, String, Table, create_engine, insert
@@ -24,8 +23,6 @@ from core.rag.datasource.vdb.vector_base import BaseVector
 from core.rag.models.document import Document
 from extensions.ext_redis import redis_client
 
-logger = logging.getLogger(__name__)
-
 Base = declarative_base()  # type: Any
 
 
@@ -38,7 +35,7 @@ class RelytConfig(BaseModel):
 
     @model_validator(mode="before")
     @classmethod
-    def validate_config(cls, values: dict):
+    def validate_config(cls, values: dict) -> dict:
         if not values["host"]:
             raise ValueError("config RELYT_HOST is required")
         if not values["port"]:
@@ -67,7 +64,7 @@ class RelytVector(BaseVector):
     def get_type(self) -> str:
         return VectorType.RELYT
 
-    def create(self, texts: list[Document], embeddings: list[list[float]], **kwargs):
+    def create(self, texts: list[Document], embeddings: list[list[float]], **kwargs) -> None:
         self.create_collection(len(embeddings[0]))
         self.embedding_dimension = len(embeddings[0])
         self.add_texts(texts, embeddings)
@@ -163,7 +160,7 @@ class RelytVector(BaseVector):
         else:
             return None
 
-    def delete_by_uuids(self, ids: list[str] | None = None):
+    def delete_by_uuids(self, ids: Optional[list[str]] = None):
         """Delete by vector IDs.
 
         Args:
@@ -190,8 +187,8 @@ class RelytVector(BaseVector):
                 delete_condition = chunks_table.c.id.in_(ids)
                 conn.execute(chunks_table.delete().where(delete_condition))
                 return True
-        except Exception:
-            logger.exception("Delete operation failed for collection %s", self._collection_name)
+        except Exception as e:
+            print("Delete operation failed:", str(e))
             return False
 
     def delete_by_metadata_field(self, key: str, value: str):
@@ -199,7 +196,7 @@ class RelytVector(BaseVector):
         if ids:
             self.delete_by_uuids(ids)
 
-    def delete_by_ids(self, ids: list[str]):
+    def delete_by_ids(self, ids: list[str]) -> None:
         with Session(self.client) as session:
             ids_str = ",".join(f"'{doc_id}'" for doc_id in ids)
             select_statement = sql_text(
@@ -210,7 +207,7 @@ class RelytVector(BaseVector):
             ids = [item[0] for item in result]
             self.delete_by_uuids(ids)
 
-    def delete(self):
+    def delete(self) -> None:
         with Session(self.client) as session:
             session.execute(sql_text(f"""DROP TABLE IF EXISTS "{self._collection_name}";"""))
             session.commit()
@@ -236,7 +233,7 @@ class RelytVector(BaseVector):
         docs = []
         for document, score in results:
             score_threshold = float(kwargs.get("score_threshold") or 0.0)
-            if 1 - score >= score_threshold:
+            if 1 - score > score_threshold:
                 docs.append(document)
         return docs
 
@@ -244,7 +241,7 @@ class RelytVector(BaseVector):
         self,
         embedding: list[float],
         k: int = 4,
-        filter: dict | None = None,
+        filter: Optional[dict] = None,
     ) -> list[tuple[Document, float]]:
         # Add the filter if provided
 

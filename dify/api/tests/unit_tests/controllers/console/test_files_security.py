@@ -4,8 +4,8 @@ from unittest.mock import patch
 import pytest
 from werkzeug.exceptions import Forbidden
 
-from controllers.common.errors import (
-    FilenameNotExistsError,
+from controllers.common.errors import FilenameNotExistsError
+from controllers.console.error import (
     FileTooLargeError,
     NoFileUploadedError,
     TooManyFilesError,

@@ -13,7 +13,6 @@ type Props = {
   isPreview: boolean
   onCheckChange: (checked: boolean) => void
   onPreview: () => void
-  testId?: string
 }
 
 const CrawledResultItem: FC<Props> = ({
@@ -22,7 +21,6 @@ const CrawledResultItem: FC<Props> = ({
   isChecked,
   onCheckChange,
   onPreview,
-  testId,
 }) => {
   const { t } = useTranslation()
 
@@ -33,7 +31,7 @@ const CrawledResultItem: FC<Props> = ({
     <div className={cn(isPreview ? 'bg-state-base-active' : 'group hover:bg-state-base-hover', 'cursor-pointer rounded-lg p-2')}>
       <div className='relative flex'>
         <div className='flex h-5 items-center'>
-          <Checkbox className='mr-2 shrink-0' checked={isChecked} onCheck={handleCheckChange} id={testId} />
+          <Checkbox className='mr-2 shrink-0' checked={isChecked} onCheck={handleCheckChange} />
         </div>
         <div className='flex min-w-0 grow flex-col'>
           <div

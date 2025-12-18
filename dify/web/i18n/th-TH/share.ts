@@ -71,8 +71,7 @@ const translation = {
       atLeastOne: 'โปรดป้อนอย่างน้อยหนึ่งแถวในไฟล์ที่อัปโหลด',
     },
     execution: 'การดำเนินการ',
-    executions: '{{num}} ครั้งที่รัน',
-    stopRun: 'หยุดการทำงาน',
+    executions: '{{num}} การประหารชีวิต',
   },
   login: {
     backToHome: 'กลับไปที่หน้าแรก',

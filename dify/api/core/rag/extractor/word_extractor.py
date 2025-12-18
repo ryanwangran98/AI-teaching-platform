@@ -1,5 +1,6 @@
 """Abstract interface for document loader implementations."""
 
+import datetime
 import logging
 import mimetypes
 import os
@@ -9,7 +10,7 @@ import uuid
 from urllib.parse import urlparse
 from xml.etree import ElementTree
 
-import httpx
+import requests
 from docx import Document as DocxDocument
 
 from configs import dify_config
@@ -18,7 +19,6 @@ from core.rag.extractor.extractor_base import BaseExtractor
 from core.rag.models.document import Document
 from extensions.ext_database import db
 from extensions.ext_storage import storage
-from libs.datetime_utils import naive_utc_now
 from models.enums import CreatorUserRole
 from models.model import UploadFile
 
@@ -43,24 +43,20 @@ class WordExtractor(BaseExtractor):
 
         # If the file is a web path, download it to a temporary file, and use that
         if not os.path.isfile(self.file_path) and self._is_valid_url(self.file_path):
-            response = httpx.get(self.file_path, timeout=None)
+            r = requests.get(self.file_path)
 
-            if response.status_code != 200:
-                response.close()
-                raise ValueError(f"Check the url of your file; returned status code {response.status_code}")
+            if r.status_code != 200:
+                raise ValueError(f"Check the url of your file; returned status code {r.status_code}")
 
             self.web_path = self.file_path
             # TODO: use a better way to handle the file
             self.temp_file = tempfile.NamedTemporaryFile()  # noqa SIM115
-            try:
-                self.temp_file.write(response.content)
-            finally:
-                response.close()
+            self.temp_file.write(r.content)
             self.file_path = self.temp_file.name
         elif not os.path.isfile(self.file_path):
             raise ValueError(f"File path {self.file_path} is not a valid file or url")
 
-    def __del__(self):
+    def __del__(self) -> None:
         if hasattr(self, "temp_file"):
             self.temp_file.close()
 
@@ -84,45 +80,22 @@ class WordExtractor(BaseExtractor):
         image_count = 0
         image_map = {}
 
-        for r_id, rel in doc.part.rels.items():
+        for rel in doc.part.rels.values():
             if "image" in rel.target_ref:
                 image_count += 1
                 if rel.is_external:
                     url = rel.target_ref
-                    if not self._is_valid_url(url):
-                        continue
-                    try:
-                        response = ssrf_proxy.get(url)
-                    except Exception as e:
-                        logger.warning("Failed to download image from URL: %s: %s", url, str(e))
-                        continue
+                    response = ssrf_proxy.get(url)
                     if response.status_code == 200:
-                        image_ext = mimetypes.guess_extension(response.headers.get("Content-Type", ""))
+                        image_ext = mimetypes.guess_extension(response.headers["Content-Type"])
                         if image_ext is None:
                             continue
                         file_uuid = str(uuid.uuid4())
-                        file_key = "image_files/" + self.tenant_id + "/" + file_uuid + image_ext
+                        file_key = "image_files/" + self.tenant_id + "/" + file_uuid + "." + image_ext
                         mime_type, _ = mimetypes.guess_type(file_key)
                         storage.save(file_key, response.content)
-                        # save file to db
-                        upload_file = UploadFile(
-                            tenant_id=self.tenant_id,
-                            storage_type=dify_config.STORAGE_TYPE,
-                            key=file_key,
-                            name=file_key,
-                            size=0,
-                            extension=str(image_ext),
-                            mime_type=mime_type or "",
-                            created_by=self.user_id,
-                            created_by_role=CreatorUserRole.ACCOUNT,
-                            created_at=naive_utc_now(),
-                            used=True,
-                            used_by=self.user_id,
-                            used_at=naive_utc_now(),
-                        )
-                        db.session.add(upload_file)
-                        # Use r_id as key for external images since target_part is undefined
-                        image_map[r_id] = f"![image]({dify_config.FILES_URL}/files/{upload_file.id}/file-preview)"
+                    else:
+                        continue
                 else:
                     image_ext = rel.target_ref.split(".")[-1]
                     if image_ext is None:
@@ -133,28 +106,27 @@ class WordExtractor(BaseExtractor):
                     mime_type, _ = mimetypes.guess_type(file_key)
 
                     storage.save(file_key, rel.target_part.blob)
-                    # save file to db
-                    upload_file = UploadFile(
-                        tenant_id=self.tenant_id,
-                        storage_type=dify_config.STORAGE_TYPE,
-                        key=file_key,
-                        name=file_key,
-                        size=0,
-                        extension=str(image_ext),
-                        mime_type=mime_type or "",
-                        created_by=self.user_id,
-                        created_by_role=CreatorUserRole.ACCOUNT,
-                        created_at=naive_utc_now(),
-                        used=True,
-                        used_by=self.user_id,
-                        used_at=naive_utc_now(),
-                    )
-                    db.session.add(upload_file)
-                    # Use target_part as key for internal images
-                    image_map[rel.target_part] = (
-                        f"![image]({dify_config.FILES_URL}/files/{upload_file.id}/file-preview)"
-                    )
-        db.session.commit()
+                # save file to db
+                upload_file = UploadFile(
+                    tenant_id=self.tenant_id,
+                    storage_type=dify_config.STORAGE_TYPE,
+                    key=file_key,
+                    name=file_key,
+                    size=0,
+                    extension=str(image_ext),
+                    mime_type=mime_type or "",
+                    created_by=self.user_id,
+                    created_by_role=CreatorUserRole.ACCOUNT,
+                    created_at=datetime.datetime.now(datetime.UTC).replace(tzinfo=None),
+                    used=True,
+                    used_by=self.user_id,
+                    used_at=datetime.datetime.now(datetime.UTC).replace(tzinfo=None),
+                )
+
+                db.session.add(upload_file)
+                db.session.commit()
+                image_map[rel.target_part] = f"![image]({dify_config.FILES_URL}/files/{upload_file.id}/file-preview)"
+
         return image_map
 
     def _table_to_markdown(self, table, image_map):
@@ -176,15 +148,13 @@ class WordExtractor(BaseExtractor):
         # Initialize a row, all of which are empty by default
         row_cells = [""] * total_cols
         col_index = 0
-        while col_index < len(row.cells):
+        for cell in row.cells:
             # make sure the col_index is not out of range
-            while col_index < len(row.cells) and row_cells[col_index] != "":
+            while col_index < total_cols and row_cells[col_index] != "":
                 col_index += 1
             # if col_index is out of range the loop is jumped
-            if col_index >= len(row.cells):
+            if col_index >= total_cols:
                 break
-            # get the correct cell
-            cell = row.cells[col_index]
             cell_content = self._parse_cell(cell, image_map).strip()
             cell_colspan = cell.grid_span or 1
             for i in range(cell_colspan):
@@ -210,17 +180,11 @@ class WordExtractor(BaseExtractor):
                     image_id = blip.get("{http://schemas.openxmlformats.org/officeDocument/2006/relationships}embed")
                     if not image_id:
                         continue
-                    rel = paragraph.part.rels.get(image_id)
-                    if rel is None:
-                        continue
-                    # For external images, use image_id as key; for internal, use target_part
-                    if rel.is_external:
-                        if image_id in image_map:
-                            paragraph_content.append(image_map[image_id])
-                    else:
-                        image_part = rel.target_part
-                        if image_part in image_map:
-                            paragraph_content.append(image_map[image_part])
+                    image_part = paragraph.part.rels[image_id].target_part
+
+                    if image_part in image_map:
+                        image_link = image_map[image_part]
+                        paragraph_content.append(image_link)
             else:
                 paragraph_content.append(run.text)
         return "".join(paragraph_content).strip()
@@ -257,18 +221,6 @@ class WordExtractor(BaseExtractor):
 
         def parse_paragraph(paragraph):
             paragraph_content = []
-
-            def append_image_link(image_id, has_drawing):
-                """Helper to append image link from image_map based on relationship type."""
-                rel = doc.part.rels[image_id]
-                if rel.is_external:
-                    if image_id in image_map and not has_drawing:
-                        paragraph_content.append(image_map[image_id])
-                else:
-                    image_part = rel.target_part
-                    if image_part in image_map and not has_drawing:
-                        paragraph_content.append(image_map[image_part])
-
             for run in paragraph.runs:
                 if hasattr(run.element, "tag") and isinstance(run.element.tag, str) and run.element.tag.endswith("r"):
                     # Process drawing type images
@@ -285,18 +237,10 @@ class WordExtractor(BaseExtractor):
                                 "{http://schemas.openxmlformats.org/officeDocument/2006/relationships}embed"
                             )
                             if embed_id:
-                                rel = doc.part.rels.get(embed_id)
-                                if rel is not None and rel.is_external:
-                                    # External image: use embed_id as key
-                                    if embed_id in image_map:
-                                        has_drawing = True
-                                        paragraph_content.append(image_map[embed_id])
-                                else:
-                                    # Internal image: use target_part as key
-                                    image_part = doc.part.related_parts.get(embed_id)
-                                    if image_part in image_map:
-                                        has_drawing = True
-                                        paragraph_content.append(image_map[image_part])
+                                image_part = doc.part.related_parts.get(embed_id)
+                                if image_part in image_map:
+                                    has_drawing = True
+                                    paragraph_content.append(image_map[image_part])
                     # Process pict type images
                     shape_elements = run.element.findall(
                         ".//{http://schemas.openxmlformats.org/wordprocessingml/2006/main}pict"
@@ -311,7 +255,9 @@ class WordExtractor(BaseExtractor):
                                 "{http://schemas.openxmlformats.org/officeDocument/2006/relationships}id"
                             )
                             if image_id and image_id in doc.part.rels:
-                                append_image_link(image_id, has_drawing)
+                                image_part = doc.part.rels[image_id].target_part
+                                if image_part in image_map and not has_drawing:
+                                    paragraph_content.append(image_map[image_part])
                         # Find imagedata element in VML
                         image_data = shape.find(".//{urn:schemas-microsoft-com:vml}imagedata")
                         if image_data is not None:
@@ -319,7 +265,9 @@ class WordExtractor(BaseExtractor):
                                 "{http://schemas.openxmlformats.org/officeDocument/2006/relationships}id"
                             )
                             if image_id and image_id in doc.part.rels:
-                                append_image_link(image_id, has_drawing)
+                                image_part = doc.part.rels[image_id].target_part
+                                if image_part in image_map and not has_drawing:
+                                    paragraph_content.append(image_map[image_part])
                 if run.text.strip():
                     paragraph_content.append(run.text.strip())
             return "".join(paragraph_content) if paragraph_content else ""

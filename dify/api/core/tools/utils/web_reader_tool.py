@@ -2,12 +2,12 @@ import mimetypes
 import re
 from collections.abc import Sequence
 from dataclasses import dataclass
-from typing import Any, cast
+from typing import Any, Optional, cast
 from urllib.parse import unquote
 
-import charset_normalizer
-import cloudscraper
-from readabilipy import simple_json_from_html_string
+import chardet
+import cloudscraper  # type: ignore
+from readabilipy import simple_json_from_html_string  # type: ignore
 
 from core.helper import ssrf_proxy
 from core.rag.extractor import extract_processor
@@ -27,7 +27,7 @@ def page_result(text: str, cursor: int, max_length: int) -> str:
     return text[cursor : cursor + max_length]
 
 
-def get_url(url: str, user_agent: str | None = None) -> str:
+def get_url(url: str, user_agent: Optional[str] = None) -> str:
     """Fetch URL and return the contents as a string."""
     headers = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko)"
@@ -63,18 +63,15 @@ def get_url(url: str, user_agent: str | None = None) -> str:
         response = ssrf_proxy.get(url, headers=headers, follow_redirects=True, timeout=(120, 300))
     elif response.status_code == 403:
         scraper = cloudscraper.create_scraper()
-        scraper.perform_request = ssrf_proxy.make_request
-        response = scraper.get(url, headers=headers, timeout=(120, 300))
+        scraper.perform_request = ssrf_proxy.make_request  # type: ignore
+        response = scraper.get(url, headers=headers, follow_redirects=True, timeout=(120, 300))  # type: ignore
 
     if response.status_code != 200:
         return f"URL returned status code {response.status_code}."
 
-    # Detect encoding using charset_normalizer
-    detected_encoding = charset_normalizer.from_bytes(response.content).best()
-    if detected_encoding:
-        encoding = detected_encoding.encoding
-    else:
-        encoding = "utf-8"
+    # Detect encoding using chardet
+    detected_encoding = chardet.detect(response.content)
+    encoding = detected_encoding["encoding"]
     if encoding:
         try:
             content = response.content.decode(encoding)
@@ -90,7 +87,7 @@ def get_url(url: str, user_agent: str | None = None) -> str:
 
     res = FULL_TEMPLATE.format(
         title=article.title,
-        author=article.author,
+        author=article.auther,
         text=article.text,
     )
 
@@ -100,7 +97,7 @@ def get_url(url: str, user_agent: str | None = None) -> str:
 @dataclass
 class Article:
     title: str
-    author: str
+    auther: str
     text: Sequence[dict]
 
 
@@ -108,7 +105,7 @@ def extract_using_readabilipy(html: str):
     json_article: dict[str, Any] = simple_json_from_html_string(html, use_readability=True)
     article = Article(
         title=json_article.get("title") or "",
-        author=json_article.get("byline") or "",
+        auther=json_article.get("byline") or "",
         text=json_article.get("plain_text") or [],
     )
 
@@ -116,7 +113,7 @@ def extract_using_readabilipy(html: str):
 
 
 def get_image_upload_file_ids(content):
-    pattern = r"!\[image\]\((https?://.*?(file-preview|image-preview))\)"
+    pattern = r"!\[image\]\((http?://.*?(file-preview|image-preview))\)"
     matches = re.findall(pattern, content)
     image_upload_file_ids = []
     for match in matches:

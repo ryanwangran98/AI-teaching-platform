@@ -1,43 +1,36 @@
 from collections.abc import Sequence
-from enum import StrEnum
+from typing import Literal
 
 from pydantic import BaseModel, Field
 
 from core.workflow.nodes.base import BaseNodeData
 
-
-class FilterOperator(StrEnum):
+_Condition = Literal[
     # string conditions
-    CONTAINS = "contains"
-    START_WITH = "start with"
-    END_WITH = "end with"
-    IS = "is"
-    IN = "in"
-    EMPTY = "empty"
-    NOT_CONTAINS = "not contains"
-    IS_NOT = "is not"
-    NOT_IN = "not in"
-    NOT_EMPTY = "not empty"
+    "contains",
+    "start with",
+    "end with",
+    "is",
+    "in",
+    "empty",
+    "not contains",
+    "is not",
+    "not in",
+    "not empty",
     # number conditions
-    EQUAL = "="
-    NOT_EQUAL = "≠"
-    LESS_THAN = "<"
-    GREATER_THAN = ">"
-    GREATER_THAN_OR_EQUAL = "≥"
-    LESS_THAN_OR_EQUAL = "≤"
-
-
-class Order(StrEnum):
-    ASC = "asc"
-    DESC = "desc"
+    "=",
+    "≠",
+    "<",
+    ">",
+    "≥",
+    "≤",
+]
 
 
 class FilterCondition(BaseModel):
     key: str = ""
-    comparison_operator: FilterOperator = FilterOperator.CONTAINS
-    # the value is bool if the filter operator is comparing with
-    # a boolean constant.
-    value: str | Sequence[str] | bool = ""
+    comparison_operator: _Condition = "contains"
+    value: str | Sequence[str] = ""
 
 
 class FilterBy(BaseModel):
@@ -45,10 +38,10 @@ class FilterBy(BaseModel):
     conditions: Sequence[FilterCondition] = Field(default_factory=list)
 
 
-class OrderByConfig(BaseModel):
+class OrderBy(BaseModel):
     enabled: bool = False
     key: str = ""
-    value: Order = Order.ASC
+    value: Literal["asc", "desc"] = "asc"
 
 
 class Limit(BaseModel):
@@ -64,6 +57,6 @@ class ExtractConfig(BaseModel):
 class ListOperatorNodeData(BaseNodeData):
     variable: Sequence[str] = Field(default_factory=list)
     filter_by: FilterBy
-    order_by: OrderByConfig
+    order_by: OrderBy
     limit: Limit
     extract_by: ExtractConfig = Field(default_factory=ExtractConfig)

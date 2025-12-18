@@ -1,13 +1,14 @@
 from collections.abc import Sequence
-from enum import StrEnum, auto
+from enum import Enum
+from typing import Optional
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from core.model_runtime.entities.common_entities import I18nObject
 from core.model_runtime.entities.model_entities import AIModelEntity, ModelType
 
 
-class ConfigurateMethod(StrEnum):
+class ConfigurateMethod(Enum):
     """
     Enum class for configurate method of provider model.
     """
@@ -16,16 +17,16 @@ class ConfigurateMethod(StrEnum):
     CUSTOMIZABLE_MODEL = "customizable-model"
 
 
-class FormType(StrEnum):
+class FormType(Enum):
     """
     Enum class for form type.
     """
 
     TEXT_INPUT = "text-input"
     SECRET_INPUT = "secret-input"
-    SELECT = auto()
-    RADIO = auto()
-    SWITCH = auto()
+    SELECT = "select"
+    RADIO = "radio"
+    SWITCH = "switch"
 
 
 class FormShowOnObject(BaseModel):
@@ -46,11 +47,10 @@ class FormOption(BaseModel):
     value: str
     show_on: list[FormShowOnObject] = []
 
-    @model_validator(mode="after")
-    def _(self):
+    def __init__(self, **data):
+        super().__init__(**data)
         if not self.label:
             self.label = I18nObject(en_US=self.value)
-        return self
 
 
 class CredentialFormSchema(BaseModel):
@@ -62,9 +62,9 @@ class CredentialFormSchema(BaseModel):
     label: I18nObject
     type: FormType
     required: bool = True
-    default: str | None = None
-    options: list[FormOption] | None = None
-    placeholder: I18nObject | None = None
+    default: Optional[str] = None
+    options: Optional[list[FormOption]] = None
+    placeholder: Optional[I18nObject] = None
     max_length: int = 0
     show_on: list[FormShowOnObject] = []
 
@@ -79,7 +79,7 @@ class ProviderCredentialSchema(BaseModel):
 
 class FieldModelSchema(BaseModel):
     label: I18nObject
-    placeholder: I18nObject | None = None
+    placeholder: Optional[I18nObject] = None
 
 
 class ModelCredentialSchema(BaseModel):
@@ -98,9 +98,8 @@ class SimpleProviderEntity(BaseModel):
 
     provider: str
     label: I18nObject
-    icon_small: I18nObject | None = None
-    icon_small_dark: I18nObject | None = None
-    icon_large: I18nObject | None = None
+    icon_small: Optional[I18nObject] = None
+    icon_large: Optional[I18nObject] = None
     supported_model_types: Sequence[ModelType]
     models: list[AIModelEntity] = []
 
@@ -121,23 +120,24 @@ class ProviderEntity(BaseModel):
 
     provider: str
     label: I18nObject
-    description: I18nObject | None = None
-    icon_small: I18nObject | None = None
-    icon_large: I18nObject | None = None
-    icon_small_dark: I18nObject | None = None
-    background: str | None = None
-    help: ProviderHelpEntity | None = None
+    description: Optional[I18nObject] = None
+    icon_small: Optional[I18nObject] = None
+    icon_large: Optional[I18nObject] = None
+    icon_small_dark: Optional[I18nObject] = None
+    icon_large_dark: Optional[I18nObject] = None
+    background: Optional[str] = None
+    help: Optional[ProviderHelpEntity] = None
     supported_model_types: Sequence[ModelType]
     configurate_methods: list[ConfigurateMethod]
     models: list[AIModelEntity] = Field(default_factory=list)
-    provider_credential_schema: ProviderCredentialSchema | None = None
-    model_credential_schema: ModelCredentialSchema | None = None
+    provider_credential_schema: Optional[ProviderCredentialSchema] = None
+    model_credential_schema: Optional[ModelCredentialSchema] = None
 
     # pydantic configs
     model_config = ConfigDict(protected_namespaces=())
 
     # position from plugin _position.yaml
-    position: dict[str, list[str]] | None = {}
+    position: Optional[dict[str, list[str]]] = {}
 
     @field_validator("models", mode="before")
     @classmethod

@@ -2,7 +2,7 @@ import json
 import logging
 import sys
 from collections.abc import Sequence
-from typing import cast
+from typing import Optional, cast
 
 from core.model_runtime.callbacks.base_callback import Callback
 from core.model_runtime.entities.llm_entities import LLMResult, LLMResultChunk
@@ -20,11 +20,11 @@ class LoggingCallback(Callback):
         credentials: dict,
         prompt_messages: list[PromptMessage],
         model_parameters: dict,
-        tools: list[PromptMessageTool] | None = None,
-        stop: Sequence[str] | None = None,
+        tools: Optional[list[PromptMessageTool]] = None,
+        stop: Optional[Sequence[str]] = None,
         stream: bool = True,
-        user: str | None = None,
-    ):
+        user: Optional[str] = None,
+    ) -> None:
         """
         Before invoke callback
 
@@ -76,10 +76,10 @@ class LoggingCallback(Callback):
         credentials: dict,
         prompt_messages: Sequence[PromptMessage],
         model_parameters: dict,
-        tools: list[PromptMessageTool] | None = None,
-        stop: Sequence[str] | None = None,
+        tools: Optional[list[PromptMessageTool]] = None,
+        stop: Optional[Sequence[str]] = None,
         stream: bool = True,
-        user: str | None = None,
+        user: Optional[str] = None,
     ):
         """
         On new chunk callback
@@ -106,11 +106,11 @@ class LoggingCallback(Callback):
         credentials: dict,
         prompt_messages: Sequence[PromptMessage],
         model_parameters: dict,
-        tools: list[PromptMessageTool] | None = None,
-        stop: Sequence[str] | None = None,
+        tools: Optional[list[PromptMessageTool]] = None,
+        stop: Optional[Sequence[str]] = None,
         stream: bool = True,
-        user: str | None = None,
-    ):
+        user: Optional[str] = None,
+    ) -> None:
         """
         After invoke callback
 
@@ -147,11 +147,11 @@ class LoggingCallback(Callback):
         credentials: dict,
         prompt_messages: list[PromptMessage],
         model_parameters: dict,
-        tools: list[PromptMessageTool] | None = None,
-        stop: Sequence[str] | None = None,
+        tools: Optional[list[PromptMessageTool]] = None,
+        stop: Optional[Sequence[str]] = None,
         stream: bool = True,
-        user: str | None = None,
-    ):
+        user: Optional[str] = None,
+    ) -> None:
         """
         Invoke error callback
 

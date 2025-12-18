@@ -1,4 +1,3 @@
-import contextlib
 import os
 
 import pytest
@@ -45,8 +44,10 @@ class TestClickzettaVector(AbstractVectorTest):
             yield vector
 
             # Cleanup: delete the test collection
-            with contextlib.suppress(Exception):
+            try:
                 vector.delete()
+            except Exception:
+                pass
 
     def test_clickzetta_vector_basic_operations(self, vector_store):
         """Test basic CRUD operations on Clickzetta vector store."""

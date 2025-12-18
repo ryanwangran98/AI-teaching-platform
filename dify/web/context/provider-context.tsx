@@ -17,8 +17,8 @@ import {
 } from '@/app/components/header/account-setting/model-provider-page/declarations'
 import type { Model, ModelProvider } from '@/app/components/header/account-setting/model-provider-page/declarations'
 import type { RETRIEVE_METHOD } from '@/types/app'
-import type { Plan, UsageResetInfo } from '@/app/components/billing/type'
-import type { UsagePlanInfo } from '@/app/components/billing/type'
+import type { BasicPlan } from '@/app/components/billing/type'
+import { Plan, type UsagePlanInfo } from '@/app/components/billing/type'
 import { fetchCurrentPlanInfo } from '@/service/billing'
 import { parseCurrentPlan } from '@/app/components/billing/utils'
 import { defaultPlan } from '@/app/components/billing/config'
@@ -27,20 +27,17 @@ import {
   useEducationStatus,
 } from '@/service/use-education'
 import { noop } from 'lodash-es'
-import { setZendeskConversationFields } from '@/app/components/base/zendesk/utils'
-import { ZENDESK_FIELD_IDS } from '@/config'
 
-export type ProviderContextState = {
+type ProviderContextState = {
   modelProviders: ModelProvider[]
   refreshModelProviders: () => void
   textGenerationModelList: Model[]
   supportRetrievalMethods: RETRIEVE_METHOD[]
   isAPIKeySet: boolean
   plan: {
-    type: Plan
+    type: BasicPlan
     usage: UsagePlanInfo
     total: UsagePlanInfo
-    reset: UsageResetInfo
   }
   isFetchedPlan: boolean
   enableBilling: boolean
@@ -51,10 +48,6 @@ export type ProviderContextState = {
   enableEducationPlan: boolean
   isEducationWorkspace: boolean
   isEducationAccount: boolean
-  allowRefreshEducationVerify: boolean
-  educationAccountExpireAt: number | null
-  isLoadingEducationAccountInfo: boolean
-  isFetchingEducationAccountInfo: boolean
   webappCopyrightEnabled: boolean
   licenseLimit: {
     workspace_members: {
@@ -64,16 +57,30 @@ export type ProviderContextState = {
   },
   refreshLicenseLimit: () => void
   isAllowTransferWorkspace: boolean
-  isAllowPublishAsCustomKnowledgePipelineTemplate: boolean
 }
-
-export const baseProviderContextValue: ProviderContextState = {
+const ProviderContext = createContext<ProviderContextState>({
   modelProviders: [],
   refreshModelProviders: noop,
   textGenerationModelList: [],
   supportRetrievalMethods: [],
   isAPIKeySet: true,
-  plan: defaultPlan,
+  plan: {
+    type: Plan.sandbox,
+    usage: {
+      vectorSpace: 32,
+      buildApps: 12,
+      teamMembers: 1,
+      annotatedResponse: 1,
+      documentsUploadQuota: 50,
+    },
+    total: {
+      vectorSpace: 200,
+      buildApps: 50,
+      teamMembers: 1,
+      annotatedResponse: 10,
+      documentsUploadQuota: 500,
+    },
+  },
   isFetchedPlan: false,
   enableBilling: false,
   onPlanInfoChanged: noop,
@@ -83,10 +90,6 @@ export const baseProviderContextValue: ProviderContextState = {
   enableEducationPlan: false,
   isEducationWorkspace: false,
   isEducationAccount: false,
-  allowRefreshEducationVerify: false,
-  educationAccountExpireAt: null,
-  isLoadingEducationAccountInfo: false,
-  isFetchingEducationAccountInfo: false,
   webappCopyrightEnabled: false,
   licenseLimit: {
     workspace_members: {
@@ -96,10 +99,7 @@ export const baseProviderContextValue: ProviderContextState = {
   },
   refreshLicenseLimit: noop,
   isAllowTransferWorkspace: false,
-  isAllowPublishAsCustomKnowledgePipelineTemplate: false,
-}
-
-const ProviderContext = createContext<ProviderContextState>(baseProviderContextValue)
+})
 
 export const useProviderContext = () => useContext(ProviderContext)
 
@@ -135,9 +135,8 @@ export const ProviderContextProvider = ({
 
   const [enableEducationPlan, setEnableEducationPlan] = useState(false)
   const [isEducationWorkspace, setIsEducationWorkspace] = useState(false)
-  const { data: educationAccountInfo, isLoading: isLoadingEducationAccountInfo, isFetching: isFetchingEducationAccountInfo } = useEducationStatus(!enableEducationPlan)
+  const { data: isEducationAccount } = useEducationStatus(!enableEducationPlan)
   const [isAllowTransferWorkspace, setIsAllowTransferWorkspace] = useState(false)
-  const [isAllowPublishAsCustomKnowledgePipelineTemplate, setIsAllowPublishAsCustomKnowledgePipelineTemplate] = useState(false)
 
   const fetchPlan = async () => {
     try {
@@ -168,8 +167,6 @@ export const ProviderContextProvider = ({
         setLicenseLimit({ workspace_members: data.workspace_members })
       if (data.is_allow_transfer_workspace)
         setIsAllowTransferWorkspace(data.is_allow_transfer_workspace)
-      if (data.knowledge_pipeline?.publish_enabled)
-        setIsAllowPublishAsCustomKnowledgePipelineTemplate(data.knowledge_pipeline?.publish_enabled)
     }
     catch (error) {
       console.error('Failed to fetch plan info:', error)
@@ -183,17 +180,6 @@ export const ProviderContextProvider = ({
   useEffect(() => {
     fetchPlan()
   }, [])
-
-  // #region Zendesk conversation fields
-  useEffect(() => {
-    if (ZENDESK_FIELD_IDS.PLAN && plan.type) {
-      setZendeskConversationFields([{
-        id: ZENDESK_FIELD_IDS.PLAN,
-        value: `${plan.type}-plan`,
-      }])
-    }
-  }, [plan.type])
-  // #endregion Zendesk conversation fields
 
   const { t } = useTranslation()
   useEffect(() => {
@@ -237,16 +223,11 @@ export const ProviderContextProvider = ({
       datasetOperatorEnabled,
       enableEducationPlan,
       isEducationWorkspace,
-      isEducationAccount: educationAccountInfo?.is_student || false,
-      allowRefreshEducationVerify: educationAccountInfo?.allow_refresh || false,
-      educationAccountExpireAt: educationAccountInfo?.expire_at || null,
-      isLoadingEducationAccountInfo,
-      isFetchingEducationAccountInfo,
+      isEducationAccount: isEducationAccount?.result || false,
       webappCopyrightEnabled,
       licenseLimit,
       refreshLicenseLimit: fetchPlan,
       isAllowTransferWorkspace,
-      isAllowPublishAsCustomKnowledgePipelineTemplate,
     }}>
       {children}
     </ProviderContext.Provider>

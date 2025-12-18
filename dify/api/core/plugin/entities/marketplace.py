@@ -1,3 +1,5 @@
+from typing import Optional
+
 from pydantic import BaseModel, Field, model_validator
 
 from core.model_runtime.entities.provider_entities import ProviderEntity
@@ -17,11 +19,11 @@ class MarketplacePluginDeclaration(BaseModel):
     resource: PluginResourceRequirements = Field(
         ..., description="Specification of computational resources needed to run the plugin"
     )
-    endpoint: EndpointProviderDeclaration | None = Field(
+    endpoint: Optional[EndpointProviderDeclaration] = Field(
         None, description="Configuration for the plugin's API endpoint, if applicable"
     )
-    model: ProviderEntity | None = Field(None, description="Details of the AI model used by the plugin, if any")
-    tool: ToolProviderEntity | None = Field(
+    model: Optional[ProviderEntity] = Field(None, description="Details of the AI model used by the plugin, if any")
+    tool: Optional[ToolProviderEntity] = Field(
         None, description="Information about the tool functionality provided by the plugin, if any"
     )
     latest_version: str = Field(

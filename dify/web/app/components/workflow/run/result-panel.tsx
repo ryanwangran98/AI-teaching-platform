@@ -16,19 +16,12 @@ import { IterationLogTrigger } from '@/app/components/workflow/run/iteration-log
 import { LoopLogTrigger } from '@/app/components/workflow/run/loop-log'
 import { RetryLogTrigger } from '@/app/components/workflow/run/retry-log'
 import { AgentLogTrigger } from '@/app/components/workflow/run/agent-log'
-import LargeDataAlert from '../variable-inspect/large-data-alert'
 
 export type ResultPanelProps = {
   nodeInfo?: NodeTracing
   inputs?: string
-  inputs_truncated?: boolean
   process_data?: string
-  process_data_truncated?: boolean
   outputs?: string | Record<string, any>
-  outputs_truncated?: boolean
-  outputs_full_content?: {
-    download_url: string
-  }
   status: string
   error?: string
   elapsed_time?: number
@@ -40,7 +33,6 @@ export type ResultPanelProps = {
   showSteps?: boolean
   exceptionCounts?: number
   execution_metadata?: any
-  isListening?: boolean
   handleShowIterationResultList?: (detail: NodeTracing[][], iterDurationMap: any) => void
   handleShowLoopResultList?: (detail: NodeTracing[][], loopDurationMap: any) => void
   onShowRetryDetail?: (detail: NodeTracing[]) => void
@@ -50,12 +42,8 @@ export type ResultPanelProps = {
 const ResultPanel: FC<ResultPanelProps> = ({
   nodeInfo,
   inputs,
-  inputs_truncated,
   process_data,
-  process_data_truncated,
   outputs,
-  outputs_truncated,
-  outputs_full_content,
   status,
   error,
   elapsed_time,
@@ -66,7 +54,6 @@ const ResultPanel: FC<ResultPanelProps> = ({
   showSteps,
   exceptionCounts,
   execution_metadata,
-  isListening = false,
   handleShowIterationResultList,
   handleShowLoopResultList,
   onShowRetryDetail,
@@ -88,7 +75,6 @@ const ResultPanel: FC<ResultPanelProps> = ({
           tokens={total_tokens}
           error={error}
           exceptionCounts={exceptionCounts}
-          isListening={isListening}
         />
       </div>
       <div className='px-4'>
@@ -132,7 +118,6 @@ const ResultPanel: FC<ResultPanelProps> = ({
           language={CodeLanguage.json}
           value={inputs}
           isJSONStringifyBeauty
-          footer={inputs_truncated && <LargeDataAlert textHasNoExport className='mx-1 mb-1 mt-2 h-7' />}
         />
         {process_data && (
           <CodeEditor
@@ -141,7 +126,6 @@ const ResultPanel: FC<ResultPanelProps> = ({
             language={CodeLanguage.json}
             value={process_data}
             isJSONStringifyBeauty
-            footer={process_data_truncated && <LargeDataAlert textHasNoExport className='mx-1 mb-1 mt-2 h-7' />}
           />
         )}
         {(outputs || status === 'running') && (
@@ -152,7 +136,6 @@ const ResultPanel: FC<ResultPanelProps> = ({
             value={outputs}
             isJSONStringifyBeauty
             tip={<ErrorHandleTip type={execution_metadata?.error_strategy} />}
-            footer={outputs_truncated && <LargeDataAlert textHasNoExport downloadUrl={outputs_full_content?.download_url} className='mx-1 mb-1 mt-2 h-7' />}
           />
         )}
       </div>

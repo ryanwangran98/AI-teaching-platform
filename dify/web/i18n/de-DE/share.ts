@@ -74,9 +74,8 @@ const translation = {
       moreThanMaxLengthLine: 'Zeile {{rowIndex}}: {{varName}} Wert darf nicht mehr als {{maxLength}} Zeichen sein',
       atLeastOne: 'Bitte geben Sie mindestens eine Zeile in die hochgeladene Datei ein.',
     },
-    execution: 'Ausführen',
-    executions: '{{num}} Ausführungen',
-    stopRun: 'Ausführung stoppen',
+    executions: '{{num}} HINRICHTUNGEN',
+    execution: 'AUSFÜHRUNG',
   },
   login: {
     backToHome: 'Zurück zur Startseite',

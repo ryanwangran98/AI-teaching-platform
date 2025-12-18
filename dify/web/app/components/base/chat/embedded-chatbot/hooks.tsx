@@ -8,7 +8,7 @@ import {
 import { useTranslation } from 'react-i18next'
 import useSWR from 'swr'
 import { useLocalStorageState } from 'ahooks'
-import { produce } from 'immer'
+import produce from 'immer'
 import type {
   ChatConfig,
   ChatItem,
@@ -18,6 +18,9 @@ import { CONVERSATION_ID_INFO } from '../constants'
 import { buildChatItemTree, getProcessedInputsFromUrlParams, getProcessedSystemVariablesFromUrlParams, getProcessedUserVariablesFromUrlParams } from '../utils'
 import { getProcessedFilesFromResponse } from '../../file-uploader/utils'
 import {
+  fetchAppInfo,
+  fetchAppMeta,
+  fetchAppParams,
   fetchChatList,
   fetchConversations,
   generationConversationName,
@@ -33,7 +36,8 @@ import { InputVarType } from '@/app/components/workflow/types'
 import { TransferMethod } from '@/types/app'
 import { addFileInfos, sortAgentSorts } from '@/app/components/tools/utils'
 import { noop } from 'lodash-es'
-import { useWebAppStore } from '@/context/web-app-context'
+import { useGetUserCanAccessApp } from '@/service/access-control'
+import { useGlobalPublicStore } from '@/context/global-public-context'
 
 function getFormattedChatList(messages: any[]) {
   const newChatList: ChatItem[] = []
@@ -63,23 +67,27 @@ function getFormattedChatList(messages: any[]) {
 
 export const useEmbeddedChatbot = () => {
   const isInstalledApp = false
-  const appInfo = useWebAppStore(s => s.appInfo)
-  const appMeta = useWebAppStore(s => s.appMeta)
-  const appParams = useWebAppStore(s => s.appParams)
-  const embeddedConversationId = useWebAppStore(s => s.embeddedConversationId)
-  const embeddedUserId = useWebAppStore(s => s.embeddedUserId)
-  const appId = useMemo(() => appInfo?.app_id, [appInfo])
+  const systemFeatures = useGlobalPublicStore(s => s.systemFeatures)
+  const { data: appInfo, isLoading: appInfoLoading, error: appInfoError } = useSWR('appInfo', fetchAppInfo)
+  const { isPending: isCheckingPermission, data: userCanAccessResult } = useGetUserCanAccessApp({
+    appId: appInfo?.app_id,
+    isInstalledApp,
+    enabled: systemFeatures.webapp_auth.enabled,
+  })
+
+  const appData = useMemo(() => {
+    return appInfo
+  }, [appInfo])
+  const appId = useMemo(() => appData?.app_id, [appData])
 
   const [userId, setUserId] = useState<string>()
   const [conversationId, setConversationId] = useState<string>()
-
   useEffect(() => {
-    setUserId(embeddedUserId || undefined)
-  }, [embeddedUserId])
-
-  useEffect(() => {
-    setConversationId(embeddedConversationId || undefined)
-  }, [embeddedConversationId])
+    getProcessedSystemVariablesFromUrlParams().then(({ user_id, conversation_id }) => {
+      setUserId(user_id)
+      setConversationId(conversation_id)
+    })
+  }, [])
 
   useEffect(() => {
     const setLanguageFromParams = async () => {
@@ -137,6 +145,8 @@ export const useEmbeddedChatbot = () => {
     return currentConversationId
   }, [currentConversationId, newConversationId])
 
+  const { data: appParams } = useSWR(['appParams', isInstalledApp, appId], () => fetchAppParams(isInstalledApp, appId))
+  const { data: appMeta } = useSWR(['appMeta', isInstalledApp, appId], () => fetchAppMeta(isInstalledApp, appId))
   const { data: appPinnedConversationData } = useSWR(['appConversationData', isInstalledApp, appId, true], () => fetchConversations(isInstalledApp, appId, undefined, true, 100))
   const { data: appConversationData, isLoading: appConversationDataLoading, mutate: mutateAppConversationData } = useSWR(['appConversationData', isInstalledApp, appId, false], () => fetchConversations(isInstalledApp, appId, undefined, false, 100))
   const { data: appChatListData, isLoading: appChatListDataLoading } = useSWR(chatShouldReloadKey ? ['appChatList', chatShouldReloadKey, isInstalledApp, appId] : null, () => fetchChatList(chatShouldReloadKey, isInstalledApp, appId))
@@ -173,28 +183,18 @@ export const useEmbeddedChatbot = () => {
 
         return {
           ...item.paragraph,
-          default: value || item.default || item.paragraph.default,
+          default: value || item.default,
           type: 'paragraph',
         }
       }
       if (item.number) {
-        const convertedNumber = Number(initInputs[item.number.variable])
+        const convertedNumber = Number(initInputs[item.number.variable]) ?? undefined
         return {
           ...item.number,
-          default: convertedNumber || item.default || item.number.default,
+          default: convertedNumber || item.default,
           type: 'number',
         }
       }
-
-      if (item.checkbox) {
-        const preset = initInputs[item.checkbox.variable] === true
-        return {
-          ...item.checkbox,
-          default: preset || item.default || item.checkbox.default,
-          type: 'checkbox',
-        }
-      }
-
       if (item.select) {
         const isInputInOptions = item.select.options.includes(initInputs[item.select.variable])
         return {
@@ -218,20 +218,13 @@ export const useEmbeddedChatbot = () => {
         }
       }
 
-      if (item.json_object) {
-        return {
-          ...item.json_object,
-          type: 'json_object',
-        }
-      }
-
       let value = initInputs[item['text-input'].variable]
       if (value && item['text-input'].max_length && value.length > item['text-input'].max_length)
         value = value.slice(0, item['text-input'].max_length)
 
       return {
         ...item['text-input'],
-        default: value || item.default || item['text-input'].default,
+        default: value || item.default,
         type: 'text-input',
       }
     })
@@ -319,7 +312,7 @@ export const useEmbeddedChatbot = () => {
 
     let hasEmptyInput = ''
     let fileIsUploading = false
-    const requiredVars = inputsForms.filter(({ required, type }) => required && type !== InputVarType.checkbox)
+    const requiredVars = inputsForms.filter(({ required }) => required)
     if (requiredVars.length) {
       requiredVars.forEach(({ variable, label, type }) => {
         if (hasEmptyInput)
@@ -383,18 +376,21 @@ export const useEmbeddedChatbot = () => {
   }, [mutateAppConversationData, handleConversationIdInfoChange])
 
   const handleFeedback = useCallback(async (messageId: string, feedback: Feedback) => {
-    await updateFeedback({ url: `/messages/${messageId}/feedbacks`, body: { rating: feedback.rating, content: feedback.content } }, isInstalledApp, appId)
+    await updateFeedback({ url: `/messages/${messageId}/feedbacks`, body: { rating: feedback.rating } }, isInstalledApp, appId)
     notify({ type: 'success', message: t('common.api.success') })
   }, [isInstalledApp, appId, t, notify])
 
   return {
+    appInfoError,
+    appInfoLoading: appInfoLoading || (systemFeatures.webapp_auth.enabled && isCheckingPermission),
+    userCanAccess: systemFeatures.webapp_auth.enabled ? userCanAccessResult?.result : true,
     isInstalledApp,
     allowResetChat,
     appId,
     currentConversationId,
     currentConversationItem,
     handleConversationIdInfoChange,
-    appData: appInfo,
+    appData,
     appParams: appParams || {} as ChatConfig,
     appMeta,
     appPinnedConversationData,

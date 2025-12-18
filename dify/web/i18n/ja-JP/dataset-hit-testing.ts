@@ -6,7 +6,7 @@ const translation = {
   table: {
     header: {
       source: 'ソース',
-      queryContent: 'クエリ内容',
+      text: 'テキスト',
       time: '時間',
     },
   },
@@ -15,7 +15,7 @@ const translation = {
     placeholder: 'テキストを入力してください。短い記述文がおすすめです。',
     countWarning: '最大 200 文字まで入力できます。',
     indexWarning: '高品質のナレッジのみ。',
-    testing: 'テスト',
+    testing: 'テスト中',
   },
   hit: {
     title: '取得したチャンク{{num}}個',
@@ -23,18 +23,12 @@ const translation = {
   },
   noRecentTip: '最近のクエリ結果はありません。',
   viewChart: 'ベクトルチャートを表示',
-  settingTitle: '検索設定',
+  settingTitle: '取得設定',
   viewDetail: '詳細を表示',
   chunkDetail: 'チャンクの詳細',
   hitChunks: '{{num}}個の子チャンクをヒット',
   open: '開く',
   keyword: 'キーワード',
-  imageUploader: {
-    tip: '画像をアップロードまたはドラッグ＆ドロップしてください（最大 {{batchCount}} 件、各 {{size}}MB まで）',
-    tooltip: '画像をアップロード（最大 {{batchCount}} 件、各 {{size}}MB まで）',
-    dropZoneTip: 'ファイルをここにドラッグしてアップロード',
-    singleChunkAttachmentLimitTooltip: '単一チャンクの添付ファイルの数は {{limit}} を超えることはできません',
-  },
 }
 
 export default translation

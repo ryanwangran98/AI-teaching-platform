@@ -18,7 +18,6 @@ import Loading from '@/app/components/base/loading'
 import Toast from '@/app/components/base/toast'
 import { noop } from 'lodash-es'
 import { useGlobalPublicStore } from '@/context/global-public-context'
-import { resolvePostLoginRedirect } from '../utils/post-login-redirect'
 
 export default function InviteSettingsPage() {
   const { t } = useTranslation()
@@ -30,7 +29,7 @@ export default function InviteSettingsPage() {
   const { setLocaleOnClient } = useContext(I18n)
   const [name, setName] = useState('')
   const [language, setLanguage] = useState(LanguagesSupported[0])
-  const [timezone, setTimezone] = useState(() => Intl.DateTimeFormat().resolvedOptions().timeZone || 'America/Los_Angeles')
+  const [timezone, setTimezone] = useState(Intl.DateTimeFormat().resolvedOptions().timeZone || 'America/Los_Angeles')
 
   const checkParams = {
     url: '/activate/check',
@@ -58,10 +57,10 @@ export default function InviteSettingsPage() {
         },
       })
       if (res.result === 'success') {
-        // Tokens are now stored in cookies by the backend
+        localStorage.setItem('console_token', res.data.access_token)
+        localStorage.setItem('refresh_token', res.data.refresh_token)
         await setLocaleOnClient(language, false)
-        const redirectUrl = resolvePostLoginRedirect(searchParams)
-        router.replace(redirectUrl || '/apps')
+        router.replace('/apps')
       }
     }
     catch {

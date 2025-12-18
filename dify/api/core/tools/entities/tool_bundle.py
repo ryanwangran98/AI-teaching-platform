@@ -1,6 +1,6 @@
-from collections.abc import Mapping
+from typing import Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
 from core.tools.entities.tool_entities import ToolParameter
 
@@ -16,16 +16,14 @@ class ApiToolBundle(BaseModel):
     # method
     method: str
     # summary
-    summary: str | None = None
+    summary: Optional[str] = None
     # operation_id
-    operation_id: str | None = None
+    operation_id: Optional[str] = None
     # parameters
-    parameters: list[ToolParameter] | None = None
+    parameters: Optional[list[ToolParameter]] = None
     # author
     author: str
     # icon
-    icon: str | None = None
+    icon: Optional[str] = None
     # openapi operation
     openapi: dict
-    # output schema
-    output_schema: Mapping[str, object] = Field(default_factory=dict)

@@ -8,7 +8,6 @@ import type {
 } from '@/models/datasets'
 import type { UploadFileSetting } from '@/app/components/workflow/types'
 import type { AccessMode } from '@/models/access-control'
-import type { ExternalDataTool } from '@/models/common'
 
 export enum Theme {
   light = 'light',
@@ -60,14 +59,8 @@ export type VariableInput = {
 /**
  * App modes
  */
-export enum AppModeEnum {
-  COMPLETION = 'completion',
-  WORKFLOW = 'workflow',
-  CHAT = 'chat',
-  ADVANCED_CHAT = 'advanced-chat',
-  AGENT_CHAT = 'agent-chat',
-}
-export const AppModes = [AppModeEnum.COMPLETION, AppModeEnum.WORKFLOW, AppModeEnum.CHAT, AppModeEnum.ADVANCED_CHAT, AppModeEnum.AGENT_CHAT] as const
+export const AppModes = ['advanced-chat', 'agent-chat', 'chat', 'completion', 'workflow'] as const
+export type AppMode = typeof AppModes[number]
 
 /**
  * Variable type
@@ -106,6 +99,14 @@ export type SelectTypeFormItem = {
   variable: string
   required: boolean
   options: string[]
+  hide: boolean
+}
+
+export type ParagraphTypeFormItem = {
+  default: string
+  label: string
+  variable: string
+  required: boolean
   hide: boolean
 }
 /**
@@ -213,12 +214,12 @@ export type ModelConfig = {
   suggested_questions?: string[]
   pre_prompt: string
   prompt_type: PromptMode
-  chat_prompt_config?: ChatPromptConfig | null
-  completion_prompt_config?: CompletionPromptConfig | null
+  chat_prompt_config: ChatPromptConfig | {}
+  completion_prompt_config: CompletionPromptConfig | {}
   user_input_form: UserInputFormItem[]
   dataset_query_variable?: string
   more_like_this: {
-    enabled: boolean
+    enabled?: boolean
   }
   suggested_questions_after_answer: {
     enabled: boolean
@@ -244,20 +245,12 @@ export type ModelConfig = {
     strategy?: AgentStrategy
     tools: ToolItem[]
   }
-  external_data_tools?: ExternalDataTool[]
   model: Model
   dataset_configs: DatasetConfigs
   file_upload?: {
     image: VisionSettings
   } & UploadFileSetting
   files?: VisionFile[]
-  system_parameters: {
-    audio_file_size_limit: number
-    file_size_limit: number
-    image_file_size_limit: number
-    video_file_size_limit: number
-    workflow_file_upload_limit: number
-  }
   created_at?: number
   updated_at?: number
 }
@@ -345,7 +338,7 @@ export type App = {
   use_icon_as_answer_icon: boolean
 
   /** Mode */
-  mode: AppModeEnum
+  mode: AppMode
   /** Enable web app */
   enable_site: boolean
   /** Enable web API */
@@ -375,12 +368,9 @@ export type App = {
     updated_at: number
     updated_by?: string
   }
-  deleted_tools?: Array<{ id: string; tool_name: string }>
   /** access control */
   access_mode: AccessMode
   max_active_requests?: number | null
-  /** whether workflow trigger has un-published draft */
-  has_draft_trigger?: boolean
 }
 
 export type AppSSO = {
@@ -396,7 +386,7 @@ export type AppTemplate = {
   /** Description */
   description: string
   /** Mode */
-  mode: AppModeEnum
+  mode: AppMode
   /** Model */
   model_config: ModelConfig
 }

@@ -1,5 +1,6 @@
 'use client'
-import { produce } from 'immer'
+import useSWR from 'swr'
+import produce from 'immer'
 import React, { Fragment } from 'react'
 import { usePathname } from 'next/navigation'
 import { useTranslation } from 'react-i18next'
@@ -8,6 +9,7 @@ import { Listbox, ListboxButton, ListboxOption, ListboxOptions, Transition } fro
 import { CheckIcon, ChevronDownIcon } from '@heroicons/react/20/solid'
 import { useFeatures, useFeaturesStore } from '@/app/components/base/features/hooks'
 import type { Item } from '@/app/components/base/select'
+import { fetchAppVoices } from '@/service/apps'
 import Tooltip from '@/app/components/base/tooltip'
 import Switch from '@/app/components/base/switch'
 import AudioBtn from '@/app/components/base/audio-btn'
@@ -15,7 +17,6 @@ import { languages } from '@/i18n-config/language'
 import { TtsAutoPlay } from '@/types/app'
 import type { OnFeaturesChange } from '@/app/components/base/features/types'
 import classNames from '@/utils/classnames'
-import { useAppVoices } from '@/service/use-apps'
 
 type VoiceParamConfigProps = {
   onClose: () => void
@@ -38,7 +39,7 @@ const VoiceParamConfig = ({
   const localLanguagePlaceholder = languageItem?.name || t('common.placeholder.select')
 
   const language = languageItem?.value
-  const { data: voiceItems } = useAppVoices(appId, language)
+  const voiceItems = useSWR({ appId, language }, fetchAppVoices).data
   let voiceItem = voiceItems?.find(item => item.value === text2speech?.voice)
   if (voiceItems && !voiceItem)
     voiceItem = voiceItems[0]

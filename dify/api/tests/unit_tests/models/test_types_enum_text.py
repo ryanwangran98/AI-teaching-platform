@@ -154,7 +154,7 @@ class TestEnumText:
             TestCase(
                 name="session insert with invalid type",
                 action=lambda s: _session_insert_with_value(s, 1),
-                exc_type=ValueError,
+                exc_type=TypeError,
             ),
             TestCase(
                 name="insert with invalid value",
@@ -164,7 +164,7 @@ class TestEnumText:
             TestCase(
                 name="insert with invalid type",
                 action=lambda s: _insert_with_user(s, 1),
-                exc_type=ValueError,
+                exc_type=TypeError,
             ),
         ]
         for idx, c in enumerate(cases, 1):

@@ -3,7 +3,6 @@ const translation = {
   searchTags: 'Search Tags',
   tags: {
     agent: 'Agent',
-    rag: 'RAG',
     search: 'Search',
     image: 'Image',
     videos: 'Videos',

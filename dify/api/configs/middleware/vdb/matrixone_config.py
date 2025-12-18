@@ -1,8 +1,7 @@
-from pydantic import Field
-from pydantic_settings import BaseSettings
+from pydantic import BaseModel, Field
 
 
-class MatrixoneConfig(BaseSettings):
+class MatrixoneConfig(BaseModel):
     """Matrixone vector database configuration."""
 
     MATRIXONE_HOST: str = Field(default="localhost", description="Host address of the Matrixone server")

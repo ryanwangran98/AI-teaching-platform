@@ -1,4 +1,4 @@
-from flask_restx import Api, Namespace, fields
+from flask_restful import fields
 
 simple_end_user_fields = {
     "id": fields.String,
@@ -6,7 +6,3 @@ simple_end_user_fields = {
     "is_anonymous": fields.Boolean,
     "session_id": fields.String,
 }
-
-
-def build_simple_end_user_model(api_or_ns: Api | Namespace):
-    return api_or_ns.model("SimpleEndUser", simple_end_user_fields)

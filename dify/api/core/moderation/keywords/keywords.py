@@ -8,7 +8,7 @@ class KeywordsModeration(Moderation):
     name: str = "keywords"
 
     @classmethod
-    def validate_config(cls, tenant_id: str, config: dict):
+    def validate_config(cls, tenant_id: str, config: dict) -> None:
         """
         Validate the incoming form config data.
 

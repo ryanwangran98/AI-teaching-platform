@@ -14,7 +14,7 @@ export type Limit = {
 export type Condition = {
   key: string
   comparison_operator: ComparisonOperator
-  value: string | number | boolean | string[]
+  value: string | number | string[]
 }
 
 export type ListFilterNodeType = CommonNodeType & {

@@ -1,5 +1,6 @@
 import { useCallback } from 'react'
-import { produce } from 'immer'
+import produce from 'immer'
+import { useTranslation } from 'react-i18next'
 import { useStoreApi } from 'reactflow'
 import type {
   BlockEnum,
@@ -11,13 +12,13 @@ import {
 } from '../../utils'
 import {
   LOOP_PADDING,
+  NODES_INITIAL_DATA,
 } from '../../constants'
 import { CUSTOM_LOOP_START_NODE } from '../loop-start/constants'
-import { useNodesMetaData } from '@/app/components/workflow/hooks'
 
 export const useNodeLoopInteractions = () => {
+  const { t } = useTranslation()
   const store = useStoreApi()
-  const { nodesMap: nodesMetaDataMap } = useNodesMetaData()
 
   const handleNodeLoopRerender = useCallback((nodeId: string) => {
     const {
@@ -114,20 +115,17 @@ export const useNodeLoopInteractions = () => {
 
     return childrenNodes.map((child, index) => {
       const childNodeType = child.data.type as BlockEnum
-      const {
-        defaultValue,
-      } = nodesMetaDataMap![childNodeType]
       const nodesWithSameType = nodes.filter(node => node.data.type === childNodeType)
       const { newNode } = generateNewNode({
         type: getNodeCustomTypeByNodeDataType(childNodeType),
         data: {
-          ...defaultValue,
+          ...NODES_INITIAL_DATA[childNodeType],
           ...child.data,
           selected: false,
           _isBundled: false,
           _connectedSourceHandleIds: [],
           _connectedTargetHandleIds: [],
-          title: nodesWithSameType.length > 0 ? `${defaultValue.title} ${nodesWithSameType.length + 1}` : defaultValue.title,
+          title: nodesWithSameType.length > 0 ? `${t(`workflow.blocks.${childNodeType}`)} ${nodesWithSameType.length + 1}` : t(`workflow.blocks.${childNodeType}`),
           loop_id: newNodeId,
 
         },
@@ -140,7 +138,7 @@ export const useNodeLoopInteractions = () => {
       newNode.id = `${newNodeId}${newNode.id + index}`
       return newNode
     })
-  }, [store, nodesMetaDataMap])
+  }, [store, t])
 
   return {
     handleNodeLoopRerender,

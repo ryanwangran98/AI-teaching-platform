@@ -19,19 +19,9 @@ class EmbeddingUsage(ModelUsage):
     latency: float
 
 
-class EmbeddingResult(BaseModel):
+class TextEmbeddingResult(BaseModel):
     """
     Model class for text embedding result.
-    """
-
-    model: str
-    embeddings: list[list[float]]
-    usage: EmbeddingUsage
-
-
-class FileEmbeddingResult(BaseModel):
-    """
-    Model class for file embedding result.
     """
 
     model: str

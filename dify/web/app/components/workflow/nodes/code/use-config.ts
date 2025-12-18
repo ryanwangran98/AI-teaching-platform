@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { produce } from 'immer'
+import produce from 'immer'
 import useVarList from '../_base/hooks/use-var-list'
 import useOutputVarList from '../_base/hooks/use-output-var-list'
 import { BlockEnum, VarType } from '../../types'
@@ -8,10 +8,8 @@ import { useStore } from '../../store'
 import type { CodeNodeType, OutputVar } from './types'
 import { CodeLanguage } from './types'
 import useNodeCrud from '@/app/components/workflow/nodes/_base/hooks/use-node-crud'
-import {
-  fetchNodeDefault,
-  fetchPipelineNodeDefault,
-} from '@/service/workflow'
+import { fetchNodeDefault } from '@/service/workflow'
+import { useStore as useAppStore } from '@/app/components/app/store'
 import {
   useNodesReadOnly,
 } from '@/app/components/workflow/hooks'
@@ -19,8 +17,7 @@ import {
 const useConfig = (id: string, payload: CodeNodeType) => {
   const { nodesReadOnly: readOnly } = useNodesReadOnly()
 
-  const appId = useStore(s => s.appId)
-  const pipelineId = useStore(s => s.pipelineId)
+  const appId = useAppStore.getState().appDetail?.id
 
   const [allLanguageDefault, setAllLanguageDefault] = useState<Record<CodeLanguage, CodeNodeType> | null>(null)
   useEffect(() => {
@@ -36,20 +33,7 @@ const useConfig = (id: string, payload: CodeNodeType) => {
     }
   }, [appId])
 
-  useEffect(() => {
-    if (pipelineId) {
-      (async () => {
-        const { config: javaScriptConfig } = await fetchPipelineNodeDefault(pipelineId, BlockEnum.Code, { code_language: CodeLanguage.javascript }) as any
-        const { config: pythonConfig } = await fetchPipelineNodeDefault(pipelineId, BlockEnum.Code, { code_language: CodeLanguage.python3 }) as any
-        setAllLanguageDefault({
-          [CodeLanguage.javascript]: javaScriptConfig as CodeNodeType,
-          [CodeLanguage.python3]: pythonConfig as CodeNodeType,
-        } as any)
-      })()
-    }
-  }, [pipelineId])
-
-  const defaultConfig = useStore(s => s.nodesDefaultConfigs)?.[payload.type]
+  const defaultConfig = useStore(s => s.nodesDefaultConfigs)[payload.type]
   const { inputs, setInputs } = useNodeCrud<CodeNodeType>(id, payload)
   const { handleVarListChange, handleAddVariable } = useVarList<CodeNodeType>({
     inputs,
@@ -76,6 +60,7 @@ const useConfig = (id: string, payload: CodeNodeType) => {
       })
       syncOutputKeyOrders(defaultConfig.outputs)
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [defaultConfig])
 
   const handleCodeChange = useCallback((code: string) => {
@@ -100,7 +85,7 @@ const useConfig = (id: string, payload: CodeNodeType) => {
   }, [allLanguageDefault, inputs, setInputs])
 
   const handleSyncFunctionSignature = useCallback(() => {
-    const generateSyncSignatureCode = (code: string) => {
+      const generateSyncSignatureCode = (code: string) => {
       let mainDefRe
       let newMainDef
       if (inputs.code_language === CodeLanguage.javascript) {
@@ -174,7 +159,7 @@ const useConfig = (id: string, payload: CodeNodeType) => {
   })
 
   const filterVar = useCallback((varPayload: Var) => {
-    return [VarType.string, VarType.number, VarType.boolean, VarType.secret, VarType.object, VarType.array, VarType.arrayNumber, VarType.arrayString, VarType.arrayObject, VarType.arrayBoolean, VarType.file, VarType.arrayFile].includes(varPayload.type)
+    return [VarType.string, VarType.number, VarType.secret, VarType.object, VarType.array, VarType.arrayNumber, VarType.arrayString, VarType.arrayObject, VarType.file, VarType.arrayFile].includes(varPayload.type)
   }, [])
 
   const handleCodeAndVarsChange = useCallback((code: string, inputVariables: Variable[], outputVariables: OutputVar) => {

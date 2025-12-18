@@ -11,7 +11,7 @@ class TestExtractTenantId:
     def test_extract_tenant_id_from_account_with_tenant(self):
         """Test extracting tenant_id from Account with current_tenant_id."""
         # Create a mock Account object
-        account = Account(name="test", email="test@example.com")
+        account = Account()
         # Mock the current_tenant_id property
         account._current_tenant = type("MockTenant", (), {"id": "account-tenant-123"})()
 
@@ -21,7 +21,7 @@ class TestExtractTenantId:
     def test_extract_tenant_id_from_account_without_tenant(self):
         """Test extracting tenant_id from Account without current_tenant_id."""
         # Create a mock Account object
-        account = Account(name="test", email="test@example.com")
+        account = Account()
         account._current_tenant = None
 
         tenant_id = extract_tenant_id(account)

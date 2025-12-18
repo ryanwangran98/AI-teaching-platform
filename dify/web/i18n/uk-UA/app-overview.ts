@@ -114,11 +114,6 @@ const translation = {
         },
       },
       launch: 'Запуску',
-      enableTooltip: {
-        description: 'Щоб увімкнути цю функцію, будь ласка, додайте вузол вводу користувача на полотно. (Може вже існувати в чернетці, набирає чинності після публікації)',
-        learnMore: 'Дізнатися більше',
-      },
-      title: 'Веб-додаток',
     },
     apiInfo: {
       title: 'API сервісу Backend',
@@ -129,17 +124,6 @@ const translation = {
     status: {
       running: 'У роботі',
       disable: 'Вимкнути',
-    },
-    triggerInfo: {
-      title: 'Тригери',
-      explanation: 'Управління тригером робочого процесу',
-      triggersAdded: 'Додано тригери',
-      noTriggerAdded: 'Триггер не додано',
-      triggerStatusDescription: 'Статус вузла тригера відображається тут. (Може вже існувати в чернетці, набирає чинності після публікації)',
-      learnAboutTriggers: 'Дізнайтеся про тригери',
-    },
-    disableTooltip: {
-      triggerMode: 'Функція {{feature}} не підтримується в режимі вузла тригера.',
     },
   },
   analysis: {

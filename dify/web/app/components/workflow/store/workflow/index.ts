@@ -35,11 +35,6 @@ import { WorkflowContext } from '@/app/components/workflow/context'
 import type { LayoutSliceShape } from './layout-slice'
 import { createLayoutSlice } from './layout-slice'
 import type { WorkflowSliceShape as WorkflowAppSliceShape } from '@/app/components/workflow-app/store/workflow/workflow-slice'
-import type { RagPipelineSliceShape } from '@/app/components/rag-pipeline/store'
-
-export type SliceFromInjection
-  = Partial<WorkflowAppSliceShape>
-  & Partial<RagPipelineSliceShape>
 
 export type Shape
   = ChatVariableSliceShape
@@ -55,12 +50,10 @@ export type Shape
   & WorkflowSliceShape
   & InspectVarsSliceShape
   & LayoutSliceShape
-  & SliceFromInjection
-
-export type InjectWorkflowStoreSliceFn = StateCreator<SliceFromInjection>
+  & WorkflowAppSliceShape
 
 type CreateWorkflowStoreParams = {
-  injectWorkflowStoreSliceFn?: InjectWorkflowStoreSliceFn
+  injectWorkflowStoreSliceFn?: StateCreator<WorkflowAppSliceShape>
 }
 
 export const createWorkflowStore = (params: CreateWorkflowStoreParams) => {
@@ -80,7 +73,7 @@ export const createWorkflowStore = (params: CreateWorkflowStoreParams) => {
     ...createWorkflowSlice(...args),
     ...createInspectVarsSlice(...args),
     ...createLayoutSlice(...args),
-    ...(injectWorkflowStoreSliceFn?.(...args) || {} as SliceFromInjection),
+    ...(injectWorkflowStoreSliceFn?.(...args) || {} as WorkflowAppSliceShape),
   }))
 }
 

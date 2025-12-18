@@ -20,7 +20,7 @@ class ConversationVariableUpdater(Protocol):
     """
 
     @abc.abstractmethod
-    def update(self, conversation_id: str, variable: "Variable"):
+    def update(self, conversation_id: str, variable: "Variable") -> None:
         """
         Updates the value of the specified conversation variable in the underlying storage.
 

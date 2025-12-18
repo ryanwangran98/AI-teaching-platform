@@ -33,8 +33,7 @@ const VariableTrigger = ({
       open={open}
       onOpenChange={() => {
         setOpen(v => !v)
-        if (open)
-          onClose()
+        open && onClose()
       }}
       placement='left-start'
       offset={{
@@ -44,8 +43,7 @@ const VariableTrigger = ({
     >
       <PortalToFollowElemTrigger onClick={() => {
         setOpen(v => !v)
-        if (open)
-          onClose()
+        open && onClose()
       }}>
         <Button variant='primary'>
           <RiAddLine className='mr-1 h-4 w-4' />
